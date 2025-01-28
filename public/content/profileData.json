@@ -1,0 +1,1036 @@
+{
+  "general": {
+    "profilePhoto": "/content/media/profilePhoto.jpg",
+    "username": "haythem",
+    "displayName": "Haythem Gataa",
+    "profession": "Software Designer & Engineer",
+    "location": "Tunisia",
+    "pronouns": null,
+    "byline": "Software Designer & Engineer in Tunisia",
+    "website": "https://www.haythem.tech",
+    "websiteURL": "https://www.haythem.tech",
+    "about": "I'm a detail-oriented Software Designer, passionate about micro interactions, animations, and the art of design. With a track record of bringing products to life and enhancing existing ones (over 4+ years), I blend creativity with my engineering background to deliver mindful user experiences.",
+    "status": {
+      "text": "Designing Mindful Experiences: From Nobel-Winning Projects to AI Innovations",
+      "emoji": "✌️",
+      "timestamp": "2024-11-18T12:22:24.699Z"
+    },
+    "sectionOrder": [
+      "Work Experience",
+      "Education",
+      "Awards",
+      "Speaking",
+      "Certifications",
+      "Features",
+      "Volunteering",
+      "Contact",
+      "Teams",
+      "Exhibitions",
+      "Projects",
+      "Side Projects",
+      "Writing"
+    ]
+  },
+  "projects": [],
+  "sideProjects": [],
+  "exhibitions": [],
+  "talks": [
+    {
+      "id": "icjW5TUBwtXGcjVhbHWH",
+      "year": "2024",
+      "heading": "Designer's Toolbox: Tips and Tricks at Ellevate Women",
+      "url": null,
+      "collaborators": [],
+      "description": "",
+      "attachments": [],
+      "type": "talk",
+      "title": "Designer's Toolbox: Tips and Tricks",
+      "event": "Ellevate Women",
+      "location": "Tunis - Tunisia"
+    },
+    {
+      "id": "jJ3JxihOZrr9nT0SgJKk",
+      "year": "2023",
+      "heading": "Design for non-designers at RNA.AI (with BioNTech)",
+      "url": null,
+      "collaborators": [],
+      "description": "",
+      "attachments": [
+        {
+          "type": "video",
+          "width": 852,
+          "height": 480,
+          "url": "/content/media/Design-for-non-designers-at-RNAAI-with-BioNTech.mp4"
+        }
+      ],
+      "type": "talk",
+      "title": "Design for non-designers",
+      "event": "RNA.AI (with BioNTech)",
+      "location": "Mainz - Germany"
+    },
+    {
+      "id": "M9caTSMXIsyX76SAp9Dl",
+      "year": "2022",
+      "heading": "Design for non-designers at GoMyCode Hackathon",
+      "url": null,
+      "collaborators": [],
+      "description": "",
+      "attachments": [
+        {
+          "type": "image",
+          "width": 661,
+          "height": 512,
+          "url": "/content/media/Design-for-non-designers-at-GoMyCode-Hackathon-1.jpg"
+        },
+        {
+          "type": "image",
+          "width": 768,
+          "height": 512,
+          "url": "/content/media/Design-for-non-designers-at-GoMyCode-Hackathon-2.jpg"
+        }
+      ],
+      "type": "talk",
+      "title": "Design for non-designers",
+      "event": "GoMyCode Hackathon",
+      "location": "Sousse - Tunisia"
+    },
+    {
+      "id": "AQiaxh6KYkRiVcVtzePt",
+      "year": "2021",
+      "heading": "Design Boost at Google Developers Group Event",
+      "url": null,
+      "collaborators": [],
+      "description": "",
+      "attachments": [],
+      "type": "talk",
+      "title": "Design Boost",
+      "event": "Google Developers Group Event",
+      "location": "Sousse - Tunisia"
+    }
+  ],
+  "writing": [],
+  "awards": [
+    {
+      "id": "o0JjGlqzQEdX9w3XUMga",
+      "year": "2021",
+      "heading": "Best website design (Silver award) from Tunisia Digital Awards",
+      "url": null,
+      "collaborators": [],
+      "description": "",
+      "attachments": [
+        {
+          "type": "image",
+          "width": 984,
+          "height": 738,
+          "url": "/content/media/Best-website-design-Silver-award-from-Tunisia-Digital-Awards-1.jpg"
+        },
+        {
+          "type": "video",
+          "width": 1254,
+          "height": 704,
+          "url": "/content/media/Best-website-design-Silver-award-from-Tunisia-Digital-Awards-2.mp4"
+        },
+        {
+          "type": "image",
+          "width": 959,
+          "height": 959,
+          "url": "/content/media/Best-website-design-Silver-award-from-Tunisia-Digital-Awards-3.jpg"
+        }
+      ],
+      "type": "award",
+      "title": "Best website design (Silver award)",
+      "presenter": "Tunisia Digital Awards"
+    },
+    {
+      "id": "XkiPta7NDNFiSxMtQixf",
+      "year": "2019",
+      "heading": "1st place winner of Code Camping from Mentor Nations",
+      "url": null,
+      "collaborators": [],
+      "description": "",
+      "attachments": [
+        {
+          "type": "image",
+          "width": 1802,
+          "height": 1130,
+          "url": "/content/media/1st-place-winner-of-Code-Camping-from-Mentor-Nations.jpg"
+        }
+      ],
+      "type": "award",
+      "title": "1st place winner of Code Camping",
+      "presenter": "Mentor Nations"
+    },
+    {
+      "id": "ScFEXLzNswxdb1Bg1iNL",
+      "year": "2019",
+      "heading": "1st place winner of Innovation Camp from Injaz Tunisia",
+      "url": null,
+      "collaborators": [],
+      "description": "",
+      "attachments": [
+        {
+          "type": "image",
+          "width": 1802,
+          "height": 1075,
+          "url": "/content/media/1st-place-winner-of-Innovation-Camp-from-Injaz-Tunisia.jpg"
+        }
+      ],
+      "type": "award",
+      "title": "1st place winner of Innovation Camp",
+      "presenter": "Injaz Tunisia"
+    }
+  ],
+  "features": [
+    {
+      "id": "m7wOW0kStzo4AIqOxmAA",
+      "year": "2024",
+      "heading": "Logo featured on LogoSystems.co",
+      "url": "https://logosystem.co/logo/lexit",
+      "collaborators": [],
+      "description": "",
+      "attachments": [],
+      "type": "feature",
+      "title": "Logo featured on LogoSystems.co",
+      "publisher": ""
+    },
+    {
+      "id": "6LTFIdr6I7yqe71oDPjw",
+      "year": "2021",
+      "heading": "Photographer on Buchhalter International Group",
+      "url": "https://issuu.com/franze.buchhalter/docs/design_destinations_magazine_fall_2021",
+      "collaborators": [],
+      "description": null,
+      "attachments": [],
+      "type": "feature",
+      "title": "Photographer",
+      "publisher": "Buchhalter International Group"
+    }
+  ],
+  "workExperience": [
+    {
+      "id": "GohQTV9Vx4tN1TQGaBux",
+      "year": "2023 — Now",
+      "heading": "Product designer at InstaDeep",
+      "url": "https://instadeep.com",
+      "collaborators": [],
+      "description": "* Collaborating on a design system to help accelerate new projects’ creation, and insure consistency across non-branded projects\n\n* Creating fun animations and micro-interactions to make our products feel dynamic (which increased the wow! effect by 2 wows/user).\n\n* Introduced tools like Rive, Lottie, and Framer, which helped us reduce developer frustration and reduce development time by up to one week on average.\n\n* Redesigned a couple of products, improving the UX and modernizing the UI. Which for some projects, paired with great enhancement by the AI team, tripled the product usage over less than 1 year.\n\n* Brought to life many innovative AI related projects.",
+      "attachments": [
+        {
+          "type": "image",
+          "width": 2000,
+          "height": 1500,
+          "url": "/content/media/Product-designer-at-InstaDeep-1.png"
+        },
+        {
+          "type": "image",
+          "width": 2000,
+          "height": 1500,
+          "url": "/content/media/Product-designer-at-InstaDeep-2.png"
+        },
+        {
+          "type": "image",
+          "width": 2000,
+          "height": 1500,
+          "url": "/content/media/Product-designer-at-InstaDeep-3.png"
+        },
+        {
+          "type": "image",
+          "width": 2000,
+          "height": 1500,
+          "url": "/content/media/Product-designer-at-InstaDeep-4.png"
+        }
+      ],
+      "type": "workExperience",
+      "title": "Product designer",
+      "company": "InstaDeep",
+      "location": "Tunis, Tunisia"
+    },
+    {
+      "id": "9LV1LNZaqcRymm9DJORh",
+      "year": "2020 — 2023",
+      "heading": "UI Designer at Weare Moon",
+      "url": "https://moon.tn",
+      "collaborators": [],
+      "description": "* Designed an award-winning platform (Sehaty Online).\n\n* Designed a high-fidelity wireframe, and assisted during user testing sessions for [WFP's Last Mile Ecosystem](https://innovation.wfp.org/project/last-mile-ecosystem), a Nobel-awarded project.\n\n* Designing and ensuring the good delivery Of our work from UX to UI, then to the dev team.\n\n* Helped leading and integrating new designers to the team",
+      "attachments": [
+        {
+          "type": "image",
+          "width": 2000,
+          "height": 1500,
+          "url": "/content/media/UI-Designer-at-Weare-Moon-1.png"
+        },
+        {
+          "type": "image",
+          "width": 2000,
+          "height": 1500,
+          "url": "/content/media/UI-Designer-at-Weare-Moon-2.png"
+        },
+        {
+          "type": "image",
+          "width": 2000,
+          "height": 1500,
+          "url": "/content/media/UI-Designer-at-Weare-Moon-3.png"
+        },
+        {
+          "type": "image",
+          "width": 2000,
+          "height": 1500,
+          "url": "/content/media/UI-Designer-at-Weare-Moon-4.png"
+        }
+      ],
+      "type": "workExperience",
+      "title": "UI Designer",
+      "company": "Weare Moon",
+      "location": "Sousse, Tunisia"
+    },
+    {
+      "id": "CUHfXoxBuxB4JVnNIEsX",
+      "year": "2022 — 2022",
+      "heading": "UX/UI teacher (Part-time) at Ecole Polytechnique Sousse",
+      "url": "https://polytechsousse.tn/",
+      "collaborators": [],
+      "description": "* Created the course plan, exercises, and exams.\n\n* Ensured the good flow of the lesson while keeping the students entertained.\n\n* Organized workshops to help students practice the newly acquired information.",
+      "attachments": [
+        {
+          "type": "image",
+          "width": 984,
+          "height": 984,
+          "url": "/content/media/UXUI-teacher-Part-time-at-Ecole-Polytechnique-Sousse.jpg"
+        }
+      ],
+      "type": "workExperience",
+      "title": "UX/UI teacher (Part-time)",
+      "company": "Ecole Polytechnique Sousse",
+      "location": "Sousse, Tunisia"
+    },
+    {
+      "id": "C1Pe1sJpLhWvMy6QXe2L",
+      "year": "2021 — 2022",
+      "heading": "UX instructor (Part-time) at GoMyCode",
+      "url": "https://gomycode.com/",
+      "collaborators": [],
+      "description": "* Assisted students in learning UX design.\n\n* Organized workshops to help students understand UX basics.\n\n* Helped students accomplish a full UX project by the end of the program.",
+      "attachments": [],
+      "type": "workExperience",
+      "title": "UX instructor (Part-time)",
+      "company": "GoMyCode",
+      "location": "Sousse, Tunisia"
+    }
+  ],
+  "volunteering": [
+    {
+      "id": "59Cu0dGugigF4SWQHeu4",
+      "year": "2018 — 2023",
+      "heading": "Graphic designer at I Rise",
+      "url": "https://www.facebook.com/I.Rise.Ksour.Essef/",
+      "collaborators": [],
+      "description": "Designed social media content and print materials that boosted event attendance and engagement., and organized an initiative to transform a neglected forest into a welcoming green space for families and children, fostering a sense of safety and community.",
+      "attachments": [
+        {
+          "type": "image",
+          "width": 2400,
+          "height": 1800,
+          "url": "/content/media/Graphic-designer-at-I-Rise-1.png"
+        },
+        {
+          "type": "image",
+          "width": 2400,
+          "height": 1800,
+          "url": "/content/media/Graphic-designer-at-I-Rise-2.png"
+        },
+        {
+          "type": "image",
+          "width": 2400,
+          "height": 1800,
+          "url": "/content/media/Graphic-designer-at-I-Rise-3.png"
+        },
+        {
+          "type": "image",
+          "width": 2400,
+          "height": 1800,
+          "url": "/content/media/Graphic-designer-at-I-Rise-4.png"
+        }
+      ],
+      "type": "volunteering",
+      "title": "Graphic designer",
+      "organization": "I Rise",
+      "location": "Mahdia, Tunisia"
+    },
+    {
+      "id": "4oYIvfgdInL7yATqJRpu",
+      "year": "2020 — 2020",
+      "heading": "Graphic Designer at Mouch Shih",
+      "url": "https://www.facebook.com/mouchshihtn",
+      "collaborators": [],
+      "description": "Designed persuasive social media visuals for a COVID-19 fact-checking project. This effort aimed to counter misinformation, educating the public about accurate health practices during the pandemic.",
+      "attachments": [
+        {
+          "type": "image",
+          "width": 2400,
+          "height": 1800,
+          "url": "/content/media/Graphic-Designer-at-Mouch-Shih.png"
+        }
+      ],
+      "type": "volunteering",
+      "title": "Graphic Designer",
+      "organization": "Mouch Shih",
+      "location": "Online"
+    },
+    {
+      "id": "SQEppu0jhRCKuMxQdqUK",
+      "year": "2018 — 2020",
+      "heading": "Co-Founder and Head of design at Google Club ISIGK",
+      "url": null,
+      "collaborators": [],
+      "description": "Co-led the organization and branding of events and workshops to share tech knowledge, attracting students and community members.",
+      "attachments": [],
+      "type": "volunteering",
+      "title": "Co-Founder and Head of design",
+      "organization": "Google Club ISIGK",
+      "location": "Kairouan, Tunisia"
+    },
+    {
+      "id": "xx639amUkX07hX2Xrglu",
+      "year": "2019 — 2020",
+      "heading": "Photographer and Designer at We Are Kairouan (a Tunivision initiative)",
+      "url": null,
+      "collaborators": [],
+      "description": "Responsible for capturing the historic beauty of Kairouan. Highlighted the city’s rich heritage, contributing to local tourism awareness and community pride.",
+      "attachments": [
+        {
+          "type": "image",
+          "width": 2400,
+          "height": 1800,
+          "url": "/content/media/Photographer-and-Designer-at-We-Are-Kairouan-a-Tunivision-initiative-1.png"
+        },
+        {
+          "type": "image",
+          "width": 2400,
+          "height": 1800,
+          "url": "/content/media/Photographer-and-Designer-at-We-Are-Kairouan-a-Tunivision-initiative-2.png"
+        },
+        {
+          "type": "image",
+          "width": 2400,
+          "height": 1800,
+          "url": "/content/media/Photographer-and-Designer-at-We-Are-Kairouan-a-Tunivision-initiative-3.png"
+        },
+        {
+          "type": "image",
+          "width": 2400,
+          "height": 1800,
+          "url": "/content/media/Photographer-and-Designer-at-We-Are-Kairouan-a-Tunivision-initiative-4.png"
+        },
+        {
+          "type": "image",
+          "width": 2400,
+          "height": 1800,
+          "url": "/content/media/Photographer-and-Designer-at-We-Are-Kairouan-a-Tunivision-initiative-5.png"
+        },
+        {
+          "type": "image",
+          "width": 2400,
+          "height": 1800,
+          "url": "/content/media/Photographer-and-Designer-at-We-Are-Kairouan-a-Tunivision-initiative-6.png"
+        }
+      ],
+      "type": "volunteering",
+      "title": "Photographer and Designer",
+      "organization": "We Are Kairouan (a Tunivision initiative)",
+      "location": "Kairouan, Tunisia"
+    }
+  ],
+  "education": [
+    {
+      "id": "1PKtTO7SfvfupFjS3YIb",
+      "year": "2020 — 2023",
+      "heading": "Master in Software Engineering at Ecole Polytechnique Sousse",
+      "url": null,
+      "collaborators": [],
+      "description": "* Graduated with an excellent grade and jury honors",
+      "attachments": [],
+      "type": "education",
+      "degree": "Master in Software Engineering",
+      "school": "Ecole Polytechnique Sousse",
+      "location": "Sousse, Tunisia"
+    },
+    {
+      "id": "vswXMvn6VCyvJiD4XHA8",
+      "year": "2017 — 2020",
+      "heading": "Bachelor in Computer Science at Higher Institute of Computer Science and Management of Kairouan",
+      "url": null,
+      "collaborators": [],
+      "description": "* Graduated with an excellent grade and jury honors",
+      "attachments": [],
+      "type": "education",
+      "degree": "Bachelor in Computer Science",
+      "school": "Higher Institute of Computer Science and Management of Kairouan",
+      "location": "Kairouan, Tunisia"
+    }
+  ],
+  "certifications": [
+    {
+      "id": "RpIcacbVASqMz0zgqXti",
+      "year": "2024",
+      "heading": "User Experience: The Beginner's Guide from Interaction Design Foundation",
+      "url": "https://www.interaction-design.org/members/haythem/certificate/course/4dd7c189-54b3-47d1-a8e0-90d75a2ce5b4",
+      "collaborators": [],
+      "description": "Distinction: Top 10% in class",
+      "attachments": [
+        {
+          "type": "image",
+          "width": 1920,
+          "height": 1408,
+          "url": "/content/media/User-Experience-The-Beginners-Guide-from-Interaction-Design-Foundation.jpg"
+        }
+      ],
+      "type": "certification",
+      "name": "User Experience: The Beginner's Guide",
+      "organization": "Interaction Design Foundation"
+    }
+  ],
+  "contact": [
+    {
+      "id": "U3wwuiipV7jiYbDmPXDn",
+      "platform": "Email",
+      "handle": "gataa.haythem@gmail.com",
+      "url": "mailto:gataa.haythem@gmail.com"
+    },
+    {
+      "id": "oOkT1WmD5cigTdidoglN",
+      "platform": "LinkedIn",
+      "handle": "haythem-gataa",
+      "url": "https://linkedin.com/in/haythem-gataa"
+    },
+    {
+      "id": "0SypH1ruApTN6OOzt9mn",
+      "platform": "Dribbble",
+      "handle": "haythemgataa",
+      "url": "https://dribbble.com/haythemgataa"
+    },
+    {
+      "id": "PABPEFtQkF4nbsklItgU",
+      "platform": "Twitter",
+      "handle": "HaythemGataa",
+      "url": "https://twitter.com/HaythemGataa"
+    },
+    {
+      "id": "cjajwVoWHqLAuvpYzqDT",
+      "platform": "Unsplash",
+      "handle": "@haythemgataa",
+      "url": "https://unsplash.com/@haythemgataa"
+    }
+  ],
+  "allCollections": [
+    {
+      "name": "Work Experience",
+      "items": [
+        {
+          "id": "GohQTV9Vx4tN1TQGaBux",
+          "year": "2023 — Now",
+          "heading": "Product designer at InstaDeep",
+          "url": "https://instadeep.com",
+          "collaborators": [],
+          "description": "* Collaborating on a design system to help accelerate new projects’ creation, and insure consistency across non-branded projects\n\n* Creating fun animations and micro-interactions to make our products feel dynamic (which increased the wow! effect by 2 wows/user).\n\n* Introduced tools like Rive, Lottie, and Framer, which helped us reduce developer frustration and reduce development time by up to one week on average.\n\n* Redesigned a couple of products, improving the UX and modernizing the UI. Which for some projects, paired with great enhancement by the AI team, tripled the product usage over less than 1 year.\n\n* Brought to life many innovative AI related projects.",
+          "attachments": [
+            {
+              "type": "image",
+              "width": 2000,
+              "height": 1500,
+              "url": "/content/media/Product-designer-at-InstaDeep-1.png"
+            },
+            {
+              "type": "image",
+              "width": 2000,
+              "height": 1500,
+              "url": "/content/media/Product-designer-at-InstaDeep-2.png"
+            },
+            {
+              "type": "image",
+              "width": 2000,
+              "height": 1500,
+              "url": "/content/media/Product-designer-at-InstaDeep-3.png"
+            },
+            {
+              "type": "image",
+              "width": 2000,
+              "height": 1500,
+              "url": "/content/media/Product-designer-at-InstaDeep-4.png"
+            }
+          ],
+          "type": "workExperience",
+          "title": "Product designer",
+          "company": "InstaDeep",
+          "location": "Tunis, Tunisia"
+        },
+        {
+          "id": "9LV1LNZaqcRymm9DJORh",
+          "year": "2020 — 2023",
+          "heading": "UI Designer at Weare Moon",
+          "url": "https://moon.tn",
+          "collaborators": [],
+          "description": "* Designed an award-winning platform (Sehaty Online).\n\n* Designed a high-fidelity wireframe, and assisted during user testing sessions for [WFP's Last Mile Ecosystem](https://innovation.wfp.org/project/last-mile-ecosystem), a Nobel-awarded project.\n\n* Designing and ensuring the good delivery Of our work from UX to UI, then to the dev team.\n\n* Helped leading and integrating new designers to the team",
+          "attachments": [
+            {
+              "type": "image",
+              "width": 2000,
+              "height": 1500,
+              "url": "/content/media/UI-Designer-at-Weare-Moon-1.png"
+            },
+            {
+              "type": "image",
+              "width": 2000,
+              "height": 1500,
+              "url": "/content/media/UI-Designer-at-Weare-Moon-2.png"
+            },
+            {
+              "type": "image",
+              "width": 2000,
+              "height": 1500,
+              "url": "/content/media/UI-Designer-at-Weare-Moon-3.png"
+            },
+            {
+              "type": "image",
+              "width": 2000,
+              "height": 1500,
+              "url": "/content/media/UI-Designer-at-Weare-Moon-4.png"
+            }
+          ],
+          "type": "workExperience",
+          "title": "UI Designer",
+          "company": "Weare Moon",
+          "location": "Sousse, Tunisia"
+        },
+        {
+          "id": "CUHfXoxBuxB4JVnNIEsX",
+          "year": "2022 — 2022",
+          "heading": "UX/UI teacher (Part-time) at Ecole Polytechnique Sousse",
+          "url": "https://polytechsousse.tn/",
+          "collaborators": [],
+          "description": "* Created the course plan, exercises, and exams.\n\n* Ensured the good flow of the lesson while keeping the students entertained.\n\n* Organized workshops to help students practice the newly acquired information.",
+          "attachments": [
+            {
+              "type": "image",
+              "width": 984,
+              "height": 984,
+              "url": "/content/media/UXUI-teacher-Part-time-at-Ecole-Polytechnique-Sousse.jpg"
+            }
+          ],
+          "type": "workExperience",
+          "title": "UX/UI teacher (Part-time)",
+          "company": "Ecole Polytechnique Sousse",
+          "location": "Sousse, Tunisia"
+        },
+        {
+          "id": "C1Pe1sJpLhWvMy6QXe2L",
+          "year": "2021 — 2022",
+          "heading": "UX instructor (Part-time) at GoMyCode",
+          "url": "https://gomycode.com/",
+          "collaborators": [],
+          "description": "* Assisted students in learning UX design.\n\n* Organized workshops to help students understand UX basics.\n\n* Helped students accomplish a full UX project by the end of the program.",
+          "attachments": [],
+          "type": "workExperience",
+          "title": "UX instructor (Part-time)",
+          "company": "GoMyCode",
+          "location": "Sousse, Tunisia"
+        }
+      ]
+    },
+    {
+      "name": "Education",
+      "items": [
+        {
+          "id": "1PKtTO7SfvfupFjS3YIb",
+          "year": "2020 — 2023",
+          "heading": "Master in Software Engineering at Ecole Polytechnique Sousse",
+          "url": null,
+          "collaborators": [],
+          "description": "* Graduated with an excellent grade and jury honors",
+          "attachments": [],
+          "type": "education",
+          "degree": "Master in Software Engineering",
+          "school": "Ecole Polytechnique Sousse",
+          "location": "Sousse, Tunisia"
+        },
+        {
+          "id": "vswXMvn6VCyvJiD4XHA8",
+          "year": "2017 — 2020",
+          "heading": "Bachelor in Computer Science at Higher Institute of Computer Science and Management of Kairouan",
+          "url": null,
+          "collaborators": [],
+          "description": "* Graduated with an excellent grade and jury honors",
+          "attachments": [],
+          "type": "education",
+          "degree": "Bachelor in Computer Science",
+          "school": "Higher Institute of Computer Science and Management of Kairouan",
+          "location": "Kairouan, Tunisia"
+        }
+      ]
+    },
+    {
+      "name": "Awards",
+      "items": [
+        {
+          "id": "o0JjGlqzQEdX9w3XUMga",
+          "year": "2021",
+          "heading": "Best website design (Silver award) from Tunisia Digital Awards",
+          "url": null,
+          "collaborators": [],
+          "description": "",
+          "attachments": [
+            {
+              "type": "image",
+              "width": 984,
+              "height": 738,
+              "url": "/content/media/Best-website-design-Silver-award-from-Tunisia-Digital-Awards-1.jpg"
+            },
+            {
+              "type": "video",
+              "width": 1254,
+              "height": 704,
+              "url": "/content/media/Best-website-design-Silver-award-from-Tunisia-Digital-Awards-2.mp4"
+            },
+            {
+              "type": "image",
+              "width": 959,
+              "height": 959,
+              "url": "/content/media/Best-website-design-Silver-award-from-Tunisia-Digital-Awards-3.jpg"
+            }
+          ],
+          "type": "award",
+          "title": "Best website design (Silver award)",
+          "presenter": "Tunisia Digital Awards"
+        },
+        {
+          "id": "XkiPta7NDNFiSxMtQixf",
+          "year": "2019",
+          "heading": "1st place winner of Code Camping from Mentor Nations",
+          "url": null,
+          "collaborators": [],
+          "description": "",
+          "attachments": [
+            {
+              "type": "image",
+              "width": 1802,
+              "height": 1130,
+              "url": "/content/media/1st-place-winner-of-Code-Camping-from-Mentor-Nations.jpg"
+            }
+          ],
+          "type": "award",
+          "title": "1st place winner of Code Camping",
+          "presenter": "Mentor Nations"
+        },
+        {
+          "id": "ScFEXLzNswxdb1Bg1iNL",
+          "year": "2019",
+          "heading": "1st place winner of Innovation Camp from Injaz Tunisia",
+          "url": null,
+          "collaborators": [],
+          "description": "",
+          "attachments": [
+            {
+              "type": "image",
+              "width": 1802,
+              "height": 1075,
+              "url": "/content/media/1st-place-winner-of-Innovation-Camp-from-Injaz-Tunisia.jpg"
+            }
+          ],
+          "type": "award",
+          "title": "1st place winner of Innovation Camp",
+          "presenter": "Injaz Tunisia"
+        }
+      ]
+    },
+    {
+      "name": "Speaking",
+      "items": [
+        {
+          "id": "icjW5TUBwtXGcjVhbHWH",
+          "year": "2024",
+          "heading": "Designer's Toolbox: Tips and Tricks at Ellevate Women",
+          "url": null,
+          "collaborators": [],
+          "description": "",
+          "attachments": [],
+          "type": "talk",
+          "title": "Designer's Toolbox: Tips and Tricks",
+          "event": "Ellevate Women",
+          "location": "Tunis - Tunisia"
+        },
+        {
+          "id": "jJ3JxihOZrr9nT0SgJKk",
+          "year": "2023",
+          "heading": "Design for non-designers at RNA.AI (with BioNTech)",
+          "url": null,
+          "collaborators": [],
+          "description": "",
+          "attachments": [
+            {
+              "type": "video",
+              "width": 852,
+              "height": 480,
+              "url": "/content/media/Design-for-non-designers-at-RNAAI-with-BioNTech.mp4"
+            }
+          ],
+          "type": "talk",
+          "title": "Design for non-designers",
+          "event": "RNA.AI (with BioNTech)",
+          "location": "Mainz - Germany"
+        },
+        {
+          "id": "M9caTSMXIsyX76SAp9Dl",
+          "year": "2022",
+          "heading": "Design for non-designers at GoMyCode Hackathon",
+          "url": null,
+          "collaborators": [],
+          "description": "",
+          "attachments": [
+            {
+              "type": "image",
+              "width": 661,
+              "height": 512,
+              "url": "/content/media/Design-for-non-designers-at-GoMyCode-Hackathon-1.jpg"
+            },
+            {
+              "type": "image",
+              "width": 768,
+              "height": 512,
+              "url": "/content/media/Design-for-non-designers-at-GoMyCode-Hackathon-2.jpg"
+            }
+          ],
+          "type": "talk",
+          "title": "Design for non-designers",
+          "event": "GoMyCode Hackathon",
+          "location": "Sousse - Tunisia"
+        },
+        {
+          "id": "AQiaxh6KYkRiVcVtzePt",
+          "year": "2021",
+          "heading": "Design Boost at Google Developers Group Event",
+          "url": null,
+          "collaborators": [],
+          "description": "",
+          "attachments": [],
+          "type": "talk",
+          "title": "Design Boost",
+          "event": "Google Developers Group Event",
+          "location": "Sousse - Tunisia"
+        }
+      ]
+    },
+    {
+      "name": "Certifications",
+      "items": [
+        {
+          "id": "RpIcacbVASqMz0zgqXti",
+          "year": "2024",
+          "heading": "User Experience: The Beginner's Guide from Interaction Design Foundation",
+          "url": "https://www.interaction-design.org/members/haythem/certificate/course/4dd7c189-54b3-47d1-a8e0-90d75a2ce5b4",
+          "collaborators": [],
+          "description": "Distinction: Top 10% in class",
+          "attachments": [
+            {
+              "type": "image",
+              "width": 1920,
+              "height": 1408,
+              "url": "/content/media/User-Experience-The-Beginners-Guide-from-Interaction-Design-Foundation.jpg"
+            }
+          ],
+          "type": "certification",
+          "name": "User Experience: The Beginner's Guide",
+          "organization": "Interaction Design Foundation"
+        }
+      ]
+    },
+    {
+      "name": "Features",
+      "items": [
+        {
+          "id": "m7wOW0kStzo4AIqOxmAA",
+          "year": "2024",
+          "heading": "Logo featured on LogoSystems.co",
+          "url": "https://logosystem.co/logo/lexit",
+          "collaborators": [],
+          "description": "",
+          "attachments": [],
+          "type": "feature",
+          "title": "Logo featured on LogoSystems.co",
+          "publisher": ""
+        },
+        {
+          "id": "6LTFIdr6I7yqe71oDPjw",
+          "year": "2021",
+          "heading": "Photographer on Buchhalter International Group",
+          "url": "https://issuu.com/franze.buchhalter/docs/design_destinations_magazine_fall_2021",
+          "collaborators": [],
+          "description": null,
+          "attachments": [],
+          "type": "feature",
+          "title": "Photographer",
+          "publisher": "Buchhalter International Group"
+        }
+      ]
+    },
+    {
+      "name": "Volunteering",
+      "items": [
+        {
+          "id": "59Cu0dGugigF4SWQHeu4",
+          "year": "2018 — 2023",
+          "heading": "Graphic designer at I Rise",
+          "url": "https://www.facebook.com/I.Rise.Ksour.Essef/",
+          "collaborators": [],
+          "description": "Designed social media content and print materials that boosted event attendance and engagement., and organized an initiative to transform a neglected forest into a welcoming green space for families and children, fostering a sense of safety and community.",
+          "attachments": [
+            {
+              "type": "image",
+              "width": 2400,
+              "height": 1800,
+              "url": "/content/media/Graphic-designer-at-I-Rise-1.png"
+            },
+            {
+              "type": "image",
+              "width": 2400,
+              "height": 1800,
+              "url": "/content/media/Graphic-designer-at-I-Rise-2.png"
+            },
+            {
+              "type": "image",
+              "width": 2400,
+              "height": 1800,
+              "url": "/content/media/Graphic-designer-at-I-Rise-3.png"
+            },
+            {
+              "type": "image",
+              "width": 2400,
+              "height": 1800,
+              "url": "/content/media/Graphic-designer-at-I-Rise-4.png"
+            }
+          ],
+          "type": "volunteering",
+          "title": "Graphic designer",
+          "organization": "I Rise",
+          "location": "Mahdia, Tunisia"
+        },
+        {
+          "id": "4oYIvfgdInL7yATqJRpu",
+          "year": "2020 — 2020",
+          "heading": "Graphic Designer at Mouch Shih",
+          "url": "https://www.facebook.com/mouchshihtn",
+          "collaborators": [],
+          "description": "Designed persuasive social media visuals for a COVID-19 fact-checking project. This effort aimed to counter misinformation, educating the public about accurate health practices during the pandemic.",
+          "attachments": [
+            {
+              "type": "image",
+              "width": 2400,
+              "height": 1800,
+              "url": "/content/media/Graphic-Designer-at-Mouch-Shih.png"
+            }
+          ],
+          "type": "volunteering",
+          "title": "Graphic Designer",
+          "organization": "Mouch Shih",
+          "location": "Online"
+        },
+        {
+          "id": "SQEppu0jhRCKuMxQdqUK",
+          "year": "2018 — 2020",
+          "heading": "Co-Founder and Head of design at Google Club ISIGK",
+          "url": null,
+          "collaborators": [],
+          "description": "Co-led the organization and branding of events and workshops to share tech knowledge, attracting students and community members.",
+          "attachments": [],
+          "type": "volunteering",
+          "title": "Co-Founder and Head of design",
+          "organization": "Google Club ISIGK",
+          "location": "Kairouan, Tunisia"
+        },
+        {
+          "id": "xx639amUkX07hX2Xrglu",
+          "year": "2019 — 2020",
+          "heading": "Photographer and Designer at We Are Kairouan (a Tunivision initiative)",
+          "url": null,
+          "collaborators": [],
+          "description": "Responsible for capturing the historic beauty of Kairouan. Highlighted the city’s rich heritage, contributing to local tourism awareness and community pride.",
+          "attachments": [
+            {
+              "type": "image",
+              "width": 2400,
+              "height": 1800,
+              "url": "/content/media/Photographer-and-Designer-at-We-Are-Kairouan-a-Tunivision-initiative-1.png"
+            },
+            {
+              "type": "image",
+              "width": 2400,
+              "height": 1800,
+              "url": "/content/media/Photographer-and-Designer-at-We-Are-Kairouan-a-Tunivision-initiative-2.png"
+            },
+            {
+              "type": "image",
+              "width": 2400,
+              "height": 1800,
+              "url": "/content/media/Photographer-and-Designer-at-We-Are-Kairouan-a-Tunivision-initiative-3.png"
+            },
+            {
+              "type": "image",
+              "width": 2400,
+              "height": 1800,
+              "url": "/content/media/Photographer-and-Designer-at-We-Are-Kairouan-a-Tunivision-initiative-4.png"
+            },
+            {
+              "type": "image",
+              "width": 2400,
+              "height": 1800,
+              "url": "/content/media/Photographer-and-Designer-at-We-Are-Kairouan-a-Tunivision-initiative-5.png"
+            },
+            {
+              "type": "image",
+              "width": 2400,
+              "height": 1800,
+              "url": "/content/media/Photographer-and-Designer-at-We-Are-Kairouan-a-Tunivision-initiative-6.png"
+            }
+          ],
+          "type": "volunteering",
+          "title": "Photographer and Designer",
+          "organization": "We Are Kairouan (a Tunivision initiative)",
+          "location": "Kairouan, Tunisia"
+        }
+      ]
+    },
+    {
+      "name": "Contact",
+      "items": [
+        {
+          "id": "U3wwuiipV7jiYbDmPXDn",
+          "platform": "Email",
+          "handle": "gataa.haythem@gmail.com",
+          "url": "mailto:gataa.haythem@gmail.com"
+        },
+        {
+          "id": "oOkT1WmD5cigTdidoglN",
+          "platform": "LinkedIn",
+          "handle": "haythem-gataa",
+          "url": "https://linkedin.com/in/haythem-gataa"
+        },
+        {
+          "id": "0SypH1ruApTN6OOzt9mn",
+          "platform": "Dribbble",
+          "handle": "haythemgataa",
+          "url": "https://dribbble.com/haythemgataa"
+        },
+        {
+          "id": "PABPEFtQkF4nbsklItgU",
+          "platform": "Twitter",
+          "handle": "HaythemGataa",
+          "url": "https://twitter.com/HaythemGataa"
+        },
+        {
+          "id": "cjajwVoWHqLAuvpYzqDT",
+          "platform": "Unsplash",
+          "handle": "@haythemgataa",
+          "url": "https://unsplash.com/@haythemgataa"
+        }
+      ]
+    }
+  ]
+}

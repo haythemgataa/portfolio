@@ -20,7 +20,7 @@ const Profile: React.FC<ProfileProps> = ({
           <h1>{cv.general.displayName}</h1>
           <div className={styles.byline}>{cv.general.byline}</div>
           {cv.general.website ?
-            <a className={styles.website}>{cv.general.website}</a>
+            <a className={styles.website} href={cv.general.websiteURL} target="_blank">{cv.general.website}</a>
           : null}
         </div>
       </div>

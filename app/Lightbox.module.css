@@ -107,7 +107,7 @@
   position: absolute;
   z-index: 0;
   inset: 0;
-  background-color: var(--background);
+  background-color: var(--backgroundColor);
   cursor: pointer;
 }
 

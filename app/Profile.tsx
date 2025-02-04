@@ -42,11 +42,11 @@ const Profile: React.FC<ProfileProps> = ({
               {collection.items.map((experience: any, index: number) => {
 
                 if (collection.name === "Contact") {
-                  return <ContactItem key={experience.url} experience={experience}/>
+                  return <ContactItem key={experience.id} experience={experience}/>
                 }
 
                 return (
-                  <ProfileItem key={experience.heading} experience={experience}/>
+                  <ProfileItem key={experience.id} experience={experience}/>
                 )
               })}
             </div>

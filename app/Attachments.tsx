@@ -10,6 +10,15 @@ import isMobile from "./isMobile";
 import useResizeObserver from "use-resize-observer";
 import styles from "./Attachments.module.css";
 
+// Helper to get optimized thumbnail URL
+// For Cloudflare Pages, you can use Cloudflare Image Resizing: /cdn-cgi/image/width=W,height=H,quality=Q,format=auto/URL
+// For now, returns original URL (you can enable Cloudflare Image Resizing later)
+const getThumbnailUrl = (originalUrl: string, maxHeight: number): string => {
+  // If you want to use Cloudflare Image Resizing, uncomment and adjust:
+  return `/cdn-cgi/image/width=${maxHeight * 2},height=${maxHeight * 2},quality=30,format=auto${originalUrl}`;
+  //return originalUrl;
+};
+
 type AttachmentsProps = {
   attachments: Array<any>,
 };
@@ -89,7 +98,9 @@ const Attachments: React.FC<AttachmentsProps> = ({
                   })}
                   media={media}
                   key={media.url}
-                  height={galleryHeight}/>
+                  height={galleryHeight}
+                  index={index}
+                />
               )
             })}
           </div>
@@ -107,11 +118,13 @@ type AttachmentProps = {
   media: any,
   height: number,
   onClick: () => void,
+  index: number,
 }
 const Attachment: React.FC<AttachmentProps> = ({
   media,
   height,
   onClick,
+  index,
 }) => {
   const maxWidth = 21/9;   // ultrawide monitor
   const minWidth = 19/5/9; // iPhone
@@ -126,15 +139,20 @@ const Attachment: React.FC<AttachmentProps> = ({
     }
   }
 
+  // Load first 5 thumbnails eagerly, lazy load the rest
+  const shouldLoadEagerly = index < 5;
+
   let item;
   if (media.type === "image") {
+    // Use optimized thumbnail URL for smaller file size
+    const thumbnailUrl = getThumbnailUrl(media.url, height);
     item = <Image 
       alt="" 
-      src={media.url} 
+      src={thumbnailUrl} 
       height={height} 
       width={height * returnThumbnailAspectRatio(media.width / media.height)}
-      loading="lazy"
-      quality={85}
+      loading={shouldLoadEagerly ? "eager" : "lazy"}
+      quality={50}
     />
   } else if (media.type === "video") {
     item = <video 
@@ -143,7 +161,7 @@ const Attachment: React.FC<AttachmentProps> = ({
       loop 
       muted 
       playsInline
-      preload="metadata"
+      preload={shouldLoadEagerly ? "auto" : "metadata"}
     />
   }
 

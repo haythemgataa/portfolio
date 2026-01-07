@@ -143,7 +143,6 @@ const Attachment: React.FC<AttachmentProps> = ({
       loop 
       muted 
       playsInline
-      loading="lazy"
       preload="metadata"
     />
   }

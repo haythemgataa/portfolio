@@ -93,12 +93,21 @@ const Lightbox: React.FC<LightboxProps> = ({
         className={styles.carouselScroll}>
         <div className={styles.carousel}>
           {attachments.map((media, index) => {
+            // Only render images that are visible or adjacent (for preloading)
+            const isVisible = currentIndex === index;
+            const isAdjacent = Math.abs(currentIndex - index) <= 1;
+            const shouldRender = isVisible || isAdjacent || isMobile();
+            
+            if (!shouldRender) {
+              return <div key={media.url} style={{ display: 'none' }} />;
+            }
+            
             return (
               <LightboxImage
                 prev={attachments && attachments.length > 1 ? prev : undefined}
                 next={attachments && attachments.length > 1 ? next : undefined}
                 key={media.url}
-                display={currentIndex === index || isMobile() ? true : false}
+                display={isVisible || isMobile() ? true : false}
                 media={media}
               />
             )
@@ -190,13 +199,24 @@ const LightboxImage: React.FC<LightboxImageProps> = ({
   const imageAspectRatio = media.width / media.height;
   
   let attachment = media.type === "image" ?
-    <img src={media.url}/> :
+    <img 
+      src={media.url}
+      loading={display ? "eager" : "lazy"}
+      decoding="async"
+      alt=""
+      width={media.width}
+      height={media.height}
+    /> :
     <video
       src={media.url}
-      autoPlay
+      autoPlay={display}
       muted
       playsInline
-      loop/>
+      loop
+      preload={display ? "auto" : "none"}
+      width={media.width}
+      height={media.height}
+    />
 
   useEffect(() => {
     setRatio();

@@ -14,7 +14,14 @@ const Profile: React.FC<ProfileProps> = ({
     <div className={styles.profile}>
       <div className={styles.profileHeader}>
         <div className={styles.profilePhoto}>
-          <Image src={cv.general.profilePhoto} alt="" width={92} height={92} />
+          <Image 
+            src={cv.general.profilePhoto} 
+            alt="" 
+            width={92} 
+            height={92}
+            priority
+            fetchPriority="high"
+          />
         </div>
         <div className={styles.profileInfo}>
           <h1>{cv.general.displayName}</h1>

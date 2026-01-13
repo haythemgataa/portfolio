@@ -2,13 +2,14 @@ import { promises as fs } from 'fs';
 import { join } from 'path';
 import { notFound } from 'next/navigation';
 import CaseStudy from './CaseStudy';
+import { loadProfileData } from '../lib/contentLoader';
 
 export async function generateStaticParams() {
-  const contentDir = join(process.cwd(), 'public', 'content');
+  const caseStudiesDir = join(process.cwd(), 'public', 'content', 'case-studies');
   let files: string[] = [];
   
   try {
-    files = await fs.readdir(contentDir);
+    files = await fs.readdir(caseStudiesDir);
   } catch {
     // Directory doesn't exist or can't be read
     // Return a placeholder to satisfy static export requirements
@@ -40,12 +41,14 @@ export default async function CaseStudyPage({
     notFound();
   }
 
-  const cvFile = await fs.readFile(process.cwd() + '/public/content/profileData.json', 'utf8');
-  const cv = JSON.parse(cvFile);
+  const cv = await loadProfileData();
 
   let markdownContent: string;
   try {
-    markdownContent = await fs.readFile(process.cwd() + `/public/content/${slug}.md`, 'utf8');
+    markdownContent = await fs.readFile(
+      join(process.cwd(), 'public', 'content', 'case-studies', `${slug}.md`),
+      'utf8'
+    );
   } catch (error) {
     // File doesn't exist or can't be read - return 404
     notFound();

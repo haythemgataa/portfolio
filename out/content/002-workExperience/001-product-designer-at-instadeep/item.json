@@ -1,0 +1,38 @@
+{
+  "id": "GohQTV9Vx4tN1TQGaBux",
+  "year": "2023 — Now",
+  "heading": "Product designer at InstaDeep",
+  "url": "https://instadeep.com",
+  "collaborators": [],
+  "description": "* Collaborating on a design system to help accelerate new projects’ creation, and insure consistency across non-branded projects\n\n* Creating fun animations and micro-interactions to make our products feel dynamic (which increased the wow! effect by 2 wows/user).\n\n* Introduced tools like Rive, Lottie, and Framer, which helped us reduce developer frustration and reduce development time by up to one week on average.\n\n* Redesigned a couple of products, improving the UX and modernizing the UI. Which for some projects, paired with great enhancement by the AI team, tripled the product usage over less than 1 year.\n\n* Brought to life many innovative AI related projects.",
+  "attachments": [
+    {
+      "type": "image",
+      "width": 2000,
+      "height": 1500,
+      "url": "Product-designer-at-InstaDeep-1.png"
+    },
+    {
+      "type": "image",
+      "width": 2000,
+      "height": 1500,
+      "url": "Product-designer-at-InstaDeep-2.png"
+    },
+    {
+      "type": "image",
+      "width": 2000,
+      "height": 1500,
+      "url": "Product-designer-at-InstaDeep-3.png"
+    },
+    {
+      "type": "image",
+      "width": 2000,
+      "height": 1500,
+      "url": "Product-designer-at-InstaDeep-4.png"
+    }
+  ],
+  "type": "workExperience",
+  "title": "Product designer",
+  "company": "InstaDeep",
+  "location": "Tunis, Tunisia"
+}

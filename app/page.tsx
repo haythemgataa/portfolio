@@ -1,10 +1,9 @@
 import styles from "./page.module.css";
-import { promises as fs } from 'fs';
 import Profile from "./Profile";
+import { loadProfileData } from "./lib/contentLoader";
 
 export default async function Home() {
-  const file = await fs.readFile(process.cwd() + '/public/content/profileData.json', 'utf8');
-  const cv = JSON.parse(file);
+  const cv = await loadProfileData();
 
   return (
     <div className={styles.page}>

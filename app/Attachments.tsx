@@ -15,7 +15,7 @@ import styles from "./Attachments.module.css";
 // For now, returns original URL (you can enable Cloudflare Image Resizing later)
 const getThumbnailUrl = (originalUrl: string, maxHeight: number): string => {
   // If you want to use Cloudflare Image Resizing, uncomment and adjust:
-  return `/cdn-cgi/image/width=${maxHeight * 2},height=${maxHeight * 2},quality=30,format=auto${originalUrl}`;
+  return `/cdn-cgi/image/width=${maxHeight * 2},height=${maxHeight * 2},quality=50,format=auto${originalUrl}`;
   //return originalUrl;
 };
 

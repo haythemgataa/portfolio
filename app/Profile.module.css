@@ -21,6 +21,19 @@
   color: var(--grey2);
 }
 
+.betaBadge {
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1;
+  padding: 3px 6px;
+  margin-left: 8px;
+  border-radius: 6px;
+  background-color: var(--wash2);
+  color: var(--grey3);
+  vertical-align: middle;
+  letter-spacing: 0.02em;
+}
+
 .profilePhoto {
   width: 92px;
   height: 92px;

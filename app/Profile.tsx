@@ -27,7 +27,12 @@ const Profile: React.FC<ProfileProps> = ({
           />
         </div>
         <div className={styles.profileInfo}>
-          <h1>{cv.general.displayName}</h1>
+          <h1>
+            {cv.general.displayName}
+            {process.env.NEXT_PUBLIC_GIT_BRANCH === "dev" && (
+              <span className={styles.betaBadge}>beta</span>
+            )}
+          </h1>
           <div className={styles.byline}>{cv.general.byline}</div>
           {cv.general.buttonLabel ?
             <DownloadDropdown label={cv.general.buttonLabel} />

@@ -1,6 +1,5 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import RichText from "./RichText";
 import Arrow12 from "./Arrow12";
@@ -34,9 +33,6 @@ const Profile: React.FC<ProfileProps> = ({
             )}
           </h1>
           <div className={styles.byline}>{cv.general.byline}</div>
-          {cv.general.buttonLabel ?
-            <DownloadDropdown label={cv.general.buttonLabel} />
-          : null}
         </div>
       </div>
 
@@ -131,72 +127,5 @@ const ContactItem: React.FC<ContactItemProps> = ({
     </div>
   )
 }
-
-type DownloadDropdownProps = {
-  label: string;
-};
-
-const DownloadDropdown: React.FC<DownloadDropdownProps> = ({ label }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
-
-  const handleDownload = (filePath: string, fileName: string) => {
-    const link = document.createElement('a');
-    link.href = filePath;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setIsOpen(false);
-  };
-
-  return (
-    <div className={styles.dropdownContainer} ref={dropdownRef}>
-      <button 
-        className={styles.website}
-        onClick={() => setIsOpen(!isOpen)}
-        type="button"
-        aria-expanded={isOpen}
-        aria-haspopup="true"
-      >
-        {label}
-        <span className={`${styles.dropdownArrow} ${isOpen ? styles.dropdownArrowOpen : ''}`}>▼</span>
-      </button>
-      {isOpen && (
-        <div className={styles.dropdownMenu}>
-          <button
-            className={styles.dropdownItem}
-            onClick={() => handleDownload('/resume.pdf', 'resume.pdf')}
-          >
-            Download Resume (PDF)
-          </button>
-          <button
-            className={styles.dropdownItem}
-            onClick={() => handleDownload('/cv.pdf', 'cv.pdf')}
-          >
-            Download CV (PDF)
-          </button>
-        </div>
-      )}
-    </div>
-  );
-};
 
 export default Profile;

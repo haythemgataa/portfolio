@@ -1,12 +1,6 @@
 import type { Metadata } from "next";
-import { Inter } from 'next/font/google'
 import "./globals.css";
 import { loadProfileData } from "./lib/contentLoader";
-
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-})
 
 export async function generateMetadata(): Promise<Metadata> {
   const cv = await loadProfileData();
@@ -23,7 +17,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} font-sans`}>
+      <head>
+        <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=switzer@1&display=swap" />
+      </head>
+      <body>
         {children}
       </body>
     </html>

@@ -11,7 +11,7 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 
 Pre-existing defects. The first four are load-bearing — the milestone's features cannot be built or verified without them. The rest are repo hardening the owner chose to include.
 
-- [ ] **BUILD-01**: Developer can see content thumbnails when running `next dev` locally
+- [x] **BUILD-01**: Developer can see content thumbnails when running `next dev` locally
 - [ ] **BUILD-02**: Lightbox restores the previous `overflow` value on close instead of writing `unset`
 - [ ] **BUILD-03**: Lightbox declares its own client boundary and does not read `window` during render
 - [ ] **BUILD-04**: `position: sticky` functions anywhere in the app
@@ -105,7 +105,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BUILD-01 | Phase 1 — Verifiable Baseline | Pending |
+| BUILD-01 | Phase 1 — Verifiable Baseline | Complete |
 | BUILD-02 | Phase 1 — Verifiable Baseline | Pending |
 | BUILD-03 | Phase 1 — Verifiable Baseline | Pending |
 | BUILD-04 | Phase 3 — Tab Shell | Pending |

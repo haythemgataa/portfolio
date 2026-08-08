@@ -8,16 +8,8 @@ import { AnimatePresence } from "framer-motion";
 import { useScrollBoost } from 'react-scrollbooster';
 import isMobile from "./isMobile";
 import useResizeObserver from "use-resize-observer";
+import { cvThumbnailUrl } from "./lib/cdnImage";
 import styles from "./Attachments.module.css";
-
-// Helper to get optimized thumbnail URL
-// For Cloudflare Pages, you can use Cloudflare Image Resizing: /cdn-cgi/image/width=W,height=H,quality=Q,format=auto/URL
-// For now, returns original URL (you can enable Cloudflare Image Resizing later)
-const getThumbnailUrl = (originalUrl: string, maxHeight: number): string => {
-  // If you want to use Cloudflare Image Resizing, uncomment and adjust:
-  return `/cdn-cgi/image/width=${maxHeight * 2},height=${maxHeight * 2},quality=50,format=auto${originalUrl}`;
-  //return originalUrl;
-};
 
 type AttachmentsProps = {
   attachments: Array<any>,
@@ -145,7 +137,7 @@ const Attachment: React.FC<AttachmentProps> = ({
   let item;
   if (media.type === "image") {
     // Use optimized thumbnail URL for smaller file size
-    const thumbnailUrl = getThumbnailUrl(media.url, height);
+    const thumbnailUrl = cvThumbnailUrl(media.url, height);
     item = <Image 
       alt="" 
       src={thumbnailUrl} 

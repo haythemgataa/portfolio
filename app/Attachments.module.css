@@ -50,9 +50,13 @@
   border-color: var(--blue);
 }
 
+/* inset: 0 is required, not decorative. With auto offsets an absolutely positioned box
+   falls back to its static position, and a <button> centres its content box — so the
+   media would sit at 50%/50% and get clipped instead of filling the thumbnail. */
 .media img,
 .media video {
   position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;

@@ -144,3 +144,7 @@ None - no external service configuration required.
 ---
 *Phase: 01-verifiable-baseline*
 *Completed: 2026-08-08*
+
+## Self-Check: PASSED
+
+All created/modified files confirmed present on disk (`app/lib/cdnImage.ts`, `next.config.ts`, `app/Attachments.tsx`, this SUMMARY). All commit hashes (`d659bab`, `c5800d6`, `9304298`, `750db2d`, `ad9c767`) confirmed present in `git log --oneline --all`.

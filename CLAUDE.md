@@ -116,9 +116,22 @@ Static export (`out/`) deployed to Cloudflare Pages. Cache headers and baseline 
 configured in `public/_headers`. Images are unoptimized by Next.js (Cloudflare handles optimization
 via CDN).
 
-`Attachments.tsx`'s `getThumbnailUrl()` rewrites thumbnail URLs to Cloudflare Image Resizing
-(`/cdn-cgi/image/...`). That endpoint only exists on Cloudflare's edge, so it is applied in
-production builds only — in development the original URL is used, otherwise every thumbnail 404s.
+`app/lib/cloudflareImage.ts` builds Cloudflare Image Resizing URLs (`/cdn-cgi/image/...`) for
+both `Attachments.tsx` and `Gallery.tsx`. That endpoint only exists on Cloudflare's edge, so it
+is applied in production builds only — in development the original URL is used, otherwise every
+image 404s.
+
+Two things there are easy to get wrong:
+
+- **Request the real displayed box, not a square.** Cloudflare's default `fit=scale-down` fits
+  *inside* the requested box, so asking for `width=180,height=180` on a 4:3 thumbnail returns
+  180x135 — fewer pixels than the 240x180 the layout needs, and the browser upscales it. The
+  helper takes CSS dimensions and multiplies by `DPR`, and callers pass `fit: 'cover'` to mirror
+  `object-fit: cover`. Measured across all 28 CV thumbnails, fixing this was worth ~9 dB PSNR,
+  far more than any quality change.
+- **`quality` applies to whatever `format=auto` negotiates** (AVIF for most current browsers,
+  WebP otherwise). It is 80 by default; 50 was visibly soft on UI screenshots, where fine text
+  degrades first.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

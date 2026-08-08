@@ -3,19 +3,12 @@
 import { useEffect, useRef } from "react";
 import type { GalleryItem } from "./lib/galleryTypes";
 import { usePrefersReducedMotion } from "./usePrefersReducedMotion";
+import { cloudflareImageUrl } from "./lib/cloudflareImage";
 import styles from "./Gallery.module.css";
 
-// The gallery renders in a 540px column, so a 2x display needs 1080px. Cloudflare Image
-// Resizing lives at the edge only, so in development we serve the original file —
-// otherwise every item 404s under `npm run dev` (same guard as Attachments.tsx).
+// Items render in a 540px column. Width is constrained but height is left free so each
+// item keeps its own aspect ratio.
 const COLUMN_WIDTH = 540;
-
-const resized = (url: string, width: number): string => {
-  if (process.env.NODE_ENV !== "production") {
-    return url;
-  }
-  return `/cdn-cgi/image/width=${width},quality=82,format=auto${url}`;
-};
 
 type GalleryProps = {
   items: GalleryItem[],
@@ -69,8 +62,11 @@ const GalleryMedia: React.FC<GalleryMediaProps> = ({ item, index }) => {
       {/* eslint-disable-next-line @next/next/no-img-element -- next/image cannot emit a
           srcset while images.unoptimized is set, and this list needs 1x/2x variants. */}
       <img
-        src={resized(item.url, COLUMN_WIDTH)}
-        srcSet={`${resized(item.url, COLUMN_WIDTH)} 1x, ${resized(item.url, COLUMN_WIDTH * 2)} 2x`}
+        src={cloudflareImageUrl(item.url, { width: COLUMN_WIDTH, dpr: 1 })}
+        srcSet={
+          `${cloudflareImageUrl(item.url, { width: COLUMN_WIDTH, dpr: 1 })} 1x, ` +
+          `${cloudflareImageUrl(item.url, { width: COLUMN_WIDTH, dpr: 2 })} 2x`
+        }
         alt={alt}
         width={item.width}
         height={item.height}

@@ -105,48 +105,59 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BUILD-01 | TBD | Pending |
-| BUILD-02 | TBD | Pending |
-| BUILD-03 | TBD | Pending |
-| BUILD-04 | TBD | Pending |
-| BUILD-05 | TBD | Pending |
-| BUILD-06 | TBD | Pending |
-| BUILD-07 | TBD | Pending |
-| BUILD-08 | TBD | Pending |
-| BUILD-09 | TBD | Pending |
-| TABS-01 | TBD | Pending |
-| TABS-02 | TBD | Pending |
-| TABS-03 | TBD | Pending |
-| TABS-04 | TBD | Pending |
-| TABS-05 | TBD | Pending |
-| TABS-06 | TBD | Pending |
-| TABS-07 | TBD | Pending |
-| CONT-01 | TBD | Pending |
-| CONT-02 | TBD | Pending |
-| CONT-03 | TBD | Pending |
-| CONT-04 | TBD | Pending |
-| CONT-05 | TBD | Pending |
-| CONT-06 | TBD | Pending |
-| CONT-07 | TBD | Pending |
-| GRID-01 | TBD | Pending |
-| GRID-02 | TBD | Pending |
-| GRID-03 | TBD | Pending |
-| GRID-04 | TBD | Pending |
-| VID-01 | TBD | Pending |
-| VID-02 | TBD | Pending |
-| VID-03 | TBD | Pending |
-| VID-04 | TBD | Pending |
-| VID-05 | TBD | Pending |
-| LBOX-01 | TBD | Pending |
-| LBOX-02 | TBD | Pending |
-| LBOX-03 | TBD | Pending |
-| LBOX-04 | TBD | Pending |
+| BUILD-01 | Phase 1 — Verifiable Baseline | Pending |
+| BUILD-02 | Phase 1 — Verifiable Baseline | Pending |
+| BUILD-03 | Phase 1 — Verifiable Baseline | Pending |
+| BUILD-04 | Phase 3 — Tab Shell | Pending |
+| BUILD-05 | Phase 2 — Repo Hygiene | Pending |
+| BUILD-06 | Phase 2 — Repo Hygiene | Pending |
+| BUILD-07 | Phase 2 — Repo Hygiene | Pending |
+| BUILD-08 | Phase 2 — Repo Hygiene | Pending |
+| BUILD-09 | Phase 1 — Verifiable Baseline | Pending |
+| TABS-01 | Phase 3 — Tab Shell | Pending |
+| TABS-02 | Phase 3 — Tab Shell | Pending |
+| TABS-03 | Phase 3 — Tab Shell | Pending |
+| TABS-04 | Phase 3 — Tab Shell | Pending |
+| TABS-05 | Phase 3 — Tab Shell | Pending |
+| TABS-06 | Phase 3 — Tab Shell | Pending |
+| TABS-07 | Phase 3 — Tab Shell | Pending |
+| CONT-01 | Phase 4 — Gallery Content Model | Pending |
+| CONT-02 | Phase 4 — Gallery Content Model | Pending |
+| CONT-03 | Phase 4 — Gallery Content Model | Pending |
+| CONT-04 | Phase 4 — Gallery Content Model | Pending |
+| CONT-05 | Phase 4 — Gallery Content Model | Pending |
+| CONT-06 | Phase 4 — Gallery Content Model | Pending |
+| CONT-07 | Phase 4 — Gallery Content Model | Pending |
+| GRID-01 | Phase 5 — Masonry Grid | Pending |
+| GRID-02 | Phase 5 — Masonry Grid | Pending |
+| GRID-03 | Phase 5 — Masonry Grid | Pending |
+| GRID-04 | Phase 5 — Masonry Grid | Pending |
+| VID-01 | Phase 6 — Video in the Grid | Pending |
+| VID-02 | Phase 6 — Video in the Grid | Pending |
+| VID-03 | Phase 6 — Video in the Grid | Pending |
+| VID-04 | Phase 6 — Video in the Grid | Pending |
+| VID-05 | Phase 6 — Video in the Grid | Pending |
+| LBOX-01 | Phase 7 — Lightbox Integration | Pending |
+| LBOX-02 | Phase 7 — Lightbox Integration | Pending |
+| LBOX-03 | Phase 7 — Lightbox Integration | Pending |
+| LBOX-04 | Phase 7 — Lightbox Integration | Pending |
 
 **Coverage:**
 - v1.1 requirements: 36 total
-- Mapped to phases: 0 (roadmap not yet created)
-- Unmapped: 36 ⚠️
+- Mapped to phases: 36 ✓
+- Unmapped: 0 ✓
+- Duplicated across phases: 0 ✓
+
+| Phase | Requirements | Count |
+|-------|--------------|-------|
+| 1 — Verifiable Baseline | BUILD-01, BUILD-02, BUILD-03, BUILD-09 | 4 |
+| 2 — Repo Hygiene | BUILD-05, BUILD-06, BUILD-07, BUILD-08 | 4 |
+| 3 — Tab Shell | BUILD-04, TABS-01, TABS-02, TABS-03, TABS-04, TABS-05, TABS-06, TABS-07 | 8 |
+| 4 — Gallery Content Model | CONT-01, CONT-02, CONT-03, CONT-04, CONT-05, CONT-06, CONT-07 | 7 |
+| 5 — Masonry Grid | GRID-01, GRID-02, GRID-03, GRID-04 | 4 |
+| 6 — Video in the Grid | VID-01, VID-02, VID-03, VID-04, VID-05 | 5 |
+| 7 — Lightbox Integration | LBOX-01, LBOX-02, LBOX-03, LBOX-04 | 4 |
 
 ---
 *Requirements defined: 2026-08-08*
-*Last updated: 2026-08-08 after initial definition*
+*Last updated: 2026-08-08 after roadmap revision — Phase 1 split into Phase 1 (load-bearing) and Phase 2 (repo hygiene), phases renumbered, 36/36 mapped*

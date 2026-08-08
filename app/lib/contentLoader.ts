@@ -153,7 +153,7 @@ async function detectAttachments(
     }
     
     return attachments;
-  } catch (error) {
+  } catch {
     // Media directory doesn't exist or can't be read
     return [];
   }

@@ -2,7 +2,6 @@ import { promises as fs } from 'fs';
 import { join } from 'path';
 import { notFound } from 'next/navigation';
 import CaseStudy from './CaseStudy';
-import { loadProfileData } from '../lib/contentLoader';
 
 export async function generateStaticParams() {
   const caseStudiesDir = join(process.cwd(), 'public', 'content', 'case-studies');
@@ -41,22 +40,20 @@ export default async function CaseStudyPage({
     notFound();
   }
 
-  const cv = await loadProfileData();
-
   let markdownContent: string;
   try {
     markdownContent = await fs.readFile(
       join(process.cwd(), 'public', 'content', 'case-studies', `${slug}.md`),
       'utf8'
     );
-  } catch (error) {
+  } catch {
     // File doesn't exist or can't be read - return 404
     notFound();
   }
 
   return (
     <div>
-      <CaseStudy cv={cv} markdownText={markdownContent} />
+      <CaseStudy markdownText={markdownContent} />
     </div>
   );
 }

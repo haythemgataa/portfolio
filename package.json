@@ -4,9 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && node scripts/clean-export.mjs",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "migrate": "tsx scripts/migrate-content.ts"
   },
   "dependencies": {
@@ -22,7 +22,9 @@
     "@types/node": "^20",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19",
-    "sharp": "^0.34.5",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.0",
+    "sharp": "^0.35.3",
     "tsx": "^4.7.0",
     "typescript": "^5"
   },

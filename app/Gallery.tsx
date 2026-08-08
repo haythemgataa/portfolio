@@ -22,13 +22,10 @@ type GalleryProps = {
 };
 
 const Gallery: React.FC<GalleryProps> = ({ items }) => {
+  // Reachable only by visiting /gallery directly — the CV page hides the tab while the
+  // gallery is empty, so this copy is for visitors, not for whoever is authoring content.
   if (items.length === 0) {
-    return (
-      <p className={styles.empty}>
-        No gallery media yet. Add files to <code>public/content/gallery/media/</code> and
-        list them in <code>gallery.json</code>.
-      </p>
-    );
+    return <p className={styles.empty}>Nothing here yet.</p>;
   }
 
   return (

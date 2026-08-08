@@ -66,9 +66,3 @@
   color: var(--grey2);
 }
 
-.empty code {
-  font-size: var(--secondary-type-size);
-  background-color: var(--wash2);
-  border-radius: 4px;
-  padding: 2px 5px;
-}

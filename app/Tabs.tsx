@@ -4,22 +4,36 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import styles from "./Tabs.module.css";
 
-const TABS = [
-  { href: "/", label: "CV" },
-  { href: "/gallery", label: "Gallery" },
-];
+type TabsProps = {
+  /**
+   * Whether to advertise the gallery. The CV page passes false while the gallery has no
+   * media, so visitors are never offered an empty tab; it appears on its own once media
+   * is added. The gallery page always passes true, since you are already there.
+   */
+  showGallery?: boolean,
+};
 
 /**
  * Top-level navigation between the CV and the gallery. These are separate routes rather
  * than client-side tab state, so each is linkable and statically exported — which means
  * real <a> elements, not role="tab". aria-current marks the active one.
  */
-const Tabs: React.FC = () => {
+const Tabs: React.FC<TabsProps> = ({ showGallery = true }) => {
   const pathname = usePathname();
+
+  const tabs = [
+    { href: "/", label: "CV" },
+    ...(showGallery ? [{ href: "/gallery", label: "Gallery" }] : []),
+  ];
+
+  // With only one destination there is nothing to navigate between.
+  if (tabs.length < 2) {
+    return null;
+  }
 
   return (
     <nav className={styles.tabs} aria-label="Sections">
-      {TABS.map(tab => {
+      {tabs.map(tab => {
         const isActive = pathname === tab.href;
         return (
           <Link

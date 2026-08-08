@@ -105,6 +105,42 @@ async function resolveEntry(
   };
 }
 
+async function readManifest(contentRoot: string): Promise<GalleryFile | null> {
+  try {
+    return JSON.parse(
+      await fs.readFile(join(contentRoot, 'gallery.json'), 'utf8')
+    ) as GalleryFile;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Cheap check for whether the gallery has anything to show, used to decide if the Gallery
+ * tab is worth advertising. Deliberately avoids sharp — it only confirms that at least
+ * one listed file actually exists on disk.
+ */
+export async function hasGalleryItems(): Promise<boolean> {
+  const contentRoot = join(process.cwd(), GALLERY_DIR);
+  const parsed = await readManifest(contentRoot);
+
+  if (!parsed || !Array.isArray(parsed.items)) {
+    return false;
+  }
+
+  for (const entry of parsed.items) {
+    if (!entry?.file) continue;
+    try {
+      await fs.access(join(contentRoot, MEDIA_DIR, entry.file));
+      return true;
+    } catch {
+      // Missing file — keep looking.
+    }
+  }
+
+  return false;
+}
+
 /**
  * Load the gallery in authored order — the order of `items` in gallery.json is the
  * display order, so reordering the array reorders the page.
@@ -114,12 +150,9 @@ async function resolveEntry(
  */
 export async function loadGalleryItems(): Promise<GalleryItem[]> {
   const contentRoot = join(process.cwd(), GALLERY_DIR);
-  const manifestPath = join(contentRoot, 'gallery.json');
+  const parsed = await readManifest(contentRoot);
 
-  let parsed: GalleryFile;
-  try {
-    parsed = JSON.parse(await fs.readFile(manifestPath, 'utf8')) as GalleryFile;
-  } catch {
+  if (!parsed) {
     return [];
   }
 

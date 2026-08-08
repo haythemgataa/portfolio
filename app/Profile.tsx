@@ -9,13 +9,15 @@ import Tabs from "./Tabs";
 
 type ProfileProps = {
   cv: any,
+  showGallery?: boolean,
 };
 const Profile: React.FC<ProfileProps> = ({
-  cv
+  cv,
+  showGallery
 }) => {
   return (
     <div className={styles.profile}>
-      <Tabs />
+      <Tabs showGallery={showGallery} />
       <div className={styles.profileHeader}>
         <div className={styles.profilePhoto}>
           <Image 

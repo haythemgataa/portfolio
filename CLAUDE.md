@@ -72,7 +72,10 @@ the CV sections:
   back to 16:9 and shifts the layout. The build warns, naming the file.
 - Missing files listed in `gallery.json` are skipped with a build warning rather than
   failing the build.
-- An absent/empty `gallery.json` renders an empty state, so the route always builds.
+- An absent/empty `gallery.json` renders a neutral empty state, so the route always builds.
+  While the gallery has no media, `page.tsx` calls `hasGalleryItems()` and the CV page
+  hides the tab bar entirely — visitors are never offered an empty tab, and the Gallery tab
+  appears on its own once media is added. `/gallery` stays reachable directly.
 
 Videos autoplay muted when scrolled into view and pause when they leave, via
 `IntersectionObserver`, so only one video decodes at a time. Under

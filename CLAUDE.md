@@ -20,6 +20,7 @@ This is a **static portfolio/CV site** built with Next.js 16 (App Router) + Reac
 ### Routing
 
 - `/` — Home page renders the `Profile` component with all CV sections
+- `/gallery` — Standalone media gallery (see **Gallery** below)
 - `/[slug]` — Dynamic case study pages generated from markdown files in `public/content/case-studies/`
 - All pages are statically generated at build time via `generateStaticParams()`
 
@@ -41,6 +42,7 @@ public/content/
   003-education/        → ...
   ...
   case-studies/         → markdown files (*.md)
+  gallery/              → gallery.json + media/ (NOT a CV section — see below)
 ```
 
 **Key conventions:**
@@ -50,12 +52,43 @@ public/content/
 - Media files in `media/` are auto-detected if not explicitly listed in `item.json` attachments
 - The content loader (`app/lib/contentLoader.ts`) reads this structure at build time and returns a unified data object
 
+`public/content/gallery/` is deliberately outside this scheme: it has no `NNN-` prefix, so
+`loadProfileData()` skips it and gallery media never appears on the CV tab (and vice versa).
+
 **Section mapping** is defined in `SECTION_MAP` in `contentLoader.ts` — directory names map to JSON keys (e.g., `speaking` → `talks`).
+
+### Gallery
+
+The `/gallery` tab is a vertical list — one item per row at the same 540px column width as
+the CV — with captions below each item. It has its own content pipeline, independent of
+the CV sections:
+
+- `public/content/gallery/gallery.json` — an **ordered** `items` array; array order is
+  display order. Authoring contract documented in `public/content/gallery/README.md`.
+- `app/lib/galleryLoader.ts` — resolves entries to `GalleryItem`s, typed in
+  `app/lib/galleryTypes.ts`. Unlike `contentLoader.ts`, this module is fully typed (no `any`).
+- Image dimensions are measured at build time with `sharp`. **Video dimensions must be
+  declared in `gallery.json`** — `sharp` cannot read video, so an undeclared video falls
+  back to 16:9 and shifts the layout. The build warns, naming the file.
+- Missing files listed in `gallery.json` are skipped with a build warning rather than
+  failing the build.
+- An absent/empty `gallery.json` renders an empty state, so the route always builds.
+
+Videos autoplay muted when scrolled into view and pause when they leave, via
+`IntersectionObserver`, so only one video decodes at a time. Under
+`prefers-reduced-motion: reduce` they stay paused and expose native controls instead
+(`app/usePrefersReducedMotion.ts`).
+
+Each item is wrapped in an aspect-ratio box derived from its intrinsic dimensions, which
+holds the row's height before the media loads — verified at CLS 0.
+
+`Tabs.tsx` switches between `/` and `/gallery`. They are real routes, not client-side tab
+state, so the tabs are `<Link>`s with `aria-current="page"` rather than `role="tab"`.
 
 ### Component Patterns
 
 - **Server components** (async): `layout.tsx`, `page.tsx`, `[slug]/page.tsx` — handle data loading
-- **Client components** (`"use client"`): `Profile.tsx`, `Attachments.tsx`, `Lightbox.tsx`, `Scrollbar.tsx`, `RichText.tsx`
+- **Client components** (`"use client"`): `Profile.tsx`, `Attachments.tsx`, `Lightbox.tsx`, `Scrollbar.tsx`, `RichText.tsx`, `Gallery.tsx`, `Tabs.tsx`
 - Lightbox uses React Portal to render to `document.body`
 - `Attachments.tsx` references Cloudflare Image Resizing via `/cdn-cgi/image/...` paths in `getThumbnailUrl()`
 

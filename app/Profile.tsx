@@ -5,6 +5,7 @@ import RichText from "./RichText";
 import Arrow12 from "./Arrow12";
 import styles from "./Profile.module.css";
 import Attachments from "./Attachments";
+import Tabs from "./Tabs";
 
 type ProfileProps = {
   cv: any,
@@ -14,6 +15,7 @@ const Profile: React.FC<ProfileProps> = ({
 }) => {
   return (
     <div className={styles.profile}>
+      <Tabs />
       <div className={styles.profileHeader}>
         <div className={styles.profilePhoto}>
           <Image 

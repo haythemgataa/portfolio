@@ -19,7 +19,7 @@ Pre-existing defects. The first four are load-bearing — the milestone's featur
 - [ ] **BUILD-06**: `npm run lint` completes successfully, or is removed from the documented commands
 - [ ] **BUILD-07**: Build output is no longer tracked in git — **gated**: requires confirming the Cloudflare Pages project builds from source before acting
 - [ ] **BUILD-08**: CLAUDE.md accurately describes the current stack, client components, font, and available commands
-- [ ] **BUILD-09**: A written CV-regression checklist exists in the repo and is walked at each phase boundary
+- [x] **BUILD-09**: A written CV-regression checklist exists in the repo and is walked at each phase boundary
 
 ### Tabs
 
@@ -113,7 +113,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | BUILD-06 | Phase 2 — Repo Hygiene | Pending |
 | BUILD-07 | Phase 2 — Repo Hygiene | Pending |
 | BUILD-08 | Phase 2 — Repo Hygiene | Pending |
-| BUILD-09 | Phase 1 — Verifiable Baseline | Pending |
+| BUILD-09 | Phase 1 — Verifiable Baseline | Complete |
 | TABS-01 | Phase 3 — Tab Shell | Pending |
 | TABS-02 | Phase 3 — Tab Shell | Pending |
 | TABS-03 | Phase 3 — Tab Shell | Pending |

@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Tabs & Gallery
-status: roadmapped
-last_updated: "2026-08-08T00:00:00.000Z"
-last_activity: 2026-08-08
+status: planning
+last_updated: "2026-08-08T10:04:49.277Z"
+last_activity: 2026-08-08 — ROADMAP.md revised, Phase 1 split into load-bearing + hygiene, 36/36 requirements mapped
 progress:
   total_phases: 7
   completed_phases: 0
@@ -72,6 +72,7 @@ None.
 **Next step:** `/gsd:plan-phase 1`
 
 **Context to carry forward:**
+
 - This project reached v1.0 without GSD. There is no MILESTONES.md and no prior phase numbering — v1.1 starts at Phase 1.
 - Verification is entirely manual and visual. There is no test framework and none is being added this milestone.
 - Nine pitfalls in `.planning/research/PITFALLS.md` are confirmed present in the repo with file and line citations. Read it before planning any phase that touches `globals.css`, `Lightbox.tsx`, `contentLoader.ts`, or `Attachments.tsx`.

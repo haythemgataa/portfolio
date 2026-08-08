@@ -23,12 +23,16 @@ const Lightbox: React.FC<LightboxProps> = ({
       let bounds = scrollRef.current.getBoundingClientRect();
       scrollRef.current.scrollLeft = bounds.width * startingIndex;
     }
-    
-    document.body.style.overflow = 'hidden';
-    document.documentElement.style.overflow = 'hidden';
+  }, []);
+
+  useEffect(() => {
+    const prevBodyOverflowY = document.body.style.overflowY;
+    const prevHtmlOverflowY = document.documentElement.style.overflowY;
+    document.body.style.overflowY = 'hidden';
+    document.documentElement.style.overflowY = 'hidden';
     return () => {
-      document.body.style.overflow = 'unset';
-      document.documentElement.style.overflow = 'unset';
+      document.body.style.overflowY = prevBodyOverflowY;
+      document.documentElement.style.overflowY = prevHtmlOverflowY;
     };
   }, []);
 

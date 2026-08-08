@@ -50,7 +50,14 @@ BUILD-09 sits in Phase 1 rather than Phase 2 because it is the regression net ev
   2. `Lightbox.tsx` declares its own client boundary and reads no browser global during render — proven by an `npm run build` that succeeds while importing Lightbox from a module graph that does not already establish a client boundary, not by inspection alone.
   3. After a full lightbox open/close cycle, `document.body.getAttribute('style')` is empty, so the page's own overflow rules are back in force for the rest of the session.
   4. A CV-regression checklist exists in the repo and a developer can walk it end to end in a few minutes; it is walked at this phase's exit with zero failures. This phase edits `Lightbox.tsx` and the CDN helper, so it is the first phase the checklist has to catch.
-**Plans**: TBD
+**Plans**: 5 plans in 4 waves
+
+Plans:
+- [ ] 01-01-PLAN.md — Gate the CDN prefix on Cloudflare production builds; extract `getThumbnailUrl` into `app/lib/cdnImage.ts` with byte-identical output (wave 1)
+- [ ] 01-04-PLAN.md — Author `CV-REGRESSION.md`, the repo's permanent CV-regression checklist (wave 1)
+- [ ] 01-02-PLAN.md — Lightbox: capture-and-restore y-axis scroll lock, `useIsMobile()` swap, container-measured aspect ratio (wave 2)
+- [ ] 01-03-PLAN.md — Prove the client boundary with a throwaway probe: negative control, `"use client"`, positive proof, teardown (wave 3)
+- [ ] 01-05-PLAN.md — Walk the checklist with zero failures, take the phase's final plain build, write the verification record (wave 4)
 
 ### Phase 2: Repo Hygiene
 **Goal**: The repo ships only what the site needs, produces readable diffs, and its documentation matches reality
@@ -129,7 +136,7 @@ BUILD-09 sits in Phase 1 rather than Phase 2 because it is the regression net ev
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Verifiable Baseline | 0/TBD | Not started | - |
+| 1. Verifiable Baseline | 0/5 | Planned | - |
 | 2. Repo Hygiene | 0/TBD | Not started | - |
 | 3. Tab Shell | 0/TBD | Not started | - |
 | 4. Gallery Content Model | 0/TBD | Not started | - |

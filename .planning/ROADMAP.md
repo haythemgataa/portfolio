@@ -59,7 +59,7 @@ Plans:
 **Wave 1**
 
 - [x] 01-01-PLAN.md — Gate the CDN prefix on Cloudflare production builds; extract `getThumbnailUrl` into `app/lib/cdnImage.ts` with byte-identical output (wave 1)
-- [ ] 01-04-PLAN.md — Author `CV-REGRESSION.md`, the repo's permanent CV-regression checklist (wave 1)
+- [x] 01-04-PLAN.md — Author `CV-REGRESSION.md`, the repo's permanent CV-regression checklist (wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -168,7 +168,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Verifiable Baseline | 1/5 | In Progress|  |
+| 1. Verifiable Baseline | 2/5 | In Progress|  |
 | 2. Repo Hygiene | 0/TBD | Not started | - |
 | 3. Tab Shell | 0/TBD | Not started | - |
 | 4. Gallery Content Model | 0/TBD | Not started | - |

@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Tabs & Gallery
 status: executing
-last_updated: "2026-08-08T16:01:29.446Z"
+last_updated: "2026-08-08T16:15:37.427Z"
 last_activity: 2026-08-08
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 5
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -24,9 +24,9 @@ progress:
 ## Current Position
 
 Phase: 01 (verifiable-baseline) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
-Progress: [██░░░░░░░░] 20%
+Progress: [████░░░░░░] 40%
 Last activity: 2026-08-08
 
 ## Phases
@@ -56,6 +56,8 @@ Last activity: 2026-08-08
 
 - [Phase 01]: PRODUCTION_BRANCH hardcoded to 'main' in next.config.ts pending Phase 2's Cloudflare dashboard confirmation — origin/HEAD points to origin/main and Profile.tsx already treats dev as the preview branch; Pages dashboard production-branch setting has not been read (assumption A1)
 - [Phase 01]: next-env.d.ts build/dev toggle diff folded into Task 3's trailing out/ resync commit rather than left dirty — It is Next.js auto-generated, non-substantive, and mechanically tracks whichever of next dev/next build last ran — same class of churn as out/'s build-ID directories
+- [Phase 01]: overflow-x expectation in CV-REGRESSION.md phrased relative to app/globals.css's declared value rather than hardcoded 'hidden' — Phase 3 changes overflow-x from hidden to clip; a literal would force an edit to a file meant to never be edited (D-21)
+- [Phase 01]: CV-REGRESSION.md avoids the literal substring 'npx serve' anywhere in the file — Task 2's audit gate greps for zero occurrences of that exact string, even inside a 'do not use' warning; reworded to describe the prohibition without repeating the forbidden invocation
 
 ### Open Decisions
 

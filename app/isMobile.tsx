@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 let isMobileValue: null | boolean = null;
 function isMobile(): boolean {
@@ -19,14 +19,16 @@ function isMobile(): boolean {
   return isMobileValue;
 }
 
+// The value never changes for the life of the page, so there is nothing to subscribe to.
+const subscribe = () => () => {};
+
+/**
+ * Reads the cached touch-capability check in a hydration-safe way: the server snapshot is
+ * always false, and React swaps in the real client value after hydration without the
+ * cascading re-render that a setState-in-effect would cause.
+ */
 export function useIsMobile(): boolean {
-  const [localMobileValue, setLocalMobileValue] = useState(isMobileValue ?? false);
-
-  useEffect(() => {
-    setLocalMobileValue(isMobile());
-  }, []);
-
-  return localMobileValue;
+  return useSyncExternalStore(subscribe, isMobile, () => false);
 }
 
 export default isMobile;

@@ -19,6 +19,10 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   trailingSlash: false,
+  // Pin the workspace root so Turbopack doesn't pick up stray lockfiles above the repo
+  turbopack: {
+    root: __dirname,
+  },
   env: {
     NEXT_PUBLIC_GIT_BRANCH: getGitBranch(),
   },

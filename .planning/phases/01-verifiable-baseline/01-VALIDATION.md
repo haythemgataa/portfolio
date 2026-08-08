@@ -55,6 +55,20 @@ project — it is the agreed verification mechanism.
     failed precondition short-circuits past the build while `PIPESTATUS[0]` still reads `0`,
     and the log assertions then run against a **stale** log from an earlier attempt. Enforced
     in `01-03` Task 1 and Task 2. Preconditions belong in a braced group that hard-`exit 1`s.
+  - ⚠ **`${PIPESTATUS[0]}` is banned outright in this phase — it is not a valid mitigation.**
+    The execution shell is **zsh** (`$0` → `/bin/zsh`), which has no `PIPESTATUS`; it spells the
+    array `$pipestatus` and indexes from 1. `${PIPESTATUS[0]}` therefore expands to the **empty
+    string**, and `test "" -eq 0` evaluates **true** in zsh — so a gate "checking" it passes a
+    failed build unconditionally. In bash the same expression fails closed with "integer
+    expression expected". Wrong in both shells. **Invoke the build unpiped** — `npm run build &&
+    …`, or `npm run build > <log> 2>&1` with `EXIT=$?` on the next line when the log is needed.
+    *(Verified empirically on this machine, 2026-08-08.)*
+  - ⚠ **A success sentinel must stay inside the `&&` chain it reports on.** Never write
+    `… && for t in …; do …; done; echo TX-PASS` — the `;` before `echo` ends the chain, so the
+    sentinel prints and the gate exits `0` even when an earlier assertion failed. Brace the loop
+    to keep it in the chain: `… && { for t in …; do … || exit 1; done; } && echo TX-PASS`.
+    *(Verified empirically: `false && for t in a b; do echo $t; done; echo T3-PASS` prints
+    `T3-PASS` and exits 0.)*
 - **After every plan wave:** the full mechanical block, plus a plain `npm run build` (no
   `CF_PAGES*` env vars) so the committed `out/` reflects a real local build.
 - **Before `/gsd:verify-work`:** every row of the Per-Requirement Verification Map green,

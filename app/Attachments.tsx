@@ -10,20 +10,24 @@ import isMobile from "./isMobile";
 import useResizeObserver from "use-resize-observer";
 import styles from "./Attachments.module.css";
 
-// Helper to get optimized thumbnail URL
-// For Cloudflare Pages, you can use Cloudflare Image Resizing: /cdn-cgi/image/width=W,height=H,quality=Q,format=auto/URL
-// For now, returns original URL (you can enable Cloudflare Image Resizing later)
+// Helper to get optimized thumbnail URL.
+// Cloudflare Image Resizing serves resized variants from /cdn-cgi/image/<options>/<url>.
+// That endpoint only exists on Cloudflare's edge, so in development we fall back to the
+// original URL — otherwise every thumbnail 404s when running `npm run dev`.
 const getThumbnailUrl = (originalUrl: string, maxHeight: number): string => {
-  // If you want to use Cloudflare Image Resizing, uncomment and adjust:
+  if (process.env.NODE_ENV !== "production") {
+    return originalUrl;
+  }
   return `/cdn-cgi/image/width=${maxHeight * 2},height=${maxHeight * 2},quality=50,format=auto${originalUrl}`;
-  //return originalUrl;
 };
 
 type AttachmentsProps = {
   attachments: Array<any>,
+  label?: string,
 };
 const Attachments: React.FC<AttachmentsProps> = ({
-  attachments
+  attachments,
+  label
 }) => {
   const [lightboxState, setLightboxState] = useState({
     open: false,
@@ -47,12 +51,6 @@ const Attachments: React.FC<AttachmentsProps> = ({
     shouldScroll: () => { return !isMobile() }
   });
 
-  const setRefs = useCallback<React.RefCallback<HTMLDivElement>>(node => {
-    containerRef.current = node;
-    viewport(node);
-    onResize();
-  }, [viewport]);
-
   const updateScrollbooster = () => {
     if (!scrollbooster || !containerRef.current) {
       return;
@@ -64,8 +62,14 @@ const Attachments: React.FC<AttachmentsProps> = ({
     updateScrollbooster();
   }
 
-  useResizeObserver({ ref: containerRef as any, onResize });
-  useResizeObserver({ ref: innerRef as any, onResize });
+  const setRefs = useCallback<React.RefCallback<HTMLDivElement>>(node => {
+    containerRef.current = node;
+    viewport(node);
+    onResize();
+  }, [viewport]);
+
+  useResizeObserver({ ref: containerRef as React.RefObject<HTMLDivElement>, onResize });
+  useResizeObserver({ ref: innerRef as React.RefObject<HTMLDivElement>, onResize });
 
   let lightbox;
   if (lightboxState.open === true) {
@@ -100,6 +104,8 @@ const Attachments: React.FC<AttachmentsProps> = ({
                   key={media.url}
                   height={galleryHeight}
                   index={index}
+                  total={attachments.length}
+                  label={label}
                 />
               )
             })}
@@ -119,12 +125,16 @@ type AttachmentProps = {
   height: number,
   onClick: () => void,
   index: number,
+  total: number,
+  label?: string,
 }
 const Attachment: React.FC<AttachmentProps> = ({
   media,
   height,
   onClick,
   index,
+  total,
+  label,
 }) => {
   const maxWidth = 21/9;   // ultrawide monitor
   const minWidth = 19/5/9; // iPhone
@@ -146,13 +156,12 @@ const Attachment: React.FC<AttachmentProps> = ({
   if (media.type === "image") {
     // Use optimized thumbnail URL for smaller file size
     const thumbnailUrl = getThumbnailUrl(media.url, height);
-    item = <Image 
-      alt="" 
-      src={thumbnailUrl} 
-      height={height} 
+    item = <Image
+      alt=""
+      src={thumbnailUrl}
+      height={height}
       width={height * returnThumbnailAspectRatio(media.width / media.height)}
       loading={shouldLoadEagerly ? "eager" : "lazy"}
-      quality={50}
     />
   } else if (media.type === "video") {
     item = <video 
@@ -165,16 +174,23 @@ const Attachment: React.FC<AttachmentProps> = ({
     />
   }
 
+  const mediaNoun = media.type === "video" ? "video" : "image";
+  const accessibleName = label
+    ? `${label} — view ${mediaNoun} ${index + 1} of ${total}`
+    : `View ${mediaNoun} ${index + 1} of ${total}`;
+
   return (
-    <div
+    <button
+      type="button"
       style={{
         height: height,
         aspectRatio: returnThumbnailAspectRatio(media.width / media.height),
       }}
       onClick={onClick}
+      aria-label={accessibleName}
       className={styles.media}>
       {item}
-    </div>
+    </button>
   )
 }
 

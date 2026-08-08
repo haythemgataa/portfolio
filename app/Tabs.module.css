@@ -1,0 +1,31 @@
+.tabs {
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  margin-bottom: 36px;
+}
+
+.tab {
+  font-size: var(--secondary-type-size);
+  line-height: 1;
+  color: var(--grey2);
+  text-decoration: none;
+  padding: 7px 10px;
+  border-radius: 6px;
+  transition: color 120ms ease, background-color 120ms ease;
+}
+
+.tab:hover {
+  color: var(--grey1);
+  background-color: var(--wash2);
+}
+
+.tab[data-active="true"] {
+  color: var(--grey1);
+  background-color: var(--wash2);
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}

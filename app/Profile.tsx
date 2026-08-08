@@ -5,15 +5,19 @@ import RichText from "./RichText";
 import Arrow12 from "./Arrow12";
 import styles from "./Profile.module.css";
 import Attachments from "./Attachments";
+import Tabs from "./Tabs";
 
 type ProfileProps = {
   cv: any,
+  showGallery?: boolean,
 };
 const Profile: React.FC<ProfileProps> = ({
-  cv
+  cv,
+  showGallery
 }) => {
   return (
     <div className={styles.profile}>
+      <Tabs showGallery={showGallery} />
       <div className={styles.profileHeader}>
         <div className={styles.profilePhoto}>
           <Image 
@@ -101,7 +105,7 @@ const ProfileItem: React.FC<ProfileItemProps> = ({
         </div>
         : null}
         {experience.attachments && experience.attachments.length > 0 ?
-          <Attachments attachments={experience.attachments}/>
+          <Attachments attachments={experience.attachments} label={experience.heading}/>
         : null}
       </div>
     </div>

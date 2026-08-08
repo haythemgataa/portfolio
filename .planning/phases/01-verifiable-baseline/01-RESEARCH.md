@@ -1277,32 +1277,40 @@ Everything else the phase needs already exists.
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+All five were resolved during planning. Each carries its resolution inline below; the
+technical content above each `**RESOLVED:**` line is unchanged from the original research.
 
 1. **Which branch does Cloudflare Pages treat as production?**
    - **Known:** `origin/HEAD → origin/main`; `Profile.tsx:31` treats `"dev"` as the preview/beta branch; `getGitBranch()` prefers `CF_PAGES_BRANCH`.
    - **Unclear:** the Pages project's configured production branch is a dashboard setting that has not been read. `CF_PAGES_URL` cannot substitute — it carries a `*.pages.dev` URL on production deployments too.
    - **Recommendation:** implement with `=== "main"`, and add the confirmation to the same dashboard visit ROADMAP already schedules for Phase 2's BUILD-07 gate. If the planner wants belt-and-braces, define the production branch name as a single named constant at the top of `next.config.ts` so it is one line to change.
+   - **RESOLVED (planning):** recommendation taken, with the belt-and-braces variant. Plan `01-01` Task 2 adds `const PRODUCTION_BRANCH = "main";` at module scope in `next.config.ts` so the branch name is one line to change. The question is **downgraded to assumption A1** rather than answered — the dashboard setting is still unread — and **no dashboard task is added to Phase 1**; ROADMAP already schedules that visit in Phase 2 alongside the BUILD-07 gate. A1 is carried forward verbatim in the `01-01` and `01-05` SUMMARYs.
 
 2. **`document.body` at `createPortal` — scope it out explicitly, or guard it?**
    - **Known:** it is a render-time browser-global read; it crashes any prerender of Lightbox; it is unreachable in practice under the mount-on-click invariant; D-15 does not enumerate it and D-17 does not defer it.
    - **Unclear:** whether "reads no browser global during render" was meant as literally absolute, or as "the two that were found".
    - **Recommendation:** surface it to the user as a one-line decision (§ Conflict, options 1 vs 2). Do not resolve it silently in either direction.
+   - **RESOLVED (user — Decision A):** option 1. The `createPortal` read is **scoped out explicitly** and handed to Phase 7; no guard is added and no source change is made for it. The honesty separation is binding on every plan: criterion 2's *stated proof mechanism* (the import-only probe build in plan `01-03`) is satisfied, its *literal wording* ("reads no browser global during render") is **not**, and no acceptance criterion anywhere in this phase may claim the literal wording is met. Recorded in plans `01-02`, `01-03`, and `01-05`, and in `01-VALIDATION.md` § Known Exceptions.
 
 3. **What does the first paint of `LightboxImage` show before the container is measured?**
    - **Known:** the current code paints a `window`-derived guess for one frame. Any replacement must define a behaviour.
    - **Unclear:** whether the user cares about that single frame at all.
    - **Recommendation:** Option A (`useState(0)` + `useLayoutEffect`) — it makes the question moot by never painting the unmeasured value, and keeps the D-16 diff to two lines.
+   - **RESOLVED (planner's discretion):** Option A taken. Plan `01-02` Task 3 replaces the initializer with `useState(0)` and promotes the mount effect to `useLayoutEffect`, so the unmeasured value is never painted and the question of what it shows becomes moot. The existing `setRatio` / `onResize` / `useResizeObserver` wiring is left byte-unchanged. Assumption A5 (the `useLayoutEffect` server-render warning is unreachable) is carried forward and is what plan `01-05`'s "zero console warnings" walk step would catch.
 
 4. **`out/` commit policy for this phase.**
    - **Known:** 4–6 builds will run; churn is ~5–10 paths and ~1 MB per build, not 96 MB; `out/content/` stays clean; Turbopack build IDs are non-deterministic.
    - **Unclear:** the user's tolerance for extra commits.
    - **Recommendation:** option 1 (resync-first, source-only middle, one `chore(build): resync out/` per plan). Write it into the plan; do not leave it to the executor.
+   - **RESOLVED (user — Decision B):** option 1, written into the plans as explicit tasks rather than left to executor judgement. Plan `01-01` Task 1 takes the dedicated resync-first commit (`chore(deps)` then `chore(build): resync out/`); every middle commit is source-only; each plan ends with one trailing `chore(build): resync out/`. `out/` stays **tracked** — untracking is Phase 2's BUILD-07 and is gated on reading the Cloudflare Pages build configuration first.
 
 5. **Should the negative-control build be a required plan task?**
    - **Known:** three of five probe shapes produce a false pass. D-14 as written specifies only the positive build.
    - **Unclear:** whether the user considers the negative control in scope or scope creep.
    - **Recommendation:** include it. It costs one `npm run build` (~5 s) and it is the only thing that distinguishes "the fix works" from "the probe is broken." Probe shape is explicitly Claude's Discretion, so this is within the planner's latitude.
+   - **RESOLVED (planner's discretion):** included. Plan `01-03` Task 1 is a dedicated **inverted** task whose expected outcome is a failing `npm run build`, with three independent assertions (non-zero exit, the client-boundary message, and an import trace ending at `probe-tmp`) plus two that rule out the wrong failure mode (`Error occurred prerendering` and `document is not defined` must both be absent). Task 2's positive proof additionally requires `/probe-tmp` in the Route table, which is what catches the underscore-folder and elided-import false passes.
 
 ---
 

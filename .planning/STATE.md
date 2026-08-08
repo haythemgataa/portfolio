@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Tabs & Gallery
 status: executing
-last_updated: "2026-08-08T15:43:24.076Z"
-last_activity: 2026-08-08 -- Phase 1 planning complete
+last_updated: "2026-08-08T16:01:29.446Z"
+last_activity: 2026-08-08
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 5
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -19,15 +19,15 @@ progress:
 
 **Core value:** A visitor can understand who Haythem is and see the quality of his work within seconds of landing — the presentation itself is part of the portfolio.
 
-**Current focus:** Milestone v1.1 — split the site into a CV tab and a Gallery tab, so visual work can be browsed as a standalone masonry grid.
+**Current focus:** Phase 01 — verifiable-baseline
 
 ## Current Position
 
-Phase: 1 — Verifiable Baseline (not started)
-Plan: —
+Phase: 01 (verifiable-baseline) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
-Progress: [                    ] 0% (0/7 phases)
-Last activity: 2026-08-08 -- Phase 1 planning complete
+Progress: [██░░░░░░░░] 20%
+Last activity: 2026-08-08
 
 ## Phases
 
@@ -53,6 +53,9 @@ Last activity: 2026-08-08 -- Phase 1 planning complete
 | BUILD-02 (Lightbox scroll-lock restore) placed in Phase 1, ahead of BUILD-04 (sticky) in Phase 3 — same file as BUILD-03, and it must not be verified after the sticky fix | Roadmap | Recorded |
 | Regression safety net is a written checklist (BUILD-09), authored in Phase 1 and walked at the exit of Phases 1, 2, 3, 4, 5, and 7 — no test framework is being added | Roadmap | Recorded |
 | BUILD-03 is proven, not asserted — Phase 1 exits on an `npm run build` that imports Lightbox from a module graph not already establishing a client boundary | Roadmap (revision) | Recorded |
+
+- [Phase 01]: PRODUCTION_BRANCH hardcoded to 'main' in next.config.ts pending Phase 2's Cloudflare dashboard confirmation — origin/HEAD points to origin/main and Profile.tsx already treats dev as the preview branch; Pages dashboard production-branch setting has not been read (assumption A1)
+- [Phase 01]: next-env.d.ts build/dev toggle diff folded into Task 3's trailing out/ resync commit rather than left dirty — It is Next.js auto-generated, non-substantive, and mechanically tracks whichever of next dev/next build last ran — same class of churn as out/'s build-ID directories
 
 ### Open Decisions
 

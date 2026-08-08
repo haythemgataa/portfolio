@@ -10,16 +10,7 @@ import isMobile from "./isMobile";
 import useResizeObserver from "use-resize-observer";
 import styles from "./Attachments.module.css";
 
-// Helper to get optimized thumbnail URL.
-// Cloudflare Image Resizing serves resized variants from /cdn-cgi/image/<options>/<url>.
-// That endpoint only exists on Cloudflare's edge, so in development we fall back to the
-// original URL — otherwise every thumbnail 404s when running `npm run dev`.
-const getThumbnailUrl = (originalUrl: string, maxHeight: number): string => {
-  if (process.env.NODE_ENV !== "production") {
-    return originalUrl;
-  }
-  return `/cdn-cgi/image/width=${maxHeight * 2},height=${maxHeight * 2},quality=50,format=auto${originalUrl}`;
-};
+import { cloudflareImageUrl } from "./lib/cloudflareImage";
 
 type AttachmentsProps = {
   attachments: Array<any>,
@@ -152,15 +143,23 @@ const Attachment: React.FC<AttachmentProps> = ({
   // Load first 5 thumbnails eagerly, lazy load the rest
   const shouldLoadEagerly = index < 5;
 
+  // The displayed box, which is what the resize request must ask for. Asking for a square
+  // box (the previous behaviour) makes Cloudflare constrain by the wrong axis and return
+  // fewer pixels than the thumbnail needs, so the browser upscales and it looks soft.
+  const displayWidth = Math.round(height * returnThumbnailAspectRatio(media.width / media.height));
+
   let item;
   if (media.type === "image") {
-    // Use optimized thumbnail URL for smaller file size
-    const thumbnailUrl = getThumbnailUrl(media.url, height);
+    const thumbnailUrl = cloudflareImageUrl(media.url, {
+      width: displayWidth,
+      height,
+      fit: 'cover',
+    });
     item = <Image
       alt=""
       src={thumbnailUrl}
       height={height}
-      width={height * returnThumbnailAspectRatio(media.width / media.height)}
+      width={displayWidth}
       loading={shouldLoadEagerly ? "eager" : "lazy"}
     />
   } else if (media.type === "video") {

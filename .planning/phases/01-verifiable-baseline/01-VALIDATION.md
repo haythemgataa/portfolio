@@ -47,6 +47,14 @@ project — it is the agreed verification mechanism.
   - ⚠ **Exit-code masking:** never write `npm run build 2>&1 | tail` — that returns `tail`'s
     exit code and printed `EXIT=0` on a definitively failed build during research. Use
     `set -o pipefail`.
+  - ⚠ **Pipeline short-circuit before a build:** a build whose status is read afterwards must
+    run **unconditionally on its own line**, with the status captured on the next line
+    (`EXIT=$?`), and any log it writes must be `rm -f`'d first. Never place the build at the
+    tail of an `&&` chain whose earlier elements are pipelines (`head -1 <file> | grep -q …`)
+    and then read `${PIPESTATUS[0]}`: `head` exits `0` regardless of what `grep` finds, so a
+    failed precondition short-circuits past the build while `PIPESTATUS[0]` still reads `0`,
+    and the log assertions then run against a **stale** log from an earlier attempt. Enforced
+    in `01-03` Task 1 and Task 2. Preconditions belong in a braced group that hard-`exit 1`s.
 - **After every plan wave:** the full mechanical block, plus a plain `npm run build` (no
   `CF_PAGES*` env vars) so the committed `out/` reflects a real local build.
 - **Before `/gsd:verify-work`:** every row of the Per-Requirement Verification Map green,
@@ -72,6 +80,12 @@ concurrently in the same working tree, so `git log --oneline -1`, `HEAD~1`, and 
 not stable there. Wave-1 gates resolve commits by message
 (`git log --format='%H %s' -n 8 | grep -m1 '<msg>' | cut -d' ' -f1`). Waves 2–4 run one plan
 at a time and may use positional refs.
+
+**`pkill -f` / `pgrep -f` must use a bracketed pattern.** `-f` matches full command lines, so a
+bare `pkill -f "next dev"` also matches the shell running the command and kills the task
+mid-flight, and a bare `pgrep -f "next dev"` matches itself and can never report empty. Use
+`pkill -f 'next [d]ev'` / `pgrep -f 'next [d]ev'`: the regex still matches the server's argv but
+not the literal text of the command issuing it. Applies to `01-01` Task 3 and `01-05` Task 3.
 
 **No gate may assert a globally clean `git status`.** `.planning/STATE.md` is modified for
 the whole phase by instruction, `.claude/` is untracked, and each plan's `*-SUMMARY.md` is
@@ -171,7 +185,18 @@ All of these are owned by **`01-05` Task 2**, the phase's single blocking
    **No acceptance criterion in any plan may claim the literal wording is met.**
 2. **Turbopack is not build-deterministic** — the build-ID directory always differs and ~1 chunk
    name may differ between identical-source builds. Zero-diff rebuilds are unreachable; a small
-   boring `out/` diff is the expected state, not a failure.
+   boring `out/` diff is the expected state, not a failure. `next.config.ts` sets no
+   `generateBuildId`, and `out/_next/static/<buildId>/_buildManifest.js` and `_ssgManifest.js`
+   are **tracked**.
+   **Binding consequence:** no gate, acceptance criterion, or verification step in this phase may
+   run a build (or any command that triggers one) and then assert `git status`/`git diff`
+   cleanliness on `out/` in the same sequence. The assertion is unsatisfiable by construction, and
+   the only chain-satisfying escape is untracking or gitignoring `out/` — forbidden by Decision B
+   and recorded in `T-01-21` as something that could take the live site down. Builds happen in the
+   **action**, which stages and commits the build it just ran; the `<verify>` gate then inspects
+   that committed product on disk. Where a gate genuinely must build (`01-01` Task 3's three
+   signal states), it asserts the resync commit's existence plus `git status --porcelain
+   out/content/` — the 87 content paths rebuild byte-identically and are therefore rebuild-stable.
 3. **All `Lightbox.tsx` line citations shift +2** once `"use client"` lands. Three edits land in
    that one file — later tasks must not be written against pre-directive line numbers. This is
    why plan `01-03` (which adds the directive) runs **after** plan `01-02` (which makes all three

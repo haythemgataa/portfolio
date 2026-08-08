@@ -1,2 +1,11 @@
 node_modules
 .next
+
+# Static export output — rebuilt by Cloudflare Pages on deploy
+out
+
+# Build/tooling artifacts
+*.tsbuildinfo
+
+# OS cruft
+.DS_Store

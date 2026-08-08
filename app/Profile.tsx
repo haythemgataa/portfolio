@@ -101,7 +101,7 @@ const ProfileItem: React.FC<ProfileItemProps> = ({
         </div>
         : null}
         {experience.attachments && experience.attachments.length > 0 ?
-          <Attachments attachments={experience.attachments}/>
+          <Attachments attachments={experience.attachments} label={experience.heading}/>
         : null}
       </div>
     </div>

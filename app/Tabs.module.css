@@ -1,13 +1,39 @@
 /* Sticky wrapper. The page background is repeated here so content scrolling underneath
-   does not show through the track's rounded corners, and the symmetric padding doubles as
-   the gap below the header when the bar is not yet stuck. */
+   does not show through the track's rounded corners, and the symmetric vertical padding
+   doubles as the gap below the header when the bar is not yet stuck.
+
+   The wrapper is full-bleed: negative margins pull it out to the viewport edges and the
+   horizontal padding puts it back to the content column, so the bar stays aligned with the
+   column while its background covers the whole width. Without that, anything wider than the
+   column — the attachment carousel bleeds past both edges below 480px — stays visible
+   beside the bar as it scrolls under. `50%` and `50vw` are both resolved against boxes
+   centred in the viewport (`.profile` / `.gallery` are `margin: 0 auto`), so the two halves
+   cancel out. Any overhang from the scrollbar's width is clipped by `overflow-x: clip`. */
 .sticky {
   position: sticky;
   top: 0;
   z-index: 20;
   background-color: var(--backgroundColor);
-  padding: 16px 0;
   margin-top: 12px;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  padding: 16px calc(50vw - 50%);
+}
+
+/* Content scrolling under the bar used to be cut off dead flat at its bottom edge. This
+   extends the background downwards as a fade, so media and text dissolve into the page
+   instead. It sits above the content (inside the wrapper's z-index: 20) and has to stay
+   click-through. Height is kept under the 36px gap that follows the bar at rest, so nothing
+   is dimmed until the page is actually scrolled. */
+.sticky::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 24px;
+  background: linear-gradient(to bottom, var(--backgroundColor), var(--backgroundColorFade));
+  pointer-events: none;
 }
 
 /* shadcn/ui Tabs, ported to CSS Modules against this project's tokens.
@@ -20,6 +46,9 @@
   width: 100%;
   height: 36px;
   padding: 3px;
+  /* Same hairline the media thumbnails carry (Attachments/Gallery `::after`), so the bar
+     reads as part of the same set of surfaces. */
+  border: 1px solid var(--transparentBorder);
   border-radius: 10px;
   background-color: var(--wash2);
   color: var(--grey2);

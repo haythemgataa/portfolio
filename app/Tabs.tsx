@@ -32,21 +32,23 @@ const Tabs: React.FC<TabsProps> = ({ showGallery = true }) => {
   }
 
   return (
-    <nav className={styles.tabs} aria-label="Sections">
-      {tabs.map(tab => {
-        const isActive = pathname === tab.href;
-        return (
-          <Link
-            key={tab.href}
-            href={tab.href}
-            className={styles.tab}
-            data-active={isActive}
-            aria-current={isActive ? "page" : undefined}>
-            {tab.label}
-          </Link>
-        );
-      })}
-    </nav>
+    <div className={styles.sticky}>
+      <nav className={styles.tabs} aria-label="Sections">
+        {tabs.map(tab => {
+          const isActive = pathname === tab.href;
+          return (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              className={styles.tab}
+              data-active={isActive}
+              aria-current={isActive ? "page" : undefined}>
+              {tab.label}
+            </Link>
+          );
+        })}
+      </nav>
+    </div>
   );
 };
 

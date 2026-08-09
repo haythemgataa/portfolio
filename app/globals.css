@@ -25,6 +25,10 @@
   --marketingBackground: #fafafa;
   --wash1: #e5e5e5;
   --wash2: #f2f2f2;
+  /* Fully transparent --backgroundColor, for gradients that fade the page out. Spelled as
+     an explicit zero-alpha colour rather than the `transparent` keyword so the midpoints
+     interpolate through the background hue instead of through transparent black. */
+  --backgroundColorFade: rgba(255, 255, 255, 0);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -43,6 +47,7 @@
     --marketingBackground: #1a1a1a;
     --wash1: #4e4e4e;
     --wash2: #383838;
+    --backgroundColorFade: rgba(34, 34, 34, 0);
   }
 }
 

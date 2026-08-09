@@ -55,7 +55,13 @@
 html,
 body {
   max-width: 100vw;
+  /* The mobile gallery deliberately bleeds ~16px past the left viewport edge, which has to
+     be clipped. `hidden` would do it, but it makes these elements scroll containers, and
+     that breaks `position: sticky` on the tab bar. `clip` clips without creating one.
+     Declared second so browsers without `clip` support (Safari < 16) keep `hidden` and
+     still clip — they just lose stickiness. */
   overflow-x: hidden;
+  overflow-x: clip;
 }
 
 body {

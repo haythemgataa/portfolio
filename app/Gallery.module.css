@@ -3,6 +3,8 @@
   display: flex;
   flex-direction: column;
   gap: 60px;
+  /* Matches the CV's first-section spacing below the tab bar. */
+  margin-top: 36px;
 }
 
 .row {
@@ -61,6 +63,7 @@
 }
 
 .empty {
+  margin-top: 36px;
   font-size: var(--type-size);
   line-height: var(--line-height);
   color: var(--grey2);

@@ -1,3 +1,56 @@
 {
-  "items": []
+  "items": [
+    {
+      "file": "dashboard-explorations.png",
+      "title": "Dashboard explorations",
+      "caption": "Layout studies for a data-heavy internal tool, narrowing five directions down to two.",
+      "date": "2026"
+    },
+    {
+      "file": "award-ceremony.mp4",
+      "title": "Tunisia Digital Awards",
+      "caption": "Silver award for best website design.",
+      "date": "March 2026",
+      "width": 1254,
+      "height": 704,
+      "poster": "award-ceremony-poster.jpg"
+    },
+    {
+      "file": "poster-series.png",
+      "title": "Poster series",
+      "caption": "Print work for We Are Kairouan.",
+      "date": "2025"
+    },
+    {
+      "file": "brand-system.png",
+      "title": "Brand system",
+      "caption": "Type scale, colour and logo lockups for a non-profit rebrand."
+    },
+    {
+      "file": "workshop-room.jpg",
+      "caption": "Design workshop, mid-session."
+    },
+    {
+      "file": "conference-talk.mp4",
+      "title": "Design for non-designers",
+      "caption": "Opening minutes of a talk on giving engineers a working design vocabulary.",
+      "date": "November 2025",
+      "width": 852,
+      "height": 480
+    },
+    {
+      "file": "kairouan-street.png"
+    },
+    {
+      "file": "mobile-app-flow.png",
+      "title": "Mobile onboarding flow",
+      "caption": "Four screens from a sign-up rework that cut drop-off on the verification step.",
+      "date": "2025"
+    },
+    {
+      "file": "code-camping.jpg",
+      "title": "Code Camping",
+      "date": "2024"
+    }
+  ]
 }

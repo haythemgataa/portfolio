@@ -4,21 +4,15 @@ import RichText from "./RichText";
 import Arrow12 from "./Arrow12";
 import styles from "./Profile.module.css";
 import Attachments from "./Attachments";
-import Tabs from "./Tabs";
-import ProfileHeader from "./ProfileHeader";
 
 type ProfileProps = {
   cv: any,
-  showGallery?: boolean,
 };
 const Profile: React.FC<ProfileProps> = ({
-  cv,
-  showGallery
+  cv
 }) => {
   return (
-    <div className={styles.profile}>
-      <ProfileHeader general={cv.general} />
-      <Tabs showGallery={showGallery} />
+    <>
 
       {cv.general.about ?
         <section className={`${styles.profileSection} ${styles.about}`}>
@@ -48,7 +42,7 @@ const Profile: React.FC<ProfileProps> = ({
           </section>
         )
       })}
-    </div>
+    </>
   );
 };
 

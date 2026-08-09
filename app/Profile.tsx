@@ -1,11 +1,11 @@
 "use client"
 
-import Image from "next/image";
 import RichText from "./RichText";
 import Arrow12 from "./Arrow12";
 import styles from "./Profile.module.css";
 import Attachments from "./Attachments";
 import Tabs from "./Tabs";
+import ProfileHeader from "./ProfileHeader";
 
 type ProfileProps = {
   cv: any,
@@ -17,28 +17,8 @@ const Profile: React.FC<ProfileProps> = ({
 }) => {
   return (
     <div className={styles.profile}>
+      <ProfileHeader general={cv.general} />
       <Tabs showGallery={showGallery} />
-      <div className={styles.profileHeader}>
-        <div className={styles.profilePhoto}>
-          <Image 
-            src={cv.general.profilePhoto} 
-            alt="" 
-            width={92} 
-            height={92}
-            priority
-            fetchPriority="high"
-          />
-        </div>
-        <div className={styles.profileInfo}>
-          <h1>
-            {cv.general.displayName}
-            {process.env.NEXT_PUBLIC_GIT_BRANCH === "dev" && (
-              <span className={styles.betaBadge}>beta</span>
-            )}
-          </h1>
-          <div className={styles.byline}>{cv.general.byline}</div>
-        </div>
-      </div>
 
       {cv.general.about ?
         <section className={`${styles.profileSection} ${styles.about}`}>

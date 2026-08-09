@@ -152,6 +152,15 @@
   text-decoration: none;
   color: inherit;
   transition: color 150ms ease;
+  /* Suppress the UA's tap feedback on touch. The default is a ~40% opaque overlay across
+     the whole anchor, which flashes over the label on every tap; the pill sliding to the
+     tapped side is the feedback. Keyboard focus is unaffected — `:focus-visible` does not
+     match on tap or click, so the ring below still only appears for keyboard users. */
+  -webkit-tap-highlight-color: transparent;
+  /* Stops a long press selecting the label, and opts out of double-tap-to-zoom so the tap
+     registers immediately rather than after the browser waits to see a second one. */
+  user-select: none;
+  touch-action: manipulation;
 }
 
 .tab:hover:not([data-active="true"]) {

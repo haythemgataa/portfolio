@@ -88,6 +88,18 @@ holds the row's height before the media loads — verified at CLS 0.
 `Tabs.tsx` switches between `/` and `/gallery`. They are real routes, not client-side tab
 state, so the tabs are `<Link>`s with `aria-current="page"` rather than `role="tab"`.
 
+The styling is shadcn/ui's Tabs ported into `Tabs.module.css` against this project's tokens
+(muted track, 3px padding, raised active pill) — the actual component is not used because it
+is Tailwind-based and Radix Tabs switches panels within one document rather than navigating.
+
+The bar is sticky at `top: 0` and spans the content column. Two things it depends on:
+
+- `ProfileHeader.tsx` is shared by both routes so the bar lands at the same vertical
+  position on each — otherwise switching tabs would make the sticky bar jump.
+- `globals.css` uses `overflow-x: clip` (not `hidden`) on `html, body`. `hidden` makes them
+  scroll containers, which silently breaks `position: sticky`. `hidden` is still declared
+  first as a fallback for browsers without `clip` support.
+
 ### Component Patterns
 
 - **Server components** (async): `layout.tsx`, `page.tsx`, `[slug]/page.tsx` — handle data loading

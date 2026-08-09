@@ -1,28 +1,68 @@
+/* Sticky wrapper. The page background is repeated here so content scrolling underneath
+   does not show through the track's rounded corners, and the symmetric padding doubles as
+   the gap below the header when the bar is not yet stuck. */
+.sticky {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background-color: var(--backgroundColor);
+  padding: 16px 0;
+  margin-top: 12px;
+}
+
+/* shadcn/ui Tabs, ported to CSS Modules against this project's tokens.
+   TabsList: bg-muted, rounded-lg (10px), p-[3px], h-9 (36px) — w-full instead of w-fit so
+   the bar matches the content column. */
 .tabs {
   display: flex;
-  flex-direction: row;
-  gap: 4px;
-  margin-bottom: 36px;
-}
-
-.tab {
-  font-size: var(--secondary-type-size);
-  line-height: 1;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 36px;
+  padding: 3px;
+  border-radius: 10px;
+  background-color: var(--wash2);
   color: var(--grey2);
+}
+
+/* TabsTrigger: flex-1, rounded-md (8px), text-sm, font-medium, transparent border,
+   transition on colour and shadow only. */
+.tab {
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: var(--type-size);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
   text-decoration: none;
-  padding: 7px 10px;
-  border-radius: 6px;
-  transition: color 120ms ease, background-color 120ms ease;
+  color: inherit;
+  transition: color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
 }
 
-.tab:hover {
+.tab:hover:not([data-active="true"]) {
   color: var(--grey1);
-  background-color: var(--wash2);
 }
 
+/* data-[state=active]: bg-background + shadow-sm + foreground text. */
 .tab[data-active="true"] {
+  background-color: var(--backgroundColor);
   color: var(--grey1);
-  background-color: var(--wash2);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  /* shadcn's dark variant gives the active pill a visible border rather than relying on a
+     shadow, which all but disappears on a dark ground. */
+  .tab[data-active="true"] {
+    border-color: var(--transparentBorder);
+    box-shadow: none;
+  }
 }
 
 .tab:focus-visible {

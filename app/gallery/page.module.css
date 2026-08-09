@@ -1,7 +1,0 @@
-/* Mirrors .profile in Profile.module.css so both tabs share one column. */
-.gallery {
-  width: 100%;
-  max-width: 540px;
-  margin: 0 auto;
-  padding: clamp(24px, calc((100vw - 540px) / 2), 72px) 0;
-}

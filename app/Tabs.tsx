@@ -51,11 +51,28 @@ const Tabs: React.FC<TabsProps> = ({ showGallery = true }) => {
     return null;
   }
 
+  const activeIndex = tabs.findIndex(tab => tab.href === pathname);
+
   return (
     <>
       <div ref={sentinelRef} className={styles.sentinel} aria-hidden="true" />
       <div className={styles.sticky} data-stuck={isStuck}>
-        <nav className={styles.tabs} aria-label="Sections">
+        <nav
+          className={styles.tabs}
+          aria-label="Sections"
+          style={{ '--tab-count': tabs.length } as React.CSSProperties}>
+          {/* One pill that slides, rather than a background handed between links. Tabs are
+              equal width (flex: 1 1 0) with no gaps, so its position is exactly
+              index x its own width — no measuring required. */}
+          {activeIndex >= 0 && (
+            <span
+              className={styles.pill}
+              aria-hidden="true"
+              // The offset is the only part that depends on runtime state, so it is set
+              // here while the rest of the pill stays in the stylesheet.
+              style={{ transform: `translateX(${activeIndex * 100}%)` }}
+            />
+          )}
           {tabs.map(tab => {
             const isActive = pathname === tab.href;
             return (

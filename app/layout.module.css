@@ -1,0 +1,12 @@
+.page {
+  padding: 0 24px;
+}
+
+/* The single content column both tabs share. Centred, which is what makes the tab bar's
+   full-bleed `calc(50% - 50vw)` margins land symmetrically. */
+.column {
+  width: 100%;
+  max-width: 540px;
+  margin: 0 auto;
+  padding: clamp(24px, calc((100vw - 540px) / 2), 72px) 0;
+}

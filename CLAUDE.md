@@ -92,10 +92,19 @@ The styling is shadcn/ui's Tabs ported into `Tabs.module.css` against this proje
 (muted track, 3px padding, raised active pill) — the actual component is not used because it
 is Tailwind-based and Radix Tabs switches panels within one document rather than navigating.
 
-The bar is sticky at `top: 0` and spans the content column. Two things it depends on:
+The bar is sticky at `top: 0`. The bar itself spans the content column, but its sticky
+wrapper is full-bleed — pulled out to the viewport edges with negative margins and pushed
+back in with equal padding — so the opaque background covers the full width. Anything wider
+than the column (below 480px the attachment carousel bleeds past both edges) would otherwise
+stay visible beside the bar as it scrolls under. Below the wrapper, a `::after` continues the
+background as a downward fade, so content dissolves into the page instead of being cut flat
+at the bar's edge; it is shorter than the 36px gap that follows the bar, so nothing is dimmed
+at rest. Three things it depends on:
 
 - `ProfileHeader.tsx` is shared by both routes so the bar lands at the same vertical
   position on each — otherwise switching tabs would make the sticky bar jump.
+- `.profile` and `.gallery` are both centred (`margin: 0 auto`), which is what makes the
+  full-bleed `calc(50% - 50vw)` margins land symmetrically on either route.
 - `globals.css` uses `overflow-x: clip` (not `hidden`) on `html, body`. `hidden` makes them
   scroll containers, which silently breaks `position: sticky`. `hidden` is still declared
   first as a fallback for browsers without `clip` support.

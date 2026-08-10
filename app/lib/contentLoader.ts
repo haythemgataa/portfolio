@@ -46,6 +46,20 @@ interface ItemDir {
 }
 
 /**
+ * Turn a directory name into a display name for sections that aren't in
+ * SECTION_MAP, e.g. "sideProjects" -> "Side Projects". Lets new sections be
+ * created from the Studio without editing this file.
+ */
+function humanizeSectionName(name: string): string {
+  return name
+    .replace(/[-_]+/g, ' ')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, c => c.toUpperCase());
+}
+
+/**
  * Extract numeric prefix and name from directory name
  * e.g., "001-general" -> { prefix: 1, name: "general" }
  */
@@ -287,12 +301,13 @@ export async function loadProfileData(): Promise<any> {
   for (const sectionDir of sectionDirs) {
     if (sectionDir.name === 'general') continue;
     
-    const sectionInfo = SECTION_MAP[sectionDir.name];
-    if (!sectionInfo) {
-      console.warn(`Unknown section: ${sectionDir.name}`);
-      continue;
-    }
-    
+    // Sections not listed in SECTION_MAP still render, using a display name
+    // derived from the directory name.
+    const sectionInfo = SECTION_MAP[sectionDir.name] ?? {
+      displayName: humanizeSectionName(sectionDir.name),
+      jsonKey: sectionDir.name,
+    };
+
     const items = await loadSection(contentPath, sectionDir);
     sections[sectionInfo.jsonKey] = items;
     

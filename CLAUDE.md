@@ -13,6 +13,23 @@ No test framework is configured.
 
 `out/` is gitignored — Cloudflare Pages runs `npm run build` on deploy, so the export is never committed.
 
+### Content Studio (`localhost:3000/studio`)
+
+A dev-only editor for `public/content/` — reorder/add/rename/delete sections and
+items, edit item fields, and manage each item's `media/` folder. Writes straight
+to disk; `git checkout -- public/content` is the undo.
+
+It exists only in `npm run dev`, enforced two ways in `next.config.ts`:
+
+- Its files are named `page.studio.tsx` / `route.studio.ts`, which only resolve
+  as routes via the dev-only `pageExtensions`.
+- `output: 'export'` is applied to production builds only, because it rejects
+  non-static route handlers even when merely running `next dev`. The tradeoff is
+  that static-export violations now surface at `npm run build` rather than in dev.
+
+Route handlers refuse to run outside development and reject non-localhost `Host`
+headers (`next dev` listens on 0.0.0.0).
+
 ## Architecture
 
 This is a **static portfolio/CV site** built with Next.js 16 (App Router) + React 19 + TypeScript. It uses `output: 'export'` in next.config.ts to produce a fully static site deployed to **Cloudflare Pages**.

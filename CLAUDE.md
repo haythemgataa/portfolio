@@ -5,21 +5,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 - `npm run dev` — Start dev server (localhost:3000)
-- `npm run build` — Build static export to `out/`
-- `npm run lint` — Run ESLint
+- `npm run build` — Build static export to `out/`, then strip the placeholder route (`scripts/clean-export.mjs`)
+- `npm run lint` — Run ESLint (flat config in `eslint.config.mjs`)
 - `npm run migrate` — Run content structure migration (`tsx scripts/migrate-content.ts`)
 
 No test framework is configured.
 
+`out/` is gitignored — Cloudflare Pages runs `npm run build` on deploy, so the export is never committed.
+
 ## Architecture
 
-This is a **static portfolio/CV site** built with Next.js 15 (App Router) + React 19 + TypeScript. It uses `output: 'export'` in next.config.ts to produce a fully static site deployed to **Cloudflare Pages**.
+This is a **static portfolio/CV site** built with Next.js 16 (App Router) + React 19 + TypeScript. It uses `output: 'export'` in next.config.ts to produce a fully static site deployed to **Cloudflare Pages**.
 
 ### Routing
 
 - `/` — Home page renders the `Profile` component with all CV sections
+- `/gallery` — Standalone media gallery (see **Gallery** below)
 - `/[slug]` — Dynamic case study pages generated from markdown files in `public/content/case-studies/`
 - All pages are statically generated at build time via `generateStaticParams()`
+
+**No case studies exist yet.** `public/content/case-studies/` is absent, but `output: 'export'` requires
+`generateStaticParams()` to return at least one route, so `[slug]/page.tsx` emits a synthetic
+`__placeholder__` slug that calls `notFound()`. The export still writes that page to disk, so
+`scripts/clean-export.mjs` deletes it after every build — otherwise Cloudflare would serve
+`/__placeholder__` as a real 200 URL. Once real case studies are added, the placeholder path is
+unused and the cleanup step becomes a no-op.
 
 ### Data Layer
 
@@ -32,6 +42,7 @@ public/content/
   003-education/        → ...
   ...
   case-studies/         → markdown files (*.md)
+  gallery/              → gallery.json + media/ (NOT a CV section — see below)
 ```
 
 **Key conventions:**
@@ -41,12 +52,67 @@ public/content/
 - Media files in `media/` are auto-detected if not explicitly listed in `item.json` attachments
 - The content loader (`app/lib/contentLoader.ts`) reads this structure at build time and returns a unified data object
 
+`public/content/gallery/` is deliberately outside this scheme: it has no `NNN-` prefix, so
+`loadProfileData()` skips it and gallery media never appears on the CV tab (and vice versa).
+
 **Section mapping** is defined in `SECTION_MAP` in `contentLoader.ts` — directory names map to JSON keys (e.g., `speaking` → `talks`).
+
+### Gallery
+
+The `/gallery` tab is a vertical list — one item per row at the same 540px column width as
+the CV — with captions below each item. It has its own content pipeline, independent of
+the CV sections:
+
+- `public/content/gallery/gallery.json` — an **ordered** `items` array; array order is
+  display order. Authoring contract documented in `public/content/gallery/README.md`.
+- `app/lib/galleryLoader.ts` — resolves entries to `GalleryItem`s, typed in
+  `app/lib/galleryTypes.ts`. Unlike `contentLoader.ts`, this module is fully typed (no `any`).
+- Image dimensions are measured at build time with `sharp`. **Video dimensions must be
+  declared in `gallery.json`** — `sharp` cannot read video, so an undeclared video falls
+  back to 16:9 and shifts the layout. The build warns, naming the file.
+- Missing files listed in `gallery.json` are skipped with a build warning rather than
+  failing the build.
+- An absent/empty `gallery.json` renders a neutral empty state, so the route always builds.
+  While the gallery has no media, `page.tsx` calls `hasGalleryItems()` and the CV page
+  hides the tab bar entirely — visitors are never offered an empty tab, and the Gallery tab
+  appears on its own once media is added. `/gallery` stays reachable directly.
+
+Videos autoplay muted when scrolled into view and pause when they leave, via
+`IntersectionObserver`, so only one video decodes at a time. Under
+`prefers-reduced-motion: reduce` they stay paused and expose native controls instead
+(`app/usePrefersReducedMotion.ts`).
+
+Each item is wrapped in an aspect-ratio box derived from its intrinsic dimensions, which
+holds the row's height before the media loads — verified at CLS 0.
+
+`Tabs.tsx` switches between `/` and `/gallery`. They are real routes, not client-side tab
+state, so the tabs are `<Link>`s with `aria-current="page"` rather than `role="tab"`.
+
+The styling is shadcn/ui's Tabs ported into `Tabs.module.css` against this project's tokens
+(muted track, 3px padding, raised active pill) — the actual component is not used because it
+is Tailwind-based and Radix Tabs switches panels within one document rather than navigating.
+
+The bar is sticky at `top: 0`. The bar itself spans the content column, but its sticky
+wrapper is full-bleed — pulled out to the viewport edges with negative margins and pushed
+back in with equal padding — so the opaque background covers the full width. Anything wider
+than the column (below 480px the attachment carousel bleeds past both edges) would otherwise
+stay visible beside the bar as it scrolls under. Below the wrapper, a `::after` continues the
+background as a downward fade, so content dissolves into the page instead of being cut flat
+at the bar's edge; it is shorter than the 36px gap that follows the bar, so nothing is dimmed
+at rest. Three things it depends on:
+
+- `ProfileHeader.tsx` is shared by both routes so the bar lands at the same vertical
+  position on each — otherwise switching tabs would make the sticky bar jump.
+- `.profile` and `.gallery` are both centred (`margin: 0 auto`), which is what makes the
+  full-bleed `calc(50% - 50vw)` margins land symmetrically on either route.
+- `globals.css` uses `overflow-x: clip` (not `hidden`) on `html, body`. `hidden` makes them
+  scroll containers, which silently breaks `position: sticky`. `hidden` is still declared
+  first as a fallback for browsers without `clip` support.
 
 ### Component Patterns
 
 - **Server components** (async): `layout.tsx`, `page.tsx`, `[slug]/page.tsx` — handle data loading
-- **Client components** (`"use client"`): `Profile.tsx`, `Attachments.tsx`, `Lightbox.tsx`, `Scrollbar.tsx`, `RichText.tsx`
+- **Client components** (`"use client"`): `Profile.tsx`, `Attachments.tsx`, `Lightbox.tsx`, `Scrollbar.tsx`, `RichText.tsx`, `Gallery.tsx`, `Tabs.tsx`
 - Lightbox uses React Portal to render to `document.body`
 - `Attachments.tsx` references Cloudflare Image Resizing via `/cdn-cgi/image/...` paths in `getThumbnailUrl()`
 
@@ -54,7 +120,8 @@ public/content/
 
 - **CSS Modules** for component-scoped styles (`.module.css` files)
 - **CSS custom properties** in `globals.css` for theming (light/dark via `prefers-color-scheme`)
-- Font: Inter (loaded via `next/font/google`)
+- Font: **Switzer**, loaded as a third-party stylesheet from `api.fontshare.com` via a `<link>` in
+  `layout.tsx` (not `next/font`), with `--default-font` in `globals.css` pointing at it
 - No UI component library — all custom components
 
 ### Key Dependencies
@@ -66,4 +133,33 @@ public/content/
 
 ### Deployment
 
-Static export (`out/`) deployed to Cloudflare Pages. Cache headers configured in `public/_headers`. Images are unoptimized by Next.js (Cloudflare handles optimization via CDN).
+Static export (`out/`) deployed to Cloudflare Pages. Cache headers and baseline security headers are
+configured in `public/_headers`. Images are unoptimized by Next.js (Cloudflare handles optimization
+via CDN).
+
+`app/lib/cloudflareImage.ts` builds Cloudflare Image Resizing URLs (`/cdn-cgi/image/...`) for
+both `Attachments.tsx` and `Gallery.tsx`. That endpoint only exists on Cloudflare's edge, so it
+is applied in production builds only — in development the original URL is used, otherwise every
+image 404s.
+
+Two things there are easy to get wrong:
+
+- **Request the real displayed box, not a square.** Cloudflare's default `fit=scale-down` fits
+  *inside* the requested box, so asking for `width=180,height=180` on a 4:3 thumbnail returns
+  180x135 — fewer pixels than the 240x180 the layout needs, and the browser upscales it. The
+  helper takes CSS dimensions and multiplies by `DPR`, and callers pass `fit: 'cover'` to mirror
+  `object-fit: cover`. Measured across all 28 CV thumbnails, fixing this was worth ~9 dB PSNR,
+  far more than any quality change.
+- **`quality` applies to whatever `format=auto` negotiates** (AVIF for most current browsers,
+  WebP otherwise). It is 80 by default; 50 was visibly soft on UI screenshots, where fine text
+  degrades first.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

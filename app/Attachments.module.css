@@ -29,11 +29,34 @@
   overflow: hidden;
   position: relative;
   cursor: pointer;
+  /* Reset the UA button styling — this is a <button> for keyboard access, not a chrome button. */
+  appearance: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: block;
+  font: inherit;
+  color: inherit;
 }
 
+/* Inset ring: the gallery scroll container clips anything drawn outside the thumbnail,
+   so a positive outline-offset would only show partially. */
+.media:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: -2px;
+}
+
+.media:focus-visible::after {
+  border-color: var(--blue);
+}
+
+/* inset: 0 is required, not decorative. With auto offsets an absolutely positioned box
+   falls back to its static position, and a <button> centres its content box — so the
+   media would sit at 50%/50% and get clipped instead of filling the thumbnail. */
 .media img,
 .media video {
   position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -60,11 +83,11 @@
     right: -24px;
   }
 
-  .scrollableArea .images > div:first-child {
+  .scrollableArea .images > *:first-child {
     margin-left: 40px;
   }
 
-  .scrollableArea .images > div:last-child {
+  .scrollableArea .images > *:last-child {
     margin-right: 24px;
   }
 

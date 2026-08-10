@@ -8,14 +8,17 @@ import { AnimatePresence } from "framer-motion";
 import { useScrollBoost } from 'react-scrollbooster';
 import isMobile from "./isMobile";
 import useResizeObserver from "use-resize-observer";
-import { cvThumbnailUrl } from "./lib/cdnImage";
 import styles from "./Attachments.module.css";
+
+import { cloudflareImageUrl } from "./lib/cloudflareImage";
 
 type AttachmentsProps = {
   attachments: Array<any>,
+  label?: string,
 };
 const Attachments: React.FC<AttachmentsProps> = ({
-  attachments
+  attachments,
+  label
 }) => {
   const [lightboxState, setLightboxState] = useState({
     open: false,
@@ -39,12 +42,6 @@ const Attachments: React.FC<AttachmentsProps> = ({
     shouldScroll: () => { return !isMobile() }
   });
 
-  const setRefs = useCallback<React.RefCallback<HTMLDivElement>>(node => {
-    containerRef.current = node;
-    viewport(node);
-    onResize();
-  }, [viewport]);
-
   const updateScrollbooster = () => {
     if (!scrollbooster || !containerRef.current) {
       return;
@@ -56,8 +53,14 @@ const Attachments: React.FC<AttachmentsProps> = ({
     updateScrollbooster();
   }
 
-  useResizeObserver({ ref: containerRef as any, onResize });
-  useResizeObserver({ ref: innerRef as any, onResize });
+  const setRefs = useCallback<React.RefCallback<HTMLDivElement>>(node => {
+    containerRef.current = node;
+    viewport(node);
+    onResize();
+  }, [viewport]);
+
+  useResizeObserver({ ref: containerRef as React.RefObject<HTMLDivElement>, onResize });
+  useResizeObserver({ ref: innerRef as React.RefObject<HTMLDivElement>, onResize });
 
   let lightbox;
   if (lightboxState.open === true) {
@@ -92,6 +95,8 @@ const Attachments: React.FC<AttachmentsProps> = ({
                   key={media.url}
                   height={galleryHeight}
                   index={index}
+                  total={attachments.length}
+                  label={label}
                 />
               )
             })}
@@ -111,12 +116,16 @@ type AttachmentProps = {
   height: number,
   onClick: () => void,
   index: number,
+  total: number,
+  label?: string,
 }
 const Attachment: React.FC<AttachmentProps> = ({
   media,
   height,
   onClick,
   index,
+  total,
+  label,
 }) => {
   const maxWidth = 21/9;   // ultrawide monitor
   const minWidth = 19/5/9; // iPhone
@@ -134,17 +143,24 @@ const Attachment: React.FC<AttachmentProps> = ({
   // Load first 5 thumbnails eagerly, lazy load the rest
   const shouldLoadEagerly = index < 5;
 
+  // The displayed box, which is what the resize request must ask for. Asking for a square
+  // box (the previous behaviour) makes Cloudflare constrain by the wrong axis and return
+  // fewer pixels than the thumbnail needs, so the browser upscales and it looks soft.
+  const displayWidth = Math.round(height * returnThumbnailAspectRatio(media.width / media.height));
+
   let item;
   if (media.type === "image") {
-    // Use optimized thumbnail URL for smaller file size
-    const thumbnailUrl = cvThumbnailUrl(media.url, height);
-    item = <Image 
-      alt="" 
-      src={thumbnailUrl} 
-      height={height} 
-      width={height * returnThumbnailAspectRatio(media.width / media.height)}
+    const thumbnailUrl = cloudflareImageUrl(media.url, {
+      width: displayWidth,
+      height,
+      fit: 'cover',
+    });
+    item = <Image
+      alt=""
+      src={thumbnailUrl}
+      height={height}
+      width={displayWidth}
       loading={shouldLoadEagerly ? "eager" : "lazy"}
-      quality={50}
     />
   } else if (media.type === "video") {
     item = <video 
@@ -157,16 +173,23 @@ const Attachment: React.FC<AttachmentProps> = ({
     />
   }
 
+  const mediaNoun = media.type === "video" ? "video" : "image";
+  const accessibleName = label
+    ? `${label} — view ${mediaNoun} ${index + 1} of ${total}`
+    : `View ${mediaNoun} ${index + 1} of ${total}`;
+
   return (
-    <div
+    <button
+      type="button"
       style={{
         height: height,
         aspectRatio: returnThumbnailAspectRatio(media.width / media.height),
       }}
       onClick={onClick}
+      aria-label={accessibleName}
       className={styles.media}>
       {item}
-    </div>
+    </button>
   )
 }
 

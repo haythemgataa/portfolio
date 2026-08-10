@@ -1,6 +1,5 @@
 "use client"
 
-import Image from "next/image";
 import RichText from "./RichText";
 import Arrow12 from "./Arrow12";
 import styles from "./Profile.module.css";
@@ -13,28 +12,7 @@ const Profile: React.FC<ProfileProps> = ({
   cv
 }) => {
   return (
-    <div className={styles.profile}>
-      <div className={styles.profileHeader}>
-        <div className={styles.profilePhoto}>
-          <Image 
-            src={cv.general.profilePhoto} 
-            alt="" 
-            width={92} 
-            height={92}
-            priority
-            fetchPriority="high"
-          />
-        </div>
-        <div className={styles.profileInfo}>
-          <h1>
-            {cv.general.displayName}
-            {process.env.NEXT_PUBLIC_GIT_BRANCH === "dev" && (
-              <span className={styles.betaBadge}>beta</span>
-            )}
-          </h1>
-          <div className={styles.byline}>{cv.general.byline}</div>
-        </div>
-      </div>
+    <>
 
       {cv.general.about ?
         <section className={`${styles.profileSection} ${styles.about}`}>
@@ -64,7 +42,7 @@ const Profile: React.FC<ProfileProps> = ({
           </section>
         )
       })}
-    </div>
+    </>
   );
 };
 
@@ -101,7 +79,7 @@ const ProfileItem: React.FC<ProfileItemProps> = ({
         </div>
         : null}
         {experience.attachments && experience.attachments.length > 0 ?
-          <Attachments attachments={experience.attachments}/>
+          <Attachments attachments={experience.attachments} label={experience.heading}/>
         : null}
       </div>
     </div>

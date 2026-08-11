@@ -43,11 +43,9 @@ export type CvItem = {
   id: string;
   year?: string;
   heading?: string;
-  /** Structured counterparts to `heading`. Not rendered — a JSON-LD hook. */
-  role?: string;
-  org?: string;
   url?: string;
-  location?: string;
+  /** Free text under the heading — a location, a stack, whatever the section needs. */
+  subheading?: string;
   /** Markdown. */
   description?: string;
   /** Filenames in the public/media/ pool; array order is display order. */

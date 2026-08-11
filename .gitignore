@@ -7,5 +7,8 @@ out
 # Build/tooling artifacts
 *.tsbuildinfo
 
+# Per-machine Claude Code settings — .claude/launch.json is shared, this is not
+.claude/settings.local.json
+
 # OS cruft
 .DS_Store

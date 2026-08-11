@@ -4,8 +4,6 @@
     {
       "id": "dashboard-explorations",
       "file": "dashboard-explorations.png",
-      "width": 1080,
-      "height": 810,
       "title": "Dashboard explorations",
       "caption": "Layout studies for a data-heavy internal tool, narrowing five directions down to two.",
       "date": "2026"
@@ -13,18 +11,13 @@
     {
       "id": "award-ceremony",
       "file": "award-ceremony.mp4",
-      "width": 1254,
-      "height": 704,
       "title": "Tunisia Digital Awards",
       "caption": "Silver award for best website design.",
-      "date": "March 2026",
-      "poster": "award-ceremony-poster.jpg"
+      "date": "March 2026"
     },
     {
       "id": "poster-series",
       "file": "poster-series.png",
-      "width": 1080,
-      "height": 1440,
       "title": "Poster series",
       "caption": "Print work for We Are Kairouan.",
       "date": "2025"
@@ -32,38 +25,28 @@
     {
       "id": "brand-system",
       "file": "brand-system.png",
-      "width": 1080,
-      "height": 810,
       "title": "Brand system",
-      "caption": "Type scale, colour and logo lockups for a non-profit rebrand."
+      "caption": "Type scale, color and logo lockups for a non-profit rebrand."
     },
     {
       "id": "workshop-room",
       "file": "workshop-room.jpg",
-      "width": 661,
-      "height": 512,
       "caption": "Design workshop, mid-session."
     },
     {
       "id": "conference-talk",
       "file": "conference-talk.mp4",
-      "width": 852,
-      "height": 480,
       "title": "Design for non-designers",
       "caption": "Opening minutes of a talk on giving engineers a working design vocabulary.",
       "date": "November 2025"
     },
     {
       "id": "kairouan-street",
-      "file": "kairouan-street.png",
-      "width": 1080,
-      "height": 810
+      "file": "kairouan-street.png"
     },
     {
       "id": "mobile-app-flow",
       "file": "mobile-app-flow.png",
-      "width": 1080,
-      "height": 810,
       "title": "Mobile onboarding flow",
       "caption": "Four screens from a sign-up rework that cut drop-off on the verification step.",
       "date": "2025"
@@ -71,8 +54,6 @@
     {
       "id": "code-camping",
       "file": "code-camping.jpg",
-      "width": 1080,
-      "height": 677,
       "title": "Code Camping",
       "date": "2024"
     }

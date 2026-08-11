@@ -1,21 +1,30 @@
-import type { CvFile } from '../../../lib/contentTypes';
+import type { CvFile, MediaAsset } from '../../../lib/contentTypes';
+import type { GalleryFile } from '../../../lib/galleryTypes';
 import {
+  appendMedia,
   createContactItem,
+  createGalleryEntry,
   createItem,
   createSection,
   deleteContactItem,
+  deleteGalleryEntry,
   deleteItem,
-  deleteMedia,
   deleteSection,
+  planGarbage,
   readDoc,
-  removeMediaFolders,
+  removeFiles,
+  removeMediaRef,
   renameSection,
   reorderContactItems,
+  reorderGallery,
   reorderItems,
   reorderMedia,
   reorderSections,
+  setGalleryFile,
+  updateAsset,
   updateContactItem,
   updateContactLabel,
+  updateGalleryEntry,
   updateItem,
   updateProfile,
   writeDoc,
@@ -25,97 +34,153 @@ import { fail, ok } from '../../lib/respond';
 
 /**
  * Every operation is read → transform → atomic write, with the caller's content
- * hash rejecting a stale overwrite. Ordering is an array index now, so nothing
- * here touches directory names.
+ * hash rejecting a stale overwrite.
+ *
+ * Ordering matters for anything that frees media: the JSON is written first and
+ * files are deleted only afterwards, so a rejected write cannot destroy assets.
  */
 export async function POST(req: Request) {
   try {
     assertLocalDev(req);
     const body = await req.json();
     const op = String(body?.op || '');
-    const { cv } = await readDoc();
+    const doc = await readDoc();
 
-    let next: CvFile;
+    let cv: CvFile = doc.cv;
+    let gallery: GalleryFile = doc.gallery;
+    let assets: Record<string, MediaAsset> = doc.assets;
     let extra: Record<string, unknown> = {};
-    /** Media folders to remove *after* the write succeeds. */
-    let orphanedIds: string[] = [];
+    /** Filenames this operation stopped referencing. */
+    let freed: string[] = [];
 
     switch (op) {
       case 'profile.update':
-        next = updateProfile(cv, body.data ?? {});
+        cv = updateProfile(cv, body.data ?? {});
         break;
 
       case 'section.reorder':
-        next = reorderSections(cv, body.order);
+        cv = reorderSections(cv, body.order);
         break;
       case 'section.create': {
         const created = createSection(cv, body.label);
-        next = created.cv;
+        cv = created.cv;
         extra = { sectionKey: created.key };
         break;
       }
       case 'section.rename':
-        next = renameSection(cv, body.sectionKey, body.label);
+        cv = renameSection(cv, body.sectionKey, body.label);
         break;
       case 'section.delete': {
         const removed = deleteSection(cv, body.sectionKey);
-        next = removed.cv;
-        orphanedIds = removed.removedIds;
+        cv = removed.cv;
+        freed = removed.freed;
         break;
       }
 
       case 'item.reorder':
-        next = reorderItems(cv, body.sectionKey, body.order);
+        cv = reorderItems(cv, body.sectionKey, body.order);
         break;
       case 'item.create': {
         const created = createItem(cv, body.sectionKey, body.data ?? {});
-        next = created.cv;
+        cv = created.cv;
         extra = { itemId: created.itemId };
         break;
       }
       case 'item.update':
-        next = updateItem(cv, body.sectionKey, body.itemId, body.data ?? {});
+        cv = updateItem(cv, body.sectionKey, body.itemId, body.data ?? {});
         break;
-      case 'item.delete':
-        next = deleteItem(cv, body.sectionKey, body.itemId);
-        orphanedIds = [body.itemId];
+      case 'item.delete': {
+        const removed = deleteItem(cv, body.sectionKey, body.itemId);
+        cv = removed.cv;
+        freed = removed.freed;
         break;
+      }
 
       case 'contact.rename':
-        next = updateContactLabel(cv, body.label);
+        cv = updateContactLabel(cv, body.label);
         break;
       case 'contact.reorder':
-        next = reorderContactItems(cv, body.order);
+        cv = reorderContactItems(cv, body.order);
         break;
       case 'contact.create': {
         const created = createContactItem(cv, body.data ?? {});
-        next = created.cv;
+        cv = created.cv;
         extra = { itemId: created.itemId };
         break;
       }
       case 'contact.update':
-        next = updateContactItem(cv, body.itemId, body.data ?? {});
+        cv = updateContactItem(cv, body.itemId, body.data ?? {});
         break;
       case 'contact.delete':
-        next = deleteContactItem(cv, body.itemId);
+        cv = deleteContactItem(cv, body.itemId);
+        break;
+
+      case 'gallery.reorder':
+        gallery = reorderGallery(gallery, body.order);
+        break;
+      case 'gallery.create': {
+        const created = createGalleryEntry(gallery, assets, body.file, body.data ?? {});
+        gallery = created.gallery;
+        extra = { itemId: created.itemId };
+        break;
+      }
+      case 'gallery.update':
+        gallery = updateGalleryEntry(gallery, body.itemId, body.data ?? {});
+        break;
+      case 'gallery.setFile': {
+        const changed = setGalleryFile(gallery, assets, body.itemId, body.file);
+        gallery = changed.gallery;
+        freed = changed.freed;
+        break;
+      }
+      case 'gallery.delete': {
+        const removed = deleteGalleryEntry(gallery, body.itemId);
+        gallery = removed.gallery;
+        freed = removed.freed;
+        break;
+      }
+
+      case 'asset.update':
+        assets = updateAsset(assets, body.file, body.data ?? {});
         break;
 
       case 'media.reorder':
-        next = reorderMedia(cv, body.sectionKey, body.itemId, body.order);
+        cv = reorderMedia(cv, body.sectionKey, body.itemId, body.order);
         break;
-      case 'media.delete':
-        next = await deleteMedia(cv, body.sectionKey, body.itemId, body.file);
+      case 'media.remove': {
+        const removed = removeMediaRef(cv, body.sectionKey, body.itemId, body.file);
+        cv = removed.cv;
+        freed = removed.freed;
+        break;
+      }
+      case 'media.attach':
+        // Reuse an asset already in the pool — the point of a shared pool.
+        cv = appendMedia(cv, body.sectionKey, body.itemId, body.files ?? []);
         break;
 
       default:
         throw new StudioError(`Unknown operation: ${op}`);
     }
 
-    const hash = await writeDoc(next, body.hash);
-    // Only after the document is safely on disk.
-    if (orphanedIds.length) await removeMediaFolders(orphanedIds);
+    let remove: string[] = [];
+    if (freed.length) {
+      // Pure: works out what is now unreferenced without touching disk. Counts
+      // both tabs, so a file the other one still uses is left alone.
+      const plan = planGarbage(cv, gallery, assets, freed);
+      assets = plan.assets;
+      remove = plan.remove;
+    }
 
-    return ok({ hash, ...extra });
+    const hash = await writeDoc({ cv, assets, gallery }, body.hash);
+    // Only once the document is safely on disk.
+    const deleted = remove.length ? await removeFiles(remove) : [];
+
+    return ok({
+      hash,
+      ...extra,
+      deletedAssets: deleted,
+      keptShared: freed.filter((f) => !remove.includes(f)),
+    });
   } catch (error) {
     return fail(error);
   }

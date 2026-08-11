@@ -73,7 +73,7 @@
   margin-left: 2px;
 }
 
-.location {
+.subheading {
   color: var(--grey2);
 }
 
@@ -103,7 +103,7 @@
 }
 
 
-.location ~ .description {
+.subheading ~ .description {
   margin-top: calc((var(--type-size) * var(--line-height)) / 2);
 }
 

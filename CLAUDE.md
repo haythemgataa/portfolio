@@ -7,10 +7,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run dev` — Start dev server (localhost:3000)
 - `npm run build` — Build static export to `out/`, then strip the placeholder route (`scripts/clean-export.mjs`)
 - `npm run lint` — Run ESLint (flat config in `eslint.config.mjs`)
-- `npm run migrate` — **Obsolete.** Points at `scripts/migrate-content.ts`, which migrated a
-  monolithic `profileData.json` into the old `NNN-` directory tree. Neither its input nor its
-  output format exists any more. `scripts/migrate-to-json.ts` (with `--dry-run`) is the migration
-  that produced the current `content/cv.json`; it has already been run.
+- `npm run check:cdn` — Assert the Cloudflare image gate emits `/cdn-cgi/image/` URLs for
+  production builds and none outside them. Runs two builds; not part of `npm run build`.
+
+`scripts/` holds only `clean-export.mjs`, which `npm run build` runs. The one-shot migrations that
+produced the current content model are gone — see git history if you need them.
 
 No test framework is configured.
 
@@ -18,17 +19,25 @@ No test framework is configured.
 
 ### Content Studio (`localhost:3000/studio`)
 
-A dev-only editor for `content/cv.json` — reorder/add/rename/delete sections and
-items, edit profile, item and contact fields, and manage each item's media. Every
-mutation is a read-modify-write of the one JSON file; `git checkout -- content public/media`
-is the undo.
+A dev-only editor for all three content files — reorder/add/rename/delete sections and items,
+edit profile, item and contact fields, manage media, and edit the gallery. Every mutation is a
+read-modify-write; `git checkout -- content public/media` is the undo.
+
+The left pane mirrors the document's shape: **Profile** pinned top, the orderable **sections**,
+**Contact** pinned bottom, and **Gallery** as a peer tab rather than a CV section. Selecting any
+pooled asset — a gallery entry's file, or a clicked CV thumbnail — opens an editor for its
+`media.json` entry, which is how a video's real dimensions get recorded (`sharp` cannot measure
+video, so uploads land on a 1600x900 placeholder).
 
 Two guards make whole-file rewrites safe, and both are load-bearing:
 
 - **Atomic write** — `cv.json.tmp` then `fs.rename`, so no reader sees a partial file.
 - **Stale-write rejection** — the UI sends the content hash it loaded and the route
-  refuses a mismatch with a 409. Without it, a tab left open would silently revert
+  refuses a mismatch with a 409. The hash covers all three content files, so a change to
+  any of them invalidates a pending edit. Without it, a tab left open would silently revert
   the whole CV on its next keystroke.
+- **Selective writes** — only files whose serialization actually changed are rewritten, so a
+  CV-only edit leaves `gallery.json` untouched and out of the diff.
 
 `Studio.module.css` positions the tool `fixed; inset: 0` because `/studio` sits under
 the site's root layout and would otherwise render below `ProfileHeader` and the tab bar.
@@ -64,17 +73,15 @@ unused and the cleanup step becomes a no-op.
 
 ### Data Layer
 
-There is no database or CMS. Content is **two JSON files plus a media tree**:
+There is no database or CMS. Content is **three JSON files plus a flat media pool**:
 
 ```
 content/                      # build-time input — NOT served
-  cv.json
-  gallery.json
+  cv.json                     # sections, items, order
+  gallery.json                # gallery entries and captions
+  media.json                  # per-asset facts, keyed by filename
   case-studies/<slug>.md      # markdown stays as files
-public/media/
-  profile/<file>
-  cv/<itemId>/<file>
-  gallery/<file>
+public/media/<file>           # ONE flat pool, shared by the CV and the gallery
 ```
 
 `content/` sits outside `public/` deliberately: it is compiler input, not a static asset.
@@ -94,12 +101,20 @@ The schema and its rationale are documented in **`CONTENT-SCHEMA.md`**; the type
   contact layout if the section was renamed.
 - **`section.key` is machine-facing and stable; `section.label` is free text** and safe to rename.
   This replaced the hardcoded `SECTION_MAP`, so adding a section needs no code change.
-- **`item.id` is stable and unique across the whole document** — it names the media folder
-  (`public/media/cv/<id>/`), so a collision would make two items share images. `contentLoader.ts`
+- **`item.id` is stable and unique across the whole document.** It no longer names anything on
+  disk, but it is still a React key and the Studio's addressing scheme, so `contentLoader.ts`
   throws on a duplicate rather than shipping it.
-- **Media dimensions are always authored**, so the build never runs `sharp`. `media[].file` is a
-  bare filename; `type` is inferred from the extension rather than stored, so there is one source
-  of truth for it.
+- **Media lives in one flat pool, described once in `media.json`.** `cv.json` and `gallery.json`
+  reference filenames only. This replaced per-item folders because a file used by both tabs had
+  two dimension records that drifted — the awards video was recorded 1920x1080 (the 16:9 fallback,
+  since `sharp` cannot measure video) against a true 1254x704. Dedup saved 6.5 MB of 51.7 MB, but
+  the point is that an asset can no longer disagree with itself.
+- **Deleting media is reference-counted.** A file goes only when nothing references it — CV items,
+  the profile photo, gallery entries and poster frames all count, so a thumbnail removed from the CV
+  survives if the gallery still shows it (and vice versa). `planGarbage()` is pure and the route
+  writes JSON *before* deleting files, so a rejected write cannot destroy media.
+- **Dimensions are always authored**, so the build never runs `sharp`; `type` is inferred from the
+  extension rather than stored, so there is one source of truth for it.
 - Optional fields are **omitted, not written as `""`**.
 
 One naming seam to know about: media is authored under `media` but the loader resolves it to
@@ -118,7 +133,8 @@ the CV sections:
 
 - `content/gallery.json` — an **ordered** `items` array; array order is display order.
 - `app/lib/galleryLoader.ts` — resolves entries to `GalleryItem`s, typed in
-  `app/lib/galleryTypes.ts`. Media resolves against `public/media/gallery/`.
+  `app/lib/galleryTypes.ts`. Entries reference the shared pool; dimensions come from
+  `media.json` via `app/lib/mediaRegistry.ts`, which both loaders share.
 - Each entry carries a **required, authored `id`**. It used to be derived from the array index
   (`${index}-${entry.file}`), which meant every id changed whenever the gallery was reordered.
 - `width`/`height` are **required**, not measured. This retires a live footgun: `sharp` cannot
@@ -183,7 +199,8 @@ at rest. Three things it depends on:
 - `framer-motion` — Lightbox and carousel animations
 - `react-markdown` — Renders markdown descriptions and case studies
 - `react-scrollbooster` — Horizontal gallery scrolling on desktop
-- `sharp` (dev only) — Image dimension detection during build
+- `sharp` (dev only) — measures image uploads in the Studio. The build never runs it: dimensions
+  are always authored into `media.json`.
 
 ### Deployment
 
@@ -194,7 +211,8 @@ via CDN).
 `app/lib/cloudflareImage.ts` builds Cloudflare Image Resizing URLs (`/cdn-cgi/image/...`) for
 both `Attachments.tsx` and `Gallery.tsx`. That endpoint only exists on Cloudflare's edge, so it
 is applied in production builds only — in development the original URL is used, otherwise every
-image 404s.
+image 404s. `npm run check:cdn` asserts both directions of that gate; nothing else catches a
+break, since `npm run build` succeeds either way.
 
 Two things there are easy to get wrong:
 

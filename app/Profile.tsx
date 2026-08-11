@@ -79,8 +79,8 @@ const ProfileItem: React.FC<ProfileItemProps> = ({
         <div className={styles.title}>
           {title}
         </div>
-        {item.location ?
-        <div className={styles.location}>{item.location}</div>
+        {item.subheading ?
+        <div className={styles.subheading}>{item.subheading}</div>
         : null}
         {item.description ?
         <div className={styles.description}>

@@ -56,7 +56,7 @@ Fields present in `item.json`, against what the merged components actually read:
 | `name` | 1 | 1 | **no** |
 
 `collaborators` is present on 20 items and empty on all 20 — pure dead weight.
-The rest are leftovers from `scripts/migrate-content.ts`; their information is
+The rest are leftovers from the original directory-tree migration; their information is
 already denormalized into `heading` (`"Product designer at InstaDeep"` =
 `title` + `company`).
 

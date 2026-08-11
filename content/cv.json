@@ -93,6 +93,32 @@
       ]
     },
     {
+      "key": "personalProjects",
+      "label": "Personal Projects",
+      "items": [
+        {
+          "id": "design-ruler",
+          "heading": "Design Ruler",
+          "location": "Swift (w/ Claude)"
+        },
+        {
+          "id": "files-shelf",
+          "heading": "Files Shelf - Raycast Extension",
+          "location": "Typescript (w/ Claude)"
+        },
+        {
+          "id": "personal-website",
+          "heading": "Personal Website",
+          "location": "Framer"
+        },
+        {
+          "id": "table-lamp-mod",
+          "heading": "Table Lamp Mod",
+          "location": "ESP32 and HomeKit"
+        }
+      ]
+    },
+    {
       "key": "awards",
       "label": "Awards",
       "items": [
@@ -172,24 +198,6 @@
           "role": "Design Boost",
           "org": "Google Developers Group Event",
           "location": "Sousse - Tunisia"
-        }
-      ]
-    },
-    {
-      "key": "certifications",
-      "label": "Certifications",
-      "items": [
-        {
-          "id": "user-experience-the-beginner-s-guide-from-interaction-design-foundation",
-          "year": "2024",
-          "heading": "User Experience: The Beginner's Guide from Interaction Design Foundation",
-          "role": "User Experience: The Beginner's Guide",
-          "org": "Interaction Design Foundation",
-          "url": "https://www.interaction-design.org/members/haythem/certificate/course/4dd7c189-54b3-47d1-a8e0-90d75a2ce5b4",
-          "description": "Distinction: Top 10% in class",
-          "media": [
-            "interaction-design-foundation.jpg"
-          ]
         }
       ]
     },

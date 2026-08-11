@@ -1,0 +1,402 @@
+/* The Studio lives under the site's root layout, so it would otherwise render
+   below ProfileHeader and the tab bar. Covering the viewport keeps it a tool
+   rather than a page, without restructuring the app's routes for a dev-only
+   feature. */
+.studio {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  color: var(--grey1);
+  background: var(--backgroundColor);
+}
+
+/* ---- top bar ---- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--primaryBorderColor);
+  flex: 0 0 auto;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.devBadge {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--wash2);
+  color: var(--grey2);
+}
+
+.topbarRight {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.status {
+  font-size: var(--secondary-type-size);
+  color: var(--grey3);
+  min-height: 1em;
+}
+
+.status_saved { color: var(--green); }
+.status_error { color: var(--red); }
+.status_busy { color: var(--grey3); }
+
+.link {
+  font-size: var(--secondary-type-size);
+  color: var(--blue);
+}
+
+/* ---- layout ---- */
+
+.columns {
+  display: grid;
+  grid-template-columns: 260px 300px minmax(0, 1fr);
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.pane {
+  border-right: 1px solid var(--primaryBorderColor);
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.editor {
+  overflow-y: auto;
+  min-height: 0;
+  padding: 20px 24px 64px;
+}
+
+.paneHeader {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--backgroundColor);
+  border-bottom: 1px solid var(--secondaryBorderColor);
+}
+
+.paneHeader h2 {
+  font-size: var(--secondary-type-size);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--grey3);
+  font-weight: 600;
+}
+
+.paneHeaderActions {
+  display: flex;
+  gap: 6px;
+}
+
+/* ---- lists ---- */
+
+.list {
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px 10px 8px;
+  border-bottom: 1px solid var(--secondaryBorderColor);
+  cursor: pointer;
+  user-select: none;
+}
+
+.row:hover { background: var(--wash2); }
+
+.rowActive {
+  background: var(--inputBackgroundColor);
+  box-shadow: inset 2px 0 0 var(--blue);
+}
+
+.rowOver { box-shadow: inset 0 -2px 0 var(--blue); }
+
+/* Pinned regions cannot be reordered, so they have no grip and sit indented
+   to match rows that do. */
+.rowPinned {
+  padding-left: 20px;
+  font-style: normal;
+}
+
+.rowPinned .rowMeta { font-style: italic; }
+
+.grip {
+  color: var(--grey3);
+  cursor: grab;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.rowMain {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.rowTitle {
+  font-size: var(--type-size);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowMeta {
+  font-size: 11px;
+  color: var(--grey3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowActions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  flex: 0 0 auto;
+}
+
+.row:hover .rowActions,
+.rowActive .rowActions { opacity: 1; }
+
+.rowActions button {
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--grey2);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.rowActions button:hover:not(:disabled) { background: var(--wash1); }
+.rowActions button:disabled { opacity: 0.25; cursor: default; }
+.danger:hover:not(:disabled) { color: var(--red); }
+
+/* ---- editor ---- */
+
+.editorHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 20px;
+}
+
+.editorHeader h2 { font-size: 18px; }
+
+.path {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--grey3);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 720px;
+  align-items: flex-start;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+}
+
+.fieldLabel {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--grey3);
+  font-weight: 600;
+}
+
+.input,
+.textarea {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--primaryBorderColor);
+  border-radius: 6px;
+  background: var(--inputBackgroundColor);
+  color: var(--grey1);
+  font-family: inherit;
+  font-size: var(--type-size);
+  line-height: var(--line-height);
+}
+
+.textarea { resize: vertical; }
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+
+.input:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+
+.hint {
+  font-size: 11px;
+  color: var(--grey3);
+}
+
+.error {
+  font-size: 11px;
+  color: var(--red);
+}
+
+/* ---- media ---- */
+
+.mediaSection { margin-top: 32px; max-width: 720px; }
+
+.dropzone {
+  border: 1px dashed var(--primaryBorderColor);
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 12px;
+}
+
+.mediaGrid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.mediaCard {
+  position: relative;
+  border: 1px solid var(--primaryBorderColor);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--wash2);
+  cursor: grab;
+}
+
+.mediaCard img {
+  display: block;
+  width: 100%;
+  height: 90px;
+  object-fit: cover;
+}
+
+.videoThumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 90px;
+  color: var(--grey3);
+  font-size: 12px;
+}
+
+.mediaMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 8px;
+  font-size: 11px;
+  overflow: hidden;
+}
+
+.mediaMeta > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mediaDelete {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  opacity: 0;
+}
+
+.mediaCard:hover .mediaDelete { opacity: 1; }
+
+/* ---- raw json ---- */
+
+.rawSection {
+  margin-top: 32px;
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+/* ---- buttons ---- */
+
+.ghostButton,
+.primaryButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--primaryBorderColor);
+  background: var(--backgroundColor);
+  color: var(--grey2);
+  font-family: inherit;
+  font-size: var(--secondary-type-size);
+  cursor: pointer;
+}
+
+.ghostButton:hover { background: var(--wash2); color: var(--grey1); }
+
+.primaryButton {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+}
+
+.primaryButton:hover { filter: brightness(1.08); }
+
+.empty {
+  padding: 24px 16px;
+  color: var(--grey3);
+  font-size: var(--secondary-type-size);
+}
+
+@media (max-width: 900px) {
+  .columns { grid-template-columns: 1fr; overflow-y: auto; }
+  .pane, .editor { overflow: visible; }
+}

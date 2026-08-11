@@ -397,6 +397,23 @@
 }
 
 @media (max-width: 900px) {
-  .columns { grid-template-columns: 1fr; overflow-y: auto; }
-  .pane, .editor { overflow: visible; }
+  /* Stacked: the whole grid becomes the scroll container, so each pane's rows
+     must size to content. */
+  .columns {
+    grid-template-columns: 1fr;
+    grid-auto-rows: min-content;
+    overflow-y: auto;
+  }
+
+  .pane,
+  .editor {
+    overflow: visible;
+    border-right: none;
+    border-bottom: 1px solid var(--primaryBorderColor);
+  }
+
+  /* Three sticky headers inside ONE scroll container all pin to the same top
+     and overlap each other. Only the column layout gives each its own scroller,
+     so stacked headers scroll with their content instead. */
+  .paneHeader { position: static; }
 }

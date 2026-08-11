@@ -112,12 +112,11 @@ Both found while auditing, both worth designing out rather than porting:
 
 ```
 content/                      # build-time input, NOT served
-  cv.json
-  gallery.json
+  cv.json                     # sections, items, order
+  gallery.json                # gallery entries and captions
+  media.json                  # per-asset facts, keyed by filename
   case-studies/<slug>.md      # markdown stays as files
-public/media/
-  cv/<itemId>/<file>
-  gallery/<file>
+public/media/<file>           # ONE flat pool, shared by both tabs
 ```
 
 Two files, not one: the CV is sections → items → media, the gallery is a flat
@@ -128,15 +127,39 @@ taking out both.
 Content JSON moves out of `public/` because it is compiler input, not a static
 asset. Media must stay under `public/`.
 
-Media folders are keyed by **stable `itemId`, never by order** — this is the part
-that makes reordering a pure JSON edit. Keeping per-item folders (rather than one
-flat pool) means deleting an item deletes its media with it, so there is no
-orphan collection to write.
+## One media pool, one description per asset
 
-Because the folder is `public/media/cv/<itemId>/`, **`id` must be unique across
-the whole document**, not merely within its section — otherwise a `contact` item
-and a `speaking` item both called `email` would share a media folder. The loader
-validates this and fails the build on a duplicate.
+Media lives in a single flat pool and each file is described exactly once, in
+`content/media.json`. `cv.json` and `gallery.json` reference filenames only.
+
+This replaced per-item folders (`public/media/cv/<itemId>/`) for a reason that
+had already cost us a bug. Two videos existed twice on disk — once under the CV
+item, once under the gallery — so each had **two** dimension records, and they
+drifted: the awards video was `1920x1080` on the CV side (the 16:9 fallback,
+because `sharp` cannot measure video) against a true `1254x704` on the gallery
+side. One file, two descriptions, one wrong.
+
+Merging the folders alone would have deduped 6.5 MB of 51.7 MB and left that bug
+class alive. The registry retires it: an asset cannot disagree with itself.
+
+The costs, which are real:
+
+- **Deletion needs reference counting.** With per-item folders, deleting an item
+  deleted its folder and orphans were impossible. In a pool, a file may only be
+  deleted once nothing references it — CV items, the profile photo, gallery
+  entries, and poster frames all count. `planGarbage()` computes this without
+  touching disk, and the route writes the JSON *before* deleting files, so a
+  rejected write can never destroy media.
+- **Filename collisions are global**, so uploads check the whole registry.
+- **Per-item locality is gone.** The registry is the index now, not the folder
+  tree.
+
+Uploading bytes already in the pool resolves to the existing asset instead of
+writing a second copy, which is what stops the duplication recurring.
+
+Item `id` must still be **unique across the whole document** — it is no longer a
+folder name, but it is still a React key and the Studio's addressing scheme. The
+loader fails the build on a duplicate.
 
 ## Fixed vs. orderable sections
 
@@ -190,10 +213,7 @@ Two consequences worth stating:
           "url": "https://instadeep.com",
           "location": "Tunis, Tunisia",
           "description": "* Collaborating on a design system…",
-          "media": [
-            { "file": "instadeep-1.png", "width": 2000, "height": 1500 },
-            { "file": "instadeep-2.png", "width": 2000, "height": 1500 }
-          ]
+          "media": ["instadeep-1.png", "instadeep-2.png"]
         }
       ]
     }
@@ -219,29 +239,44 @@ Rules:
 - `sections[]` is homogeneous — every entry is timeline-shaped.
 - `key` is stable and machine-facing; it replaces `SECTION_MAP`, so adding a
   section needs no code change. `label` is free text and safe to rename.
-- `id` is stable and **globally unique**; it names the media folder
-  `public/media/cv/<id>/`.
+- `id` is stable and **globally unique**. It names nothing on disk, but it is a
+  React key and the Studio's addressing scheme.
 - `role` / `org` are optional. They carry no rendering weight today — `heading`
   is what renders — but they are the hook for future JSON-LD.
-- `media[].width` / `height` are **always stored**, so the build skips `sharp`
-  entirely. `galleryLoader.ts` already works this way.
-- `media[].file` is a bare filename resolved against the item's folder. Media
-  `type` stays **inferred from the extension**, as both loaders already do —
-  storing it would be a second source of truth that can drift.
+- `item.media` is a **list of filenames** into the pool; array order is display
+  order. Dimensions live in `media.json`, so the build skips `sharp` entirely.
+- Media `type` stays **inferred from the extension** — storing it would be a
+  second source of truth that can drift, which is the same mistake in miniature.
 - Omit optional fields rather than writing `""`.
+
+## `content/media.json`
+
+```json
+{
+  "version": 1,
+  "assets": {
+    "instadeep-1.png": { "width": 2000, "height": 1500 },
+    "award-ceremony.mp4": { "width": 1254, "height": 704, "poster": "award-ceremony-poster.jpg" }
+  }
+}
+```
+
+Keyed by filename, so an asset structurally cannot carry two records. Holds only
+*intrinsic* facts — dimensions and the poster frame. Presentation (captions,
+dates, ordering) stays with the referring entry.
+
+Not added: `alt`. It belongs here, and CV thumbnails currently render `alt=""`,
+but wiring it up changes rendered output and is its own change. The registry is
+where it goes when you want it.
 
 ## `content/gallery.json`
 
-Keep the existing shape from `galleryTypes.ts` — it is already the
-best-specified thing in the repo. Three changes:
+Entries carry only presentation — which asset, in what order, with what caption:
 
-- Add a required, authored `id` per entry, replacing the index-derived one.
-- Media resolves against `public/media/gallery/` instead of
-  `public/content/gallery/media/`.
-- `width`/`height` become required rather than optional. This retires a live
-  footgun: today an undeclared **video** silently falls back to 16:9 and shifts
-  the layout, because `sharp` cannot measure video. If dimensions are always
-  written by the migration and the Studio, images and videos behave identically.
+- A required, authored `id`, replacing the index-derived one (`${index}-${file}`
+  changed every id on reorder).
+- `file` references the shared pool.
+- `width`/`height`/`poster` are **gone** — they live in `media.json` now.
 
 ## Studio impact
 
@@ -281,7 +316,13 @@ Media upload still touches the filesystem; only ordering and text move into JSON
 
 ## Migration
 
-`scripts/migrate-to-json.ts`, with `--dry-run`:
+Two scripts ran, in order. Both copied rather than moved, so each old layout
+could be deleted in its own reviewable commit.
+
+### 1. `scripts/migrate-to-json.ts` — directory tree to JSON
+
+Historical: this produced the per-item media layout that step 2 then replaced.
+With `--dry-run`:
 
 1. Walk the existing tree via the current loader logic.
 2. Emit `content/cv.json`, preserving current order as array order, hoisting
@@ -295,6 +336,27 @@ Media upload still touches the filesystem; only ordering and text move into JSON
    discarding it silently.
 7. Verify `id` uniqueness across the whole document and fail loudly on a clash.
 8. Leave the old tree in place — deletion is a separate, reviewable commit.
+
+### 2. `scripts/migrate-media-pool.ts` — per-item folders to one pool
+
+With `--dry-run`:
+
+1. Hash every referenced file and collapse identical bytes to one asset. Two
+   videos were duplicated between the CV and the gallery.
+2. Assign short names — `org` (falling back to `heading`) plus an index, so
+   `Product-designer-at-InstaDeep-1.png` became `instadeep-1.png`. Gallery names
+   are registered first, so the shorter existing name wins for shared assets.
+3. Measure anything whose dimensions were not recorded — the poster frame and the
+   avatar — rather than writing a placeholder.
+4. Where two records for one file disagreed, keep the one that is not a known
+   fallback (`1920x1080`, `1600x900`) and report it.
+5. Emit `content/media.json`; rewrite `cv.json` media as filename lists and strip
+   `width`/`height`/`poster` from `gallery.json`.
+
+Verified by deriving the exact old→new URL map from the two content snapshots,
+rewriting the previous build's HTML with it, and diffing: 40 mappings, no
+ordering changes, and the rendered DOM identical apart from a build-hash chunk
+name.
 
 ### Acceptance test
 
@@ -324,7 +386,8 @@ block, which is what lets both `collection.name === "Contact"` checks die.
 ## Decisions settled
 
 1. **Two files, not one** — CV and gallery keep separate schemas.
-2. **Per-item media folders keyed by stable, globally unique id**, not a flat pool.
+2. **One flat media pool plus a `media.json` registry**, superseding the original
+   per-item-folder decision — see "One media pool" above for why it changed.
 3. **Case studies stay as `.md` files**, not strings in JSON.
 4. **`role` / `org` retained** as optional structured fields for future JSON-LD.
 5. **`buttonLabel`, `status`, and the rest of the unread `general` fields are

@@ -9,7 +9,7 @@ import type {
   MediaAsset,
 } from '../../lib/contentTypes';
 import { inferMediaType } from '../../lib/contentTypes';
-import type { GalleryFile } from '../../lib/galleryTypes';
+import type { GalleryEntry, GalleryFile } from '../../lib/galleryTypes';
 import {
   CV_PATH,
   GALLERY_PATH,
@@ -30,9 +30,9 @@ import {
  *      covers BOTH files, so a change to either invalidates a pending edit;
  *   3. media is only deleted from the pool once nothing references it.
  *
- * gallery.json is read but never written here: the Studio does not edit the
- * gallery yet, but it must count gallery references before deleting any asset,
- * or removing a CV thumbnail could delete a file the gallery still shows.
+ * gallery.json is written too, so the hash covers all three files. Reference
+ * counting spans both tabs: removing a CV thumbnail must not delete a file the
+ * gallery still shows, and vice versa.
  */
 
 export type Doc = {
@@ -40,6 +40,8 @@ export type Doc = {
   gallery: GalleryFile;
   assets: Record<string, MediaAsset>;
   hash: string;
+  /** Exact bytes on disk, so a write can skip files that did not change. */
+  raw: { cv: string; media: string; gallery: string };
 };
 
 function hashOf(...parts: string[]): string {
@@ -76,7 +78,13 @@ export async function readDoc(): Promise<Doc> {
     throw new StudioError(`Content JSON is invalid: ${error}`);
   }
 
-  return { cv, gallery, assets, hash: hashOf(cvRaw, mediaRaw) };
+  return {
+    cv,
+    gallery,
+    assets,
+    hash: hashOf(cvRaw, mediaRaw, galleryRaw),
+    raw: { cv: cvRaw, media: mediaRaw, gallery: galleryRaw },
+  };
 }
 
 async function writeAtomic(path: string, contents: string): Promise<void> {
@@ -87,30 +95,39 @@ async function writeAtomic(path: string, contents: string): Promise<void> {
 }
 
 export async function writeDoc(
-  cv: CvFile,
-  assets: Record<string, MediaAsset>,
+  next: { cv: CvFile; assets: Record<string, MediaAsset>; gallery: GalleryFile },
   expectedHash?: string
 ): Promise<string> {
-  if (expectedHash) {
-    const { hash } = await readDoc();
-    if (hash !== expectedHash) {
-      throw new StudioError(
-        'Content changed since this page loaded. Reload the Studio and redo this edit.',
-        409
-      );
-    }
+  // One read serves both the stale check and the "did this file change" test.
+  const current = await readDoc();
+  if (expectedHash && current.hash !== expectedHash) {
+    throw new StudioError(
+      'Content changed since this page loaded. Reload the Studio and redo this edit.',
+      409
+    );
   }
 
-  const cvContents = JSON.stringify(cv, null, 2) + '\n';
-  // Keys sorted so the registry stays diff-friendly as assets come and go.
+  const cvContents = JSON.stringify(next.cv, null, 2) + '\n';
+  // Registry keys sorted so it stays diff-friendly as assets come and go.
   const sorted: Record<string, MediaAsset> = {};
-  for (const key of Object.keys(assets).sort()) sorted[key] = assets[key];
+  for (const key of Object.keys(next.assets).sort()) sorted[key] = next.assets[key];
   const mediaContents = JSON.stringify({ version: 1, assets: sorted }, null, 2) + '\n';
+  const galleryContents =
+    JSON.stringify({ version: next.gallery.version ?? 1, items: next.gallery.items ?? [] }, null, 2) +
+    '\n';
 
-  await writeAtomic(CV_PATH, cvContents);
-  await writeAtomic(MEDIA_PATH, mediaContents);
+  // Only rewrite what actually differs, so an untouched file keeps its mtime and
+  // stays out of the diff. `current.raw` is the bytes we just read.
+  const pending: [string, string, string][] = [
+    [CV_PATH, cvContents, current.raw.cv],
+    [MEDIA_PATH, mediaContents, current.raw.media],
+    [GALLERY_PATH, galleryContents, current.raw.gallery],
+  ];
+  for (const [path, contents, existing] of pending) {
+    if (contents !== existing) await writeAtomic(path, contents);
+  }
 
-  return hashOf(cvContents, mediaContents);
+  return hashOf(cvContents, mediaContents, galleryContents);
 }
 
 // ---------------------------------------------------------------------------
@@ -467,6 +484,148 @@ export function deleteContactItem(cv: CvFile, itemId: string): CvFile {
     ...cv,
     contact: { ...contact, items: (contact.items ?? []).filter((i) => i.id !== itemId) },
   };
+}
+
+// ---------------------------------------------------------------------------
+// Gallery — its own tab, so it is a peer of the CV rather than a section
+// ---------------------------------------------------------------------------
+
+function galleryItems(gallery: GalleryFile): GalleryEntry[] {
+  return gallery.items ?? [];
+}
+
+function findEntry(gallery: GalleryFile, id: string): GalleryEntry {
+  const entry = galleryItems(gallery).find((e) => e.id === id);
+  if (!entry) throw new StudioError(`No gallery entry "${id}"`, 404);
+  return entry;
+}
+
+export function reorderGallery(gallery: GalleryFile, order: string[]): GalleryFile {
+  return { ...gallery, items: applyOrder(galleryItems(gallery), order, (e) => e.id) };
+}
+
+/**
+ * Add an entry pointing at an asset already in the pool. Ids are derived from
+ * the filename but stay authored afterwards, so reordering never changes them.
+ */
+export function createGalleryEntry(
+  gallery: GalleryFile,
+  assets: Record<string, MediaAsset>,
+  file: string,
+  data: Record<string, unknown> = {}
+): { gallery: GalleryFile; itemId: string } {
+  assertSafeSegment(file, 'filename');
+  if (!assets[file]) {
+    throw new StudioError(
+      `"${file}" is not in content/media.json — upload it or pick an existing asset.`
+    );
+  }
+
+  const taken = new Set(galleryItems(gallery).map((e) => e.id));
+  let id = slugify(file.replace(/\.[^.]+$/, ''), 'item');
+  if (taken.has(id)) {
+    let n = 2;
+    while (taken.has(`${id}-${n}`)) n++;
+    id = `${id}-${n}`;
+  }
+
+  const entry = mergePatch(
+    { id, file } as unknown as Record<string, unknown>,
+    data,
+    ['id', 'file']
+  ) as unknown as GalleryEntry;
+
+  return { gallery: { ...gallery, items: [...galleryItems(gallery), entry] }, itemId: id };
+}
+
+export function updateGalleryEntry(
+  gallery: GalleryFile,
+  id: string,
+  patch: Record<string, unknown>
+): GalleryFile {
+  findEntry(gallery, id);
+  return {
+    ...gallery,
+    items: galleryItems(gallery).map((e) =>
+      e.id !== id
+        ? e
+        : (mergePatch(e as unknown as Record<string, unknown>, patch, [
+            'id',
+            'file',
+          ]) as unknown as GalleryEntry)
+    ),
+  };
+}
+
+/** Point an entry at a different pooled asset. Frees the previous one. */
+export function setGalleryFile(
+  gallery: GalleryFile,
+  assets: Record<string, MediaAsset>,
+  id: string,
+  file: string
+): { gallery: GalleryFile; freed: string[] } {
+  assertSafeSegment(file, 'filename');
+  if (!assets[file]) throw new StudioError(`"${file}" is not in content/media.json`);
+  const entry = findEntry(gallery, id);
+  return {
+    gallery: {
+      ...gallery,
+      items: galleryItems(gallery).map((e) => (e.id === id ? { ...e, file } : e)),
+    },
+    freed: entry.file === file ? [] : [entry.file],
+  };
+}
+
+export function deleteGalleryEntry(
+  gallery: GalleryFile,
+  id: string
+): { gallery: GalleryFile; freed: string[] } {
+  const entry = findEntry(gallery, id);
+  return {
+    gallery: { ...gallery, items: galleryItems(gallery).filter((e) => e.id !== id) },
+    freed: [entry.file],
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Registry entries — editable, so a video's real dimensions can be recorded
+// ---------------------------------------------------------------------------
+
+/**
+ * Correct an asset's intrinsic facts. This is what makes an uploaded video
+ * fixable in the UI: sharp cannot measure video, so uploads land on a 16:9
+ * placeholder that has to be replaced with the real numbers.
+ */
+export function updateAsset(
+  assets: Record<string, MediaAsset>,
+  file: string,
+  patch: { width?: unknown; height?: unknown; poster?: unknown }
+): Record<string, MediaAsset> {
+  assertSafeSegment(file, 'filename');
+  const asset = assets[file];
+  if (!asset) throw new StudioError(`"${file}" is not in content/media.json`, 404);
+
+  const next: MediaAsset = { ...asset };
+
+  for (const key of ['width', 'height'] as const) {
+    if (patch[key] === undefined) continue;
+    const value = Number(patch[key]);
+    if (!Number.isFinite(value) || value <= 0 || !Number.isInteger(value)) {
+      throw new StudioError(`${key} must be a positive whole number`);
+    }
+    next[key] = value;
+  }
+
+  if (patch.poster !== undefined) {
+    if (patch.poster === '' || patch.poster === null) delete next.poster;
+    else {
+      const poster = assertSafeSegment(patch.poster, 'poster filename');
+      if (!assets[poster]) throw new StudioError(`Poster "${poster}" is not in the pool`);
+      next.poster = poster;
+    }
+  }
+
+  return { ...assets, [file]: next };
 }
 
 // ---------------------------------------------------------------------------

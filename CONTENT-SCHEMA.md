@@ -265,13 +265,19 @@ Keyed by filename, so an asset structurally cannot carry two records. Holds only
 *intrinsic* facts — dimensions and the poster frame. Presentation (captions,
 dates, ordering) stays with the referring entry.
 
+Editable from the Studio: selecting a gallery entry, or clicking a CV thumbnail, opens
+that asset's entry. This is the supported way to fix a video's dimensions, since
+`sharp` cannot measure video and an upload therefore lands on a 1600x900 placeholder.
+Because the record is shared, correcting it fixes every place the file is used.
+
 Not added: `alt`. It belongs here, and CV thumbnails currently render `alt=""`,
 but wiring it up changes rendered output and is its own change. The registry is
 where it goes when you want it.
 
 ## `content/gallery.json`
 
-Entries carry only presentation — which asset, in what order, with what caption:
+Editable from the Studio's Gallery pane. Entries carry only presentation — which asset, in what
+order, with what caption:
 
 - A required, authored `id`, replacing the index-derived one (`${index}-${file}`
   changed every id on reorder).

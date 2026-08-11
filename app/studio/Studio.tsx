@@ -2,11 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import styles from './Studio.module.css';
-import { CONTACT_FIELDS, ITEM_FIELDS, PROFILE_FIELDS, SECTION_SUGGESTIONS } from './lib/schema';
+import {
+  ASSET_FIELDS,
+  CONTACT_FIELDS,
+  GALLERY_FIELDS,
+  ITEM_FIELDS,
+  PROFILE_FIELDS,
+  SECTION_SUGGESTIONS,
+} from './lib/schema';
 import type { FieldDef } from './lib/schema';
 import { inferMediaType } from '../lib/contentTypes';
 import type { ContactItem, CvFile, CvItem, CvSection, MediaAsset } from '../lib/contentTypes';
-import type { GalleryFile } from '../lib/galleryTypes';
+import type { GalleryEntry, GalleryFile } from '../lib/galleryTypes';
 
 type Status = { kind: 'idle' | 'busy' | 'saved' | 'error'; message?: string };
 
@@ -14,7 +21,13 @@ type Status = { kind: 'idle' | 'busy' | 'saved' | 'error'; message?: string };
 type Selection =
   | { kind: 'profile' }
   | { kind: 'section'; key: string }
-  | { kind: 'contact' };
+  | { kind: 'contact' }
+  | { kind: 'gallery' };
+
+type Row = CvItem | ContactItem | GalleryEntry;
+
+const isContact = (row: Row): row is ContactItem => 'platform' in row;
+const isGallery = (row: Row): row is GalleryEntry => 'file' in row;
 
 function move<T>(list: T[], from: number, to: number): T[] {
   const next = list.slice();
@@ -98,6 +111,8 @@ export default function Studio({
   const [orphans, setOrphans] = useState<Orphans>(initialOrphans);
   const [selection, setSelection] = useState<Selection>({ kind: 'profile' });
   const [itemId, setItemId] = useState<string | null>(null);
+  /** Pooled asset shown in the asset panel, so dimensions can be corrected. */
+  const [assetFile, setAssetFile] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>(
     loadError ? { kind: 'error', message: loadError } : { kind: 'idle' }
   );
@@ -167,12 +182,16 @@ export default function Studio({
     return cv.sections.find((s) => s.key === selection.key) ?? null;
   }, [cv, selection]);
 
-  const rows = useMemo<(CvItem | ContactItem)[]>(() => {
+  const rows = useMemo<Row[]>(() => {
     if (!cv) return [];
     if (selection.kind === 'section') return section?.items ?? [];
     if (selection.kind === 'contact') return cv.contact?.items ?? [];
+    if (selection.kind === 'gallery') return gallery.items ?? [];
     return [];
-  }, [cv, section, selection]);
+  }, [cv, gallery, section, selection]);
+
+  /** Every pooled filename, for the "use an existing asset" pickers. */
+  const poolFiles = useMemo(() => Object.keys(assets).sort(), [assets]);
 
   const activeItem = useMemo(() => rows.find((r) => r.id === itemId) ?? null, [rows, itemId]);
 
@@ -215,6 +234,21 @@ export default function Studio({
         const row = draft.contact.items.find((i) => i.id === id);
         if (row) (row as Record<string, unknown>)[key] = value;
       });
+    } else if (selection.kind === 'gallery') {
+      // gallery.json is a peer document, so it is patched separately from cv.
+      setGallery((prev) => ({
+        ...prev,
+        items: (prev.items ?? []).map((e) =>
+          e.id !== id ? e : ({ ...e, [key]: value } as GalleryEntry)
+        ),
+      }));
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(() => {
+        setStatus({ kind: 'busy' });
+        mutate('gallery.update', { itemId: id, data: { [key]: value } })
+          .then(() => setStatus({ kind: 'saved', message: 'Saved' }))
+          .catch((error) => setStatus({ kind: 'error', message: error.message }));
+      }, 600);
     } else {
       const sectionKey = selection.key;
       queueSave('item.update', { sectionKey, itemId: id, data: { [key]: value } }, (draft) => {
@@ -224,6 +258,21 @@ export default function Studio({
         if (item) (item as Record<string, unknown>)[key] = value;
       });
     }
+  };
+
+  /** Correct an asset's intrinsic facts — the only way to fix video dimensions. */
+  const saveAssetField = (file: string, key: string, value: string) => {
+    setAssets((prev) => ({
+      ...prev,
+      [file]: { ...prev[file], [key]: key === 'poster' ? value : Number(value) || 0 },
+    }));
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      setStatus({ kind: 'busy' });
+      mutate('asset.update', { file, data: { [key]: value } })
+        .then(() => setStatus({ kind: 'saved', message: 'Asset updated' }))
+        .catch((error) => setStatus({ kind: 'error', message: error.message }));
+    }, 600);
   };
 
   // ---- reordering ---------------------------------------------------------
@@ -242,6 +291,8 @@ export default function Studio({
       const order = move(rows, from, to).map((r) => r.id);
       if (selection.kind === 'contact') {
         run(() => mutate('contact.reorder', { order }), 'Contact rows reordered');
+      } else if (selection.kind === 'gallery') {
+        run(() => mutate('gallery.reorder', { order }), 'Gallery reordered');
       } else if (selection.kind === 'section') {
         run(() => mutate('item.reorder', { sectionKey: selection.key, order }), 'Items reordered');
       }
@@ -260,6 +311,16 @@ export default function Studio({
     () => new Set((gallery.items ?? []).map((e) => e.file)),
     [gallery]
   );
+
+  /** The mirror image: filenames the CV references, for the gallery pane. */
+  const cvUses = useMemo(() => {
+    const used = new Set<string>();
+    if (cv?.profile?.photo) used.add(cv.profile.photo);
+    for (const s of cv?.sections ?? []) {
+      for (const i of s.items ?? []) for (const f of i.media ?? []) used.add(f);
+    }
+    return used;
+  }, [cv]);
 
   const reorderMedia = useCallback(
     (from: number, to: number) => {
@@ -333,6 +394,17 @@ export default function Studio({
       }, 'Contact row added');
       return;
     }
+    if (selection.kind === 'gallery') {
+      const file = window.prompt(
+        `Filename of a pooled asset to add.\n\nOr cancel and use "+ Upload" for a new file.\n\nIn the pool:\n${poolFiles.join('\n')}`
+      );
+      if (!file) return;
+      run(async () => {
+        const res: { itemId?: string } = await mutate('gallery.create', { file });
+        if (res.itemId) setItemId(res.itemId);
+      }, 'Gallery entry added');
+      return;
+    }
     if (selection.kind !== 'section') return;
     const heading = window.prompt('Heading (e.g. Product designer at InstaDeep)');
     if (!heading) return;
@@ -345,19 +417,30 @@ export default function Studio({
     }, 'Item created');
   };
 
-  const rowLabel = (row: CvItem | ContactItem) =>
-    'platform' in row ? row.platform : (row as CvItem).heading || row.id;
+  const rowLabel = (row: Row) =>
+    isContact(row)
+      ? row.platform
+      : isGallery(row)
+        ? row.title || row.file
+        : (row as CvItem).heading || row.id;
 
-  const removeRow = (target: CvItem | ContactItem) => {
+  const removeRow = (target: Row) => {
+    const detail = isGallery(target)
+      ? cvUses.has(target.file)
+        ? `\n\nThe CV also uses ${target.file}, so the file stays in public/media/.`
+        : `\n\nNothing else references ${target.file}, so the file will be deleted.`
+      : '';
     if (
       !window.confirm(
-        `Delete "${rowLabel(target)}"?\n\nUndo with: git checkout -- content public/media`
+        `Delete "${rowLabel(target)}"?${detail}\n\nUndo with: git checkout -- content public/media`
       )
     )
       return;
 
     if (selection.kind === 'contact') {
       run(() => mutate('contact.delete', { itemId: target.id }), 'Contact row deleted');
+    } else if (selection.kind === 'gallery') {
+      run(() => mutate('gallery.delete', { itemId: target.id }), 'Gallery entry deleted');
     } else if (selection.kind === 'section') {
       run(
         () => mutate('item.delete', { sectionKey: selection.key, itemId: target.id }),
@@ -368,10 +451,16 @@ export default function Studio({
 
   // ---- media --------------------------------------------------------------
   const uploadFiles = (files: FileList | null) => {
-    if (selection.kind !== 'section' || !activeItem || !files || files.length === 0) return;
+    if (!files || files.length === 0) return;
+    const toGallery = selection.kind === 'gallery';
+    if (!toGallery && (selection.kind !== 'section' || !activeItem)) return;
+
     const form = new FormData();
-    form.append('sectionKey', selection.key);
-    form.append('itemId', activeItem.id);
+    form.append('attachTo', toGallery ? 'gallery' : 'cv');
+    if (!toGallery && selection.kind === 'section' && activeItem) {
+      form.append('sectionKey', selection.key);
+      form.append('itemId', activeItem.id);
+    }
     form.append('hash', hashRef.current);
     Array.from(files).forEach((file) => form.append('files', file));
 
@@ -380,6 +469,7 @@ export default function Studio({
       const json = await res.json().catch(() => ({ error: res.statusText }));
       if (!res.ok) throw new Error(json.error || 'Upload failed');
       if (json.hash) hashRef.current = json.hash;
+      if (json.createdIds?.length) setItemId(json.createdIds[0]);
       if (json.warning) throw new Error(json.warning);
     }, 'Media uploaded');
   };
@@ -403,7 +493,9 @@ export default function Studio({
       ? PROFILE_FIELDS
       : selection.kind === 'contact'
         ? CONTACT_FIELDS
-        : ITEM_FIELDS;
+        : selection.kind === 'gallery'
+          ? GALLERY_FIELDS
+          : ITEM_FIELDS;
 
   const editorTarget: Record<string, unknown> | null =
     selection.kind === 'profile'
@@ -415,7 +507,15 @@ export default function Studio({
       ? 'Profile'
       : selection.kind === 'contact'
         ? (cv?.contact?.label ?? 'Contact')
-        : (section?.label ?? 'Items');
+        : selection.kind === 'gallery'
+          ? 'Gallery'
+          : (section?.label ?? 'Items');
+
+  /** The asset the panel edits: a gallery entry's file, or a clicked CV thumbnail. */
+  const panelAsset =
+    selection.kind === 'gallery' && activeItem && isGallery(activeItem)
+      ? activeItem.file
+      : assetFile;
 
   return (
     <div className={styles.studio}>
@@ -551,6 +651,31 @@ export default function Studio({
                 </span>
               </li>
             </ul>
+
+            <div className={styles.paneHeader}>
+              <h2>Other tab</h2>
+            </div>
+            <ul className={styles.list}>
+              <li
+                className={[
+                  styles.row,
+                  styles.rowPinned,
+                  selection.kind === 'gallery' ? styles.rowActive : '',
+                ].join(' ')}
+                onClick={() => {
+                  setSelection({ kind: 'gallery' });
+                  setItemId(null);
+                  setAssetFile(null);
+                }}
+              >
+                <span className={styles.rowMain}>
+                  <span className={styles.rowTitle}>Gallery</span>
+                  <span className={styles.rowMeta}>
+                    /gallery · {gallery.items?.length ?? 0} items
+                  </span>
+                </span>
+              </li>
+            </ul>
           </aside>
 
           {/* ---------------- Rows ---------------- */}
@@ -559,9 +684,26 @@ export default function Studio({
               <h2>{middleTitle}</h2>
               {selection.kind !== 'profile' && (
                 <span className={styles.paneHeaderActions}>
-                  <button className={styles.ghostButton} onClick={renameRegion}>
-                    Rename
-                  </button>
+                  {selection.kind !== 'gallery' && (
+                    <button className={styles.ghostButton} onClick={renameRegion}>
+                      Rename
+                    </button>
+                  )}
+                  {selection.kind === 'gallery' && (
+                    <label className={styles.ghostButton}>
+                      + Upload
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*,video/*"
+                        hidden
+                        onChange={(e) => {
+                          uploadFiles(e.target.files);
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+                  )}
                   <button className={styles.ghostButton} onClick={addRow}>
                     + Add
                   </button>
@@ -594,9 +736,13 @@ export default function Studio({
                     <span className={styles.rowMain}>
                       <span className={styles.rowTitle}>{rowLabel(row)}</span>
                       <span className={styles.rowMeta}>
-                        {'platform' in row
+                        {isContact(row)
                           ? row.handle
-                          : [
+                          : isGallery(row)
+                            ? [row.file, cvUses.has(row.file) ? 'also on CV' : null]
+                                .filter(Boolean)
+                                .join(' · ')
+                            : [
                               (row as CvItem).year,
                               (row as CvItem).media?.length
                                 ? `${(row as CvItem).media!.length} media`
@@ -661,7 +807,9 @@ export default function Studio({
                       ? 'content/cv.json → profile'
                       : selection.kind === 'contact'
                         ? `content/cv.json → contact.items[${activeItem!.id}]`
-                        : `content/cv.json → ${selection.key}[${activeItem!.id}]`}
+                        : selection.kind === 'gallery'
+                          ? `content/gallery.json → ${activeItem!.id}`
+                          : `content/cv.json → ${selection.key}[${activeItem!.id}]`}
                   </code>
                 </div>
 
@@ -697,6 +845,93 @@ export default function Studio({
                     Photo: <code>public/media/profile/{String(cv.profile.photo)}</code> — replace
                     the file on disk to change it.
                   </p>
+                )}
+
+                {selection.kind === 'gallery' && activeItem && isGallery(activeItem) && (
+                  <section className={styles.mediaSection}>
+                    <div className={styles.paneHeader}>
+                      <h2>Asset</h2>
+                    </div>
+                    <div className={styles.dropzone}>
+                      <ul className={styles.mediaGrid}>
+                        <li className={styles.mediaCard}>
+                          {inferMediaType(activeItem.file) === 'image' ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img alt={activeItem.file} src={`/media/${activeItem.file}`} />
+                          ) : (
+                            <div className={styles.videoThumb}>▶ video</div>
+                          )}
+                          <div className={styles.mediaMeta}>
+                            <span title={activeItem.file}>{activeItem.file}</span>
+                            <span className={styles.rowMeta}>
+                              {assets[activeItem.file]
+                                ? `${assets[activeItem.file].width}×${assets[activeItem.file].height}`
+                                : 'not in media.json'}
+                              {cvUses.has(activeItem.file) ? ' · also on CV' : ''}
+                            </span>
+                          </div>
+                        </li>
+                      </ul>
+                    </div>
+                    <label className={styles.field}>
+                      <span className={styles.fieldLabel}>Point at a different asset</span>
+                      <select
+                        className={styles.input}
+                        value={activeItem.file}
+                        onChange={(e) =>
+                          run(
+                            () =>
+                              mutate('gallery.setFile', {
+                                itemId: activeItem.id,
+                                file: e.target.value,
+                              }),
+                            'Asset changed'
+                          )
+                        }
+                      >
+                        {poolFiles.map((file) => (
+                          <option key={file} value={file}>
+                            {file}
+                          </option>
+                        ))}
+                      </select>
+                      <span className={styles.hint}>
+                        Every file in public/media/. Reusing one the CV already shows costs no
+                        extra bytes.
+                      </span>
+                    </label>
+                  </section>
+                )}
+
+                {panelAsset && assets[panelAsset] && (
+                  <section className={styles.mediaSection}>
+                    <div className={styles.paneHeader}>
+                      <h2>{panelAsset} — in media.json</h2>
+                    </div>
+                    <p className={styles.hint}>
+                      Shared by both tabs, so editing this changes it everywhere the file is
+                      used.
+                    </p>
+                    <div className={styles.form}>
+                      {ASSET_FIELDS.map((field) => (
+                        <label key={field.key} className={styles.field}>
+                          <span className={styles.fieldLabel}>{field.label}</span>
+                          <input
+                            className={styles.input}
+                            type="text"
+                            placeholder={field.placeholder}
+                            value={String(
+                              (assets[panelAsset] as unknown as Record<string, unknown>)[
+                                field.key
+                              ] ?? ''
+                            )}
+                            onChange={(e) => saveAssetField(panelAsset, field.key, e.target.value)}
+                          />
+                          {field.hint && <span className={styles.hint}>{field.hint}</span>}
+                        </label>
+                      ))}
+                    </div>
+                  </section>
                 )}
 
                 {selection.kind === 'section' && activeItem && (
@@ -752,7 +987,10 @@ export default function Studio({
                                 className={[
                                   styles.mediaCard,
                                   mediaDrag.over === index ? styles.rowOver : '',
+                                  panelAsset === file ? styles.rowActive : '',
                                 ].join(' ')}
+                                onClick={() => setAssetFile(file)}
+                                title="Click to edit this asset's dimensions"
                               >
                                 {inferMediaType(file) === 'image' ? (
                                   // eslint-disable-next-line @next/next/no-img-element

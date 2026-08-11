@@ -18,17 +18,25 @@ No test framework is configured.
 
 ### Content Studio (`localhost:3000/studio`)
 
-A dev-only editor for `content/cv.json` + `content/media.json` — reorder/add/rename/delete
-sections and items, edit profile, item and contact fields, and manage media. Every mutation is a
-read-modify-write of those files; `git checkout -- content public/media` is the undo.
+A dev-only editor for all three content files — reorder/add/rename/delete sections and items,
+edit profile, item and contact fields, manage media, and edit the gallery. Every mutation is a
+read-modify-write; `git checkout -- content public/media` is the undo.
+
+The left pane mirrors the document's shape: **Profile** pinned top, the orderable **sections**,
+**Contact** pinned bottom, and **Gallery** as a peer tab rather than a CV section. Selecting any
+pooled asset — a gallery entry's file, or a clicked CV thumbnail — opens an editor for its
+`media.json` entry, which is how a video's real dimensions get recorded (`sharp` cannot measure
+video, so uploads land on a 1600x900 placeholder).
 
 Two guards make whole-file rewrites safe, and both are load-bearing:
 
 - **Atomic write** — `cv.json.tmp` then `fs.rename`, so no reader sees a partial file.
 - **Stale-write rejection** — the UI sends the content hash it loaded and the route
-  refuses a mismatch with a 409. The hash covers `cv.json` *and* `media.json`, so a change
-  to either invalidates a pending edit. Without it, a tab left open would silently revert
+  refuses a mismatch with a 409. The hash covers all three content files, so a change to
+  any of them invalidates a pending edit. Without it, a tab left open would silently revert
   the whole CV on its next keystroke.
+- **Selective writes** — only files whose serialization actually changed are rewritten, so a
+  CV-only edit leaves `gallery.json` untouched and out of the diff.
 
 `Studio.module.css` positions the tool `fixed; inset: 0` because `/studio` sits under
 the site's root layout and would otherwise render below `ProfileHeader` and the tab bar.
@@ -101,9 +109,9 @@ The schema and its rationale are documented in **`CONTENT-SCHEMA.md`**; the type
   since `sharp` cannot measure video) against a true 1254x704. Dedup saved 6.5 MB of 51.7 MB, but
   the point is that an asset can no longer disagree with itself.
 - **Deleting media is reference-counted.** A file goes only when nothing references it — CV items,
-  the profile photo, gallery entries and poster frames all count, so the Studio reads `gallery.json`
-  even though it never writes it. `planGarbage()` is pure and the route writes JSON *before*
-  deleting files, so a rejected write cannot destroy media.
+  the profile photo, gallery entries and poster frames all count, so a thumbnail removed from the CV
+  survives if the gallery still shows it (and vice versa). `planGarbage()` is pure and the route
+  writes JSON *before* deleting files, so a rejected write cannot destroy media.
 - **Dimensions are always authored**, so the build never runs `sharp`; `type` is inferred from the
   extension rather than stored, so there is one source of truth for it.
 - Optional fields are **omitted, not written as `""`**.

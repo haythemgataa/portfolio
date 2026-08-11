@@ -1,7 +1,12 @@
 import { join, resolve, sep } from 'path';
 
-/** Everything the Studio may touch lives under this root. */
-export const CONTENT_ROOT = join(process.cwd(), 'public', 'content');
+/** Build-time content input. Deliberately outside public/ — never served. */
+export const CONTENT_ROOT = join(process.cwd(), 'content');
+/** Served media. Per-item folders are keyed by the item's stable id. */
+export const MEDIA_ROOT = join(process.cwd(), 'public', 'media');
+
+export const CV_PATH = join(CONTENT_ROOT, 'cv.json');
+export const CV_MEDIA_ROOT = join(MEDIA_ROOT, 'cv');
 
 /** A message safe to surface to the Studio UI. */
 export class StudioError extends Error {
@@ -13,28 +18,35 @@ export class StudioError extends Error {
   }
 }
 
-// Must start alphanumeric so our internal "__studio_tmp_*" scratch names can
-// never be produced by user input.
+// Must start alphanumeric so internal scratch names ("cv.json.tmp") can never
+// be produced by user input.
 const SEGMENT_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
 export function assertSafeSegment(segment: unknown, label = 'name'): string {
-  if (typeof segment !== 'string' || segment.length > 200 || !SEGMENT_RE.test(segment) || segment.includes('..')) {
+  if (
+    typeof segment !== 'string' ||
+    segment.length > 200 ||
+    !SEGMENT_RE.test(segment) ||
+    segment.includes('..')
+  ) {
     throw new StudioError(`Invalid ${label}: ${JSON.stringify(segment)}`);
   }
   return segment;
 }
 
-/**
- * Join validated segments under CONTENT_ROOT and verify the resolved path
- * cannot escape it.
- */
-export function contentPath(...segments: string[]): string {
+/** Resolve a path under `root`, proving it cannot escape. */
+function underRoot(root: string, segments: string[]): string {
   for (const segment of segments) assertSafeSegment(segment, 'path segment');
-  const full = resolve(CONTENT_ROOT, ...segments);
-  if (full !== CONTENT_ROOT && !full.startsWith(CONTENT_ROOT + sep)) {
+  const full = resolve(root, ...segments);
+  if (full !== root && !full.startsWith(root + sep)) {
     throw new StudioError('Path escapes the content directory', 403);
   }
   return full;
+}
+
+/** public/media/cv/<itemId>[/<file>] */
+export function itemMediaPath(itemId: string, ...rest: string[]): string {
+  return underRoot(CV_MEDIA_ROOT, [itemId, ...rest]);
 }
 
 /**

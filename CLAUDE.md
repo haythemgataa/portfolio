@@ -7,7 +7,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run dev` — Start dev server (localhost:3000)
 - `npm run build` — Build static export to `out/`, then strip the placeholder route (`scripts/clean-export.mjs`)
 - `npm run lint` — Run ESLint (flat config in `eslint.config.mjs`)
-- `npm run migrate` — Run content structure migration (`tsx scripts/migrate-content.ts`)
+- `npm run migrate` — **Obsolete.** Points at `scripts/migrate-content.ts`, which migrated a
+  monolithic `profileData.json` into the old `NNN-` directory tree. Neither its input nor its
+  output format exists any more. `scripts/migrate-to-json.ts` (with `--dry-run`) is the migration
+  that produced the current `content/cv.json`; it has already been run.
 
 No test framework is configured.
 
@@ -15,9 +18,20 @@ No test framework is configured.
 
 ### Content Studio (`localhost:3000/studio`)
 
-A dev-only editor for `public/content/` — reorder/add/rename/delete sections and
-items, edit item fields, and manage each item's `media/` folder. Writes straight
-to disk; `git checkout -- public/content` is the undo.
+A dev-only editor for `content/cv.json` — reorder/add/rename/delete sections and
+items, edit profile, item and contact fields, and manage each item's media. Every
+mutation is a read-modify-write of the one JSON file; `git checkout -- content public/media`
+is the undo.
+
+Two guards make whole-file rewrites safe, and both are load-bearing:
+
+- **Atomic write** — `cv.json.tmp` then `fs.rename`, so no reader sees a partial file.
+- **Stale-write rejection** — the UI sends the content hash it loaded and the route
+  refuses a mismatch with a 409. Without it, a tab left open would silently revert
+  the whole CV on its next keystroke.
+
+`Studio.module.css` positions the tool `fixed; inset: 0` because `/studio` sits under
+the site's root layout and would otherwise render below `ProfileHeader` and the tab bar.
 
 It exists only in `npm run dev`, enforced two ways in `next.config.ts`:
 
@@ -38,10 +52,10 @@ This is a **static portfolio/CV site** built with Next.js 16 (App Router) + Reac
 
 - `/` — Home page renders the `Profile` component with all CV sections
 - `/gallery` — Standalone media gallery (see **Gallery** below)
-- `/[slug]` — Dynamic case study pages generated from markdown files in `public/content/case-studies/`
+- `/[slug]` — Dynamic case study pages generated from markdown files in `content/case-studies/`
 - All pages are statically generated at build time via `generateStaticParams()`
 
-**No case studies exist yet.** `public/content/case-studies/` is absent, but `output: 'export'` requires
+**No case studies exist yet.** `content/case-studies/` is absent, but `output: 'export'` requires
 `generateStaticParams()` to return at least one route, so `[slug]/page.tsx` emits a synthetic
 `__placeholder__` slug that calls `notFound()`. The export still writes that page to disk, so
 `scripts/clean-export.mjs` deletes it after every build — otherwise Cloudflare would serve
@@ -50,29 +64,51 @@ unused and the cleanup step becomes a no-op.
 
 ### Data Layer
 
-There is no database or CMS. Content lives entirely in `public/content/` as a directory-based file system structure:
+There is no database or CMS. Content is **two JSON files plus a media tree**:
 
 ```
-public/content/
-  001-general/          → general.json + media/
-  002-workExperience/   → item subdirectories with item.json + media/
-  003-education/        → ...
-  ...
-  case-studies/         → markdown files (*.md)
-  gallery/              → gallery.json + media/ (NOT a CV section — see below)
+content/                      # build-time input — NOT served
+  cv.json
+  gallery.json
+  case-studies/<slug>.md      # markdown stays as files
+public/media/
+  profile/<file>
+  cv/<itemId>/<file>
+  gallery/<file>
 ```
 
-**Key conventions:**
-- Directories use `NNN-name` prefixes for ordering (e.g., `001-general`, `002-workExperience`)
-- Items within sections follow the same pattern (e.g., `001-product-designer-at-company/`)
-- Each item directory contains `item.json` and an optional `media/` folder
-- Media files in `media/` are auto-detected if not explicitly listed in `item.json` attachments
-- The content loader (`app/lib/contentLoader.ts`) reads this structure at build time and returns a unified data object
+`content/` sits outside `public/` deliberately: it is compiler input, not a static asset.
+Keeping it in `public/` shipped 27 never-requested JSON files to the CDN and made the whole
+CV fetchable at `/content/.../item.json`. Media has to stay under `public/`.
 
-`public/content/gallery/` is deliberately outside this scheme: it has no `NNN-` prefix, so
-`loadProfileData()` skips it and gallery media never appears on the CV tab (and vice versa).
+The schema and its rationale are documented in **`CONTENT-SCHEMA.md`**; the types are in
+`app/lib/contentTypes.ts`. Key rules:
 
-**Section mapping** is defined in `SECTION_MAP` in `contentLoader.ts` — directory names map to JSON keys (e.g., `speaking` → `talks`).
+- **Array order is display order.** There are no `NNN-` filename prefixes anywhere. Reordering
+  is a pure JSON edit, which is what lets the Studio avoid renaming directories.
+- **`profile` is pinned first, `contact` pinned last**, and neither lives in `sections[]`.
+  `sections[]` therefore holds only the homogeneous, timeline-shaped sections — every entry
+  renders identically, which is *why* reordering it is safe. This replaced a `kind` discriminator:
+  a flag that can be wrong became a shape that cannot. It also killed two
+  `collection.name === "Contact"` string comparisons in `Profile.tsx` that silently broke the
+  contact layout if the section was renamed.
+- **`section.key` is machine-facing and stable; `section.label` is free text** and safe to rename.
+  This replaced the hardcoded `SECTION_MAP`, so adding a section needs no code change.
+- **`item.id` is stable and unique across the whole document** — it names the media folder
+  (`public/media/cv/<id>/`), so a collision would make two items share images. `contentLoader.ts`
+  throws on a duplicate rather than shipping it.
+- **Media dimensions are always authored**, so the build never runs `sharp`. `media[].file` is a
+  bare filename; `type` is inferred from the extension rather than stored, so there is one source
+  of truth for it.
+- Optional fields are **omitted, not written as `""`**.
+
+One naming seam to know about: media is authored under `media` but the loader resolves it to
+`attachments`, because that is the prop `Attachments.tsx` already takes. Renaming the component
+prop was deliberately kept separate from migrating the data.
+
+`loadProfileData()` returns `{ profile, sections, contact }`. The previous loader also spread
+per-section keys onto its return value (`cv.talks`, `cv.workExperience`); nothing ever read them,
+so they are gone.
 
 ### Gallery
 
@@ -80,13 +116,14 @@ The `/gallery` tab is a vertical list — one item per row at the same 540px col
 the CV — with captions below each item. It has its own content pipeline, independent of
 the CV sections:
 
-- `public/content/gallery/gallery.json` — an **ordered** `items` array; array order is
-  display order. Authoring contract documented in `public/content/gallery/README.md`.
+- `content/gallery.json` — an **ordered** `items` array; array order is display order.
 - `app/lib/galleryLoader.ts` — resolves entries to `GalleryItem`s, typed in
-  `app/lib/galleryTypes.ts`. Unlike `contentLoader.ts`, this module is fully typed (no `any`).
-- Image dimensions are measured at build time with `sharp`. **Video dimensions must be
-  declared in `gallery.json`** — `sharp` cannot read video, so an undeclared video falls
-  back to 16:9 and shifts the layout. The build warns, naming the file.
+  `app/lib/galleryTypes.ts`. Media resolves against `public/media/gallery/`.
+- Each entry carries a **required, authored `id`**. It used to be derived from the array index
+  (`${index}-${entry.file}`), which meant every id changed whenever the gallery was reordered.
+- `width`/`height` are **required**, not measured. This retires a live footgun: `sharp` cannot
+  measure video, so an undeclared video used to fall back silently to 16:9 and shift the layout.
+  Now the migration and the Studio always write real numbers and images and videos behave alike.
 - Missing files listed in `gallery.json` are skipped with a build warning rather than
   failing the build.
 - An absent/empty `gallery.json` renders a neutral empty state, so the route always builds.

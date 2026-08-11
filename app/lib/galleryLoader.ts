@@ -7,8 +7,10 @@ import type {
   GalleryMediaType,
 } from './galleryTypes';
 
-const GALLERY_DIR = join('public', 'content', 'gallery');
-const MEDIA_DIR = 'media';
+/** JSON is build-time input outside public/; media is served from public/. */
+const MANIFEST_PATH = join('content', 'gallery.json');
+const MEDIA_DIR = join('public', 'media', 'gallery');
+const PUBLIC_BASE = '/media/gallery';
 
 const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'svg'];
 const VIDEO_EXTS = ['mp4', 'webm', 'ogg', 'mov'];
@@ -44,10 +46,14 @@ async function measureImage(path: string): Promise<{ width: number; height: numb
 async function resolveEntry(
   entry: GalleryEntry,
   index: number,
-  contentRoot: string
+  mediaRoot: string
 ): Promise<GalleryItem | null> {
   if (!entry.file) {
     console.warn(`gallery.json: item at index ${index} has no "file", skipping`);
+    return null;
+  }
+  if (!entry.id) {
+    console.warn(`gallery.json: "${entry.file}" has no "id", skipping`);
     return null;
   }
 
@@ -57,7 +63,7 @@ async function resolveEntry(
     return null;
   }
 
-  const absolutePath = join(contentRoot, MEDIA_DIR, entry.file);
+  const absolutePath = join(mediaRoot, entry.file);
   try {
     await fs.access(absolutePath);
   } catch {
@@ -90,25 +96,23 @@ async function resolveEntry(
     height = FALLBACK_DIMENSIONS.height;
   }
 
-  const publicBase = `/content/gallery/${MEDIA_DIR}`;
-
   return {
-    id: `${index}-${entry.file}`,
+    id: entry.id,
     type,
-    url: `${publicBase}/${entry.file}`,
+    url: `${PUBLIC_BASE}/${entry.file}`,
     width,
     height,
     title: entry.title ?? null,
     caption: entry.caption ?? null,
     date: entry.date ?? null,
-    posterUrl: entry.poster ? `${publicBase}/${entry.poster}` : null,
+    posterUrl: entry.poster ? `${PUBLIC_BASE}/${entry.poster}` : null,
   };
 }
 
-async function readManifest(contentRoot: string): Promise<GalleryFile | null> {
+async function readManifest(): Promise<GalleryFile | null> {
   try {
     return JSON.parse(
-      await fs.readFile(join(contentRoot, 'gallery.json'), 'utf8')
+      await fs.readFile(join(process.cwd(), MANIFEST_PATH), 'utf8')
     ) as GalleryFile;
   } catch {
     return null;
@@ -121,8 +125,8 @@ async function readManifest(contentRoot: string): Promise<GalleryFile | null> {
  * one listed file actually exists on disk.
  */
 export async function hasGalleryItems(): Promise<boolean> {
-  const contentRoot = join(process.cwd(), GALLERY_DIR);
-  const parsed = await readManifest(contentRoot);
+  const mediaRoot = join(process.cwd(), MEDIA_DIR);
+  const parsed = await readManifest();
 
   if (!parsed || !Array.isArray(parsed.items)) {
     return false;
@@ -131,7 +135,7 @@ export async function hasGalleryItems(): Promise<boolean> {
   for (const entry of parsed.items) {
     if (!entry?.file) continue;
     try {
-      await fs.access(join(contentRoot, MEDIA_DIR, entry.file));
+      await fs.access(join(mediaRoot, entry.file));
       return true;
     } catch {
       // Missing file — keep looking.
@@ -149,8 +153,8 @@ export async function hasGalleryItems(): Promise<boolean> {
  * route builds and renders an empty state before any media has been added.
  */
 export async function loadGalleryItems(): Promise<GalleryItem[]> {
-  const contentRoot = join(process.cwd(), GALLERY_DIR);
-  const parsed = await readManifest(contentRoot);
+  const mediaRoot = join(process.cwd(), MEDIA_DIR);
+  const parsed = await readManifest();
 
   if (!parsed) {
     return [];
@@ -162,7 +166,7 @@ export async function loadGalleryItems(): Promise<GalleryItem[]> {
   }
 
   const resolved = await Promise.all(
-    parsed.items.map((entry, index) => resolveEntry(entry, index, contentRoot))
+    parsed.items.map((entry, index) => resolveEntry(entry, index, mediaRoot))
   );
 
   return resolved.filter((item): item is GalleryItem => item !== null);

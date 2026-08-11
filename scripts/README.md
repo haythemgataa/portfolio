@@ -12,30 +12,23 @@ afterwards — otherwise Cloudflare would serve `/__placeholder__` as a real 200
 Once real case studies exist in `content/case-studies/`, the placeholder path is
 unused and this becomes a no-op.
 
-## `migrate-to-json.ts`
-
-**Already run — kept for provenance, not reuse.** Its input no longer exists.
-
-This produced the current content model, converting the old `NNN-` prefixed
-directory tree (`public/content/<NNN-section>/<NNN-item>/item.json` + `media/`)
-into `content/cv.json`, `content/gallery.json` and an id-keyed
-`public/media/cv/<itemId>/` tree. See [CONTENT-SCHEMA.md](../CONTENT-SCHEMA.md)
-for the schema and the reasoning.
+## `check-cdn-gate.mjs`
 
 ```bash
-npx tsx scripts/migrate-to-json.ts --dry-run   # print the plan, write nothing
-npx tsx scripts/migrate-to-json.ts             # apply
+npm run check:cdn
 ```
 
-What it did, worth knowing if you ever need to audit the result:
+Not part of the build — run it after touching `app/lib/cloudflareImage.ts`,
+`next.config.ts`, or anything that renders a thumbnail.
 
-- **Preserved rather than dropped.** `title`/`degree`/`name` became `role`, and
-  `company`/`school`/`presenter`/`event`/`organization`/`publisher` became `org`,
-  keeping structured data that previously existed only denormalized inside
-  `heading`. Fields no component read were dropped and reported.
-- **Reproduced the old loader's behaviour exactly**, including its media ordering
-  (explicit `attachments` first, then a sorted `readdir`) and its dimension
-  fallbacks — so the rendered HTML was provably unchanged. Verifying that was the
-  acceptance test: build before, build after, diff the rendered DOM.
-- **Copied media, never moved it**, so it was re-runnable and the old tree could
-  be deleted in a separate reviewable commit.
+`/cdn-cgi/image/` only exists on Cloudflare's edge, so variant URLs must be
+emitted for production-branch Pages builds and for nothing else. Both failure
+directions are invisible locally, because `npm run build` passes either way:
+
+| Gate | Symptom |
+|---|---|
+| stuck on | every thumbnail 404s in dev and on `*.pages.dev` previews |
+| stuck off | production serves full-size originals, unresized |
+
+The script runs both builds (~1 min) and asserts each direction. It builds plain
+*last*, so a failure never leaves `out/` holding a production-flagged export.

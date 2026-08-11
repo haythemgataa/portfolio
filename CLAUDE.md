@@ -7,10 +7,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run dev` — Start dev server (localhost:3000)
 - `npm run build` — Build static export to `out/`, then strip the placeholder route (`scripts/clean-export.mjs`)
 - `npm run lint` — Run ESLint (flat config in `eslint.config.mjs`)
+- `npm run check:cdn` — Assert the Cloudflare image gate emits `/cdn-cgi/image/` URLs for
+  production builds and none outside them. Runs two builds; not part of `npm run build`.
 
-`scripts/migrate-to-json.ts` (supports `--dry-run`) is the one-shot migration that produced the
-current `content/cv.json` from the old `NNN-` directory tree. It has already been run and the old
-tree is gone, so it is kept for provenance rather than reuse.
+`scripts/` holds only `clean-export.mjs`, which `npm run build` runs. The one-shot migrations that
+produced the current content model are gone — see git history if you need them.
 
 No test framework is configured.
 
@@ -72,7 +73,7 @@ unused and the cleanup step becomes a no-op.
 
 ### Data Layer
 
-There is no database or CMS. Content is **two JSON files plus a media tree**:
+There is no database or CMS. Content is **three JSON files plus a flat media pool**:
 
 ```
 content/                      # build-time input — NOT served
@@ -198,7 +199,8 @@ at rest. Three things it depends on:
 - `framer-motion` — Lightbox and carousel animations
 - `react-markdown` — Renders markdown descriptions and case studies
 - `react-scrollbooster` — Horizontal gallery scrolling on desktop
-- `sharp` (dev only) — Image dimension detection during build
+- `sharp` (dev only) — measures image uploads in the Studio. The build never runs it: dimensions
+  are always authored into `media.json`.
 
 ### Deployment
 
@@ -209,7 +211,8 @@ via CDN).
 `app/lib/cloudflareImage.ts` builds Cloudflare Image Resizing URLs (`/cdn-cgi/image/...`) for
 both `Attachments.tsx` and `Gallery.tsx`. That endpoint only exists on Cloudflare's edge, so it
 is applied in production builds only — in development the original URL is used, otherwise every
-image 404s.
+image 404s. `npm run check:cdn` asserts both directions of that gate; nothing else catches a
+break, since `npm run build` succeeds either way.
 
 Two things there are easy to get wrong:
 

@@ -2,10 +2,10 @@ import Image from "next/image";
 import styles from "./ProfileHeader.module.css";
 
 type ProfileHeaderProps = {
-  general: {
+  profile: {
     profilePhoto: string,
     displayName: string,
-    byline: string,
+    byline?: string,
   },
 };
 
@@ -14,12 +14,12 @@ type ProfileHeaderProps = {
  * beneath it lands in the same place on both routes — without this, switching tabs would
  * shift the (sticky) tab bar vertically.
  */
-const ProfileHeader: React.FC<ProfileHeaderProps> = ({ general }) => {
+const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profile }) => {
   return (
     <div className={styles.profileHeader}>
       <div className={styles.profilePhoto}>
         <Image
-          src={general.profilePhoto}
+          src={profile.profilePhoto}
           alt=""
           width={92}
           height={92}
@@ -29,12 +29,12 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ general }) => {
       </div>
       <div>
         <h1>
-          {general.displayName}
+          {profile.displayName}
           {process.env.NEXT_PUBLIC_GIT_BRANCH === "dev" && (
             <span className={styles.betaBadge}>beta</span>
           )}
         </h1>
-        <div className={styles.byline}>{general.byline}</div>
+        <div className={styles.byline}>{profile.byline}</div>
       </div>
     </div>
   );

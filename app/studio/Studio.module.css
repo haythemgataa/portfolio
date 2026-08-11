@@ -1,7 +1,13 @@
+/* The Studio lives under the site's root layout, so it would otherwise render
+   below ProfileHeader and the tab bar. Covering the viewport keeps it a tool
+   rather than a page, without restructuring the app's routes for a dev-only
+   feature. */
 .studio {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
   display: flex;
   flex-direction: column;
-  height: 100vh;
   color: var(--grey1);
   background: var(--backgroundColor);
 }
@@ -127,6 +133,15 @@
 }
 
 .rowOver { box-shadow: inset 0 -2px 0 var(--blue); }
+
+/* Pinned regions cannot be reordered, so they have no grip and sit indented
+   to match rows that do. */
+.rowPinned {
+  padding-left: 20px;
+  font-style: normal;
+}
+
+.rowPinned .rowMeta { font-style: italic; }
 
 .grip {
   color: var(--grey3);
@@ -382,7 +397,6 @@
 }
 
 @media (max-width: 900px) {
-  .columns { grid-template-columns: 1fr; }
-  .studio { height: auto; }
+  .columns { grid-template-columns: 1fr; overflow-y: auto; }
   .pane, .editor { overflow: visible; }
 }

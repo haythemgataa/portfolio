@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import CaseStudy from './CaseStudy';
 
 export async function generateStaticParams() {
-  const caseStudiesDir = join(process.cwd(), 'public', 'content', 'case-studies');
+  const caseStudiesDir = join(process.cwd(), 'content', 'case-studies');
   let files: string[] = [];
   
   try {
@@ -43,7 +43,7 @@ export default async function CaseStudyPage({
   let markdownContent: string;
   try {
     markdownContent = await fs.readFile(
-      join(process.cwd(), 'public', 'content', 'case-studies', `${slug}.md`),
+      join(process.cwd(), 'content', 'case-studies', `${slug}.md`),
       'utf8'
     );
   } catch {

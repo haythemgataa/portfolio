@@ -1,4 +1,5 @@
-import { syncAttachments, writeMedia } from '../../lib/content-fs';
+import type { MediaEntry } from '../../../lib/contentTypes';
+import { appendMedia, readDoc, writeDoc, writeMedia } from '../../lib/cv-fs';
 import { StudioError, assertLocalDev } from '../../lib/paths';
 import { fail, ok } from '../../lib/respond';
 
@@ -9,24 +10,35 @@ export async function POST(req: Request) {
     assertLocalDev(req);
 
     const form = await req.formData();
-    const sectionDir = String(form.get('sectionDir') || '');
-    const itemDir = String(form.get('itemDir') || '');
+    const sectionKey = String(form.get('sectionKey') || '');
+    const itemId = String(form.get('itemId') || '');
+    const hash = String(form.get('hash') || '') || undefined;
     const files = form.getAll('files').filter((f): f is File => f instanceof File);
 
     if (files.length === 0) throw new StudioError('No files were uploaded');
 
-    const written: string[] = [];
+    const written: MediaEntry[] = [];
+    const unmeasured: string[] = [];
     for (const file of files) {
       if (file.size > MAX_BYTES) {
         throw new StudioError(`${file.name} is larger than 50 MB`);
       }
-      const bytes = Buffer.from(await file.arrayBuffer());
-      written.push(await writeMedia(sectionDir, itemDir, file.name, bytes));
+      const entry = await writeMedia(itemId, file.name, Buffer.from(await file.arrayBuffer()));
+      written.push(entry);
+      // Video dimensions cannot be read here, so flag the 16:9 placeholder.
+      if (entry.width === 1600 && entry.height === 900) unmeasured.push(entry.file);
     }
 
-    // Fold the new files into item.json's attachments so they actually render.
-    const media = await syncAttachments(sectionDir, itemDir);
-    return ok({ written, media });
+    const { cv } = await readDoc();
+    const nextHash = await writeDoc(appendMedia(cv, sectionKey, itemId, written), hash);
+
+    return ok({
+      hash: nextHash,
+      written: written.map((w) => w.file),
+      warning: unmeasured.length
+        ? `Could not measure ${unmeasured.join(', ')} — dimensions were set to 1600x900. Correct them in the media panel.`
+        : null,
+    });
   } catch (error) {
     return fail(error);
   }

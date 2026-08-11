@@ -9,8 +9,8 @@ import { hasGalleryItems } from "./lib/galleryLoader";
 export async function generateMetadata(): Promise<Metadata> {
   const cv = await loadProfileData();
   return {
-    title: cv.general.displayName,
-    description: cv.general.byline || '',
+    title: cv.profile.displayName,
+    description: cv.profile.byline || '',
   };
 }
 
@@ -39,7 +39,7 @@ export default async function RootLayout({
       <body>
         <div className={styles.page}>
           <div className={styles.column}>
-            <ProfileHeader general={cv.general} />
+            <ProfileHeader profile={cv.profile} />
             <Tabs showGallery={showGallery} />
             {children}
           </div>

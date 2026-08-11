@@ -68,6 +68,37 @@ export const CONTACT_FIELDS: FieldDef[] = [
   { key: 'url', label: 'Link', type: 'url', placeholder: 'mailto:you@example.com' },
 ];
 
+/** Gallery entries carry presentation only; dimensions live in media.json. */
+export const GALLERY_FIELDS: FieldDef[] = [
+  { key: 'title', label: 'Title', type: 'text', placeholder: 'Poster series' },
+  {
+    key: 'caption',
+    label: 'Caption',
+    type: 'markdown',
+    placeholder: 'Print work for We Are Kairouan.',
+    hint: 'Shown beneath the item. Also used as the image alt text.',
+  },
+  { key: 'date', label: 'Date', type: 'text', placeholder: '2026 — or "March 2026"' },
+];
+
+/** Editable facts about a pooled asset, shared by both tabs. */
+export const ASSET_FIELDS: FieldDef[] = [
+  {
+    key: 'width',
+    label: 'Intrinsic width',
+    type: 'text',
+    hint: 'Video cannot be measured on upload, so a new video lands on 1600x900 until corrected. ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0 <file>',
+  },
+  { key: 'height', label: 'Intrinsic height', type: 'text' },
+  {
+    key: 'poster',
+    label: 'Poster frame',
+    type: 'text',
+    placeholder: 'award-ceremony-poster.jpg',
+    hint: 'Video only. Must already be in the pool. Clear to remove.',
+  },
+];
+
 /** Suggestions only — any key works, and the label is what renders. */
 export const SECTION_SUGGESTIONS = [
   'workExperience',

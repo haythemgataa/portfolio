@@ -43,16 +43,14 @@ export const ITEM_FIELDS: FieldDef[] = [
     type: 'text',
     placeholder: 'Product designer at InstaDeep',
   },
-  {
-    key: 'role',
-    label: 'Role',
-    type: 'text',
-    placeholder: 'Product designer',
-    hint: 'Not rendered. Structured half of the heading, kept for future JSON-LD.',
-  },
-  { key: 'org', label: 'Organisation', type: 'text', placeholder: 'InstaDeep' },
   { key: 'url', label: 'Link', type: 'url', placeholder: 'https://example.com' },
-  { key: 'location', label: 'Location', type: 'text', placeholder: 'Tunis, Tunisia' },
+  {
+    key: 'subheading',
+    label: 'Subheading',
+    type: 'text',
+    placeholder: 'Tunis, Tunisia',
+    hint: 'The line under the heading — a location, a stack, whatever the section needs.',
+  },
   {
     key: 'description',
     label: 'Description',

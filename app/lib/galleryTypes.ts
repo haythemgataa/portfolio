@@ -1,30 +1,36 @@
 export type GalleryMediaType = 'image' | 'video';
 
 /**
- * Shape of a single entry in public/content/gallery/gallery.json.
- * Everything except `file` is optional — see gallery.json's own comments and
- * public/content/gallery/README.md for the authoring contract.
+ * Shape of a single entry in content/gallery.json.
+ * See CONTENT-SCHEMA.md for the authoring contract.
  */
 export type GalleryEntry = {
-  /** Filename inside public/content/gallery/media/. Required. */
+  /**
+   * Stable, authored, unique. Previously derived from the array index, which
+   * meant every id changed whenever the gallery was reordered.
+   */
+  id: string;
+  /** Filename inside public/media/gallery/. Required. */
   file: string;
   title?: string;
   caption?: string;
   /** Overrides the extension-based guess. Rarely needed. */
   type?: GalleryMediaType;
   /**
-   * Intrinsic pixel dimensions. Optional for images (measured at build time with
-   * sharp) but REQUIRED for video, which cannot be measured during the build.
+   * Intrinsic pixel dimensions. Required — video cannot be measured during the
+   * build, so leaving these to be inferred silently mis-sized every video. The
+   * migration and the Studio always write them.
    */
-  width?: number;
-  height?: number;
-  /** Poster frame filename for video, also inside media/. */
+  width: number;
+  height: number;
+  /** Poster frame filename for video, also inside public/media/gallery/. */
   poster?: string;
   /** Free-form date label shown with the caption, e.g. "2026" or "March 2026". */
   date?: string;
 };
 
 export type GalleryFile = {
+  version?: number;
   items?: GalleryEntry[];
 };
 

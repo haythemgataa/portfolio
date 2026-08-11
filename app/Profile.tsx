@@ -4,102 +4,111 @@ import RichText from "./RichText";
 import Arrow12 from "./Arrow12";
 import styles from "./Profile.module.css";
 import Attachments from "./Attachments";
+import type { ContactItem, ResolvedCv, ResolvedItem } from "./lib/contentTypes";
 
 type ProfileProps = {
-  cv: any,
+  cv: ResolvedCv,
 };
+
+/**
+ * About and Contact are pinned — About first, Contact last — and only `sections`
+ * is orderable. That is why nothing here branches on a section's label: every
+ * entry in `sections` renders identically, so renaming one is always safe.
+ */
 const Profile: React.FC<ProfileProps> = ({
   cv
 }) => {
   return (
     <>
 
-      {cv.general.about ?
+      {cv.profile.about ?
         <section className={`${styles.profileSection} ${styles.about}`}>
           <h3>About</h3>
           <div className={styles.description}>
-            <RichText text={cv.general.about}/>
+            <RichText text={cv.profile.about}/>
           </div>
         </section>
       : null}
 
-      {cv.allCollections.map((collection: any, index: number) => {
-        return (
-          <section key={collection.name || index} className={styles.profileSection}>
-            <h3>{collection.name}</h3>
-            <div className={collection.name === "Contact" ? styles.contacts : styles.experiences}>
-              {collection.items.map((experience: any, index: number) => {
+      {cv.sections.map((section) => (
+        <section key={section.key} className={styles.profileSection}>
+          <h3>{section.label}</h3>
+          <div className={styles.experiences}>
+            {section.items.map((item) => (
+              <ProfileItem key={item.id} item={item}/>
+            ))}
+          </div>
+        </section>
+      ))}
 
-                if (collection.name === "Contact") {
-                  return <ContactItem key={experience.id} experience={experience}/>
-                }
-
-                return (
-                  <ProfileItem key={experience.id} experience={experience}/>
-                )
-              })}
-            </div>
-          </section>
-        )
-      })}
+      {cv.contact.items.length > 0 ?
+        <section className={styles.profileSection}>
+          <h3>{cv.contact.label}</h3>
+          <div className={styles.contacts}>
+            {cv.contact.items.map((item) => (
+              <ContactRow key={item.id} item={item}/>
+            ))}
+          </div>
+        </section>
+      : null}
     </>
   );
 };
 
 type ProfileItemProps = {
-  experience: any,
+  item: ResolvedItem,
 };
 const ProfileItem: React.FC<ProfileItemProps> = ({
-  experience
+  item
 }) => {
 
   let title;
-  if (experience.url) {
+  if (item.url) {
     title = <>
-      <a href={experience.url} target="_blank">{experience.heading}</a><span className={styles.linkArrow}>&#xfeff;<Arrow12 fill="var(--grey1)"/></span>
+      <a href={item.url} target="_blank">{item.heading}</a><span className={styles.linkArrow}>&#xfeff;<Arrow12 fill="var(--grey1)"/></span>
     </>
   } else {
-    title = experience.heading
+    title = item.heading
   }
   return (
     <div className={styles.experience}>
       <div className={styles.year}>
-        <span>{experience.year}</span>
+        <span>{item.year}</span>
       </div>
       <div className={styles.experienceContent}>
         <div className={styles.title}>
           {title}
         </div>
-        {experience.location ?
-        <div className={styles.location}>{experience.location}</div>
+        {item.location ?
+        <div className={styles.location}>{item.location}</div>
         : null}
-        {experience.description ?
+        {item.description ?
         <div className={styles.description}>
-          <RichText text={experience.description}/>
+          <RichText text={item.description}/>
         </div>
         : null}
-        {experience.attachments && experience.attachments.length > 0 ?
-          <Attachments attachments={experience.attachments} label={experience.heading}/>
+        {item.attachments.length > 0 ?
+          <Attachments attachments={item.attachments} label={item.heading}/>
         : null}
       </div>
     </div>
   )
 }
 
-type ContactItemProps = {
-  experience: any,
+type ContactRowProps = {
+  item: ContactItem,
 };
-const ContactItem: React.FC<ContactItemProps> = ({
-  experience
+const ContactRow: React.FC<ContactRowProps> = ({
+  item
 }) => {
   return (
     <div className={styles.experience}>
       <div className={styles.year}>
-        <span>{experience.platform}</span>
+        <span>{item.platform}</span>
       </div>
       <div className={styles.experienceContent}>
         <div className={styles.title}>
-          <a href={experience.url} target="_blank">{experience.handle}</a><span className={styles.linkArrow}>&#xfeff;<Arrow12/></span>
+          <a href={item.url} target="_blank">{item.handle}</a><span className={styles.linkArrow}>&#xfeff;<Arrow12/></span>
         </div>
       </div>
     </div>

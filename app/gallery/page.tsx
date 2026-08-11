@@ -6,8 +6,8 @@ import { loadProfileData } from "../lib/contentLoader";
 export async function generateMetadata(): Promise<Metadata> {
   const cv = await loadProfileData();
   return {
-    title: `Gallery — ${cv.general.displayName}`,
-    description: `Selected images and videos by ${cv.general.displayName}.`,
+    title: `Gallery — ${cv.profile.displayName}`,
+    description: `Selected images and videos by ${cv.profile.displayName}.`,
   };
 }
 

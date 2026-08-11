@@ -1,0 +1,430 @@
+{
+  "version": 1,
+  "profile": {
+    "displayName": "Haythem Gataa",
+    "byline": "Software Designer & Engineer in Tunisia",
+    "about": "I'm a detail-oriented Software Designer, passionate about micro interactions, animations, and the art of design. With a track record of bringing products to life and enhancing existing ones (over 5+ years), I blend creativity with my engineering background to deliver mindful user experiences.",
+    "photo": "profilePhoto.jpg"
+  },
+  "sections": [
+    {
+      "key": "workExperience",
+      "label": "Work Experience",
+      "items": [
+        {
+          "id": "product-designer-at-instadeep",
+          "year": "2023 — Now",
+          "heading": "Product designer at InstaDeep",
+          "role": "Product designer",
+          "org": "InstaDeep",
+          "url": "https://instadeep.com",
+          "location": "Tunis, Tunisia",
+          "description": "* Collaborating on a design system to help accelerate new projects’ creation, and insure consistency across non-branded projects\n\n* Creating fun animations and micro-interactions to make our products feel dynamic (which increased the wow! effect by 2 wows/user).\n\n* Introduced tools like Rive, Lottie, and Framer, which helped us reduce developer frustration and reduce development time by up to one week on average.\n\n* Redesigned a couple of products, improving the UX and modernizing the UI. Which for some projects, paired with great enhancement by the AI team, tripled the product usage over less than 1 year.\n\n* Brought to life many innovative AI related projects.",
+          "media": [
+            {
+              "file": "Product-designer-at-InstaDeep-1.png",
+              "width": 2000,
+              "height": 1500
+            },
+            {
+              "file": "Product-designer-at-InstaDeep-2.png",
+              "width": 2000,
+              "height": 1500
+            },
+            {
+              "file": "Product-designer-at-InstaDeep-3.png",
+              "width": 2000,
+              "height": 1500
+            },
+            {
+              "file": "Product-designer-at-InstaDeep-4.png",
+              "width": 2000,
+              "height": 1500
+            }
+          ]
+        },
+        {
+          "id": "ui-designer-at-weare-moon",
+          "year": "2020 — 2023",
+          "heading": "UI Designer at Weare Moon",
+          "role": "UI Designer",
+          "org": "Weare Moon",
+          "url": "https://moon.tn",
+          "location": "Sousse, Tunisia",
+          "description": "* Designed an award-winning platform (Sehaty Online).\n\n* Designed a high-fidelity wireframe, and assisted during user testing sessions for [WFP's Last Mile Ecosystem](https://innovation.wfp.org/project/last-mile-ecosystem), a Nobel-awarded project.\n\n* Designing and ensuring the good delivery Of our work from UX to UI, then to the dev team.\n\n* Helped leading and integrating new designers to the team",
+          "media": [
+            {
+              "file": "UI-Designer-at-Weare-Moon-1.png",
+              "width": 2000,
+              "height": 1500
+            },
+            {
+              "file": "UI-Designer-at-Weare-Moon-2.png",
+              "width": 2000,
+              "height": 1500
+            },
+            {
+              "file": "UI-Designer-at-Weare-Moon-3.png",
+              "width": 2000,
+              "height": 1500
+            },
+            {
+              "file": "UI-Designer-at-Weare-Moon-4.png",
+              "width": 2000,
+              "height": 1500
+            }
+          ]
+        },
+        {
+          "id": "ux-ui-teacher-part-time-at-ecole-polytechnique-sousse",
+          "year": "2022 — 2022",
+          "heading": "UX/UI teacher (Part-time) at Ecole Polytechnique Sousse",
+          "role": "UX/UI teacher (Part-time)",
+          "org": "Ecole Polytechnique Sousse",
+          "url": "https://polytechsousse.tn/",
+          "location": "Sousse, Tunisia",
+          "description": "* Created the course plan, exercises, and exams.\n\n* Ensured the good flow of the lesson while keeping the students entertained.\n\n* Organized workshops to help students practice the newly acquired information.",
+          "media": [
+            {
+              "file": "UXUI-teacher-Part-time-at-Ecole-Polytechnique-Sousse.jpg",
+              "width": 984,
+              "height": 984
+            }
+          ]
+        },
+        {
+          "id": "ux-instructor-part-time-at-gomycode",
+          "year": "2021 — 2022",
+          "heading": "UX instructor (Part-time) at GoMyCode",
+          "role": "UX instructor (Part-time)",
+          "org": "GoMyCode",
+          "url": "https://gomycode.com/",
+          "location": "Sousse, Tunisia",
+          "description": "* Assisted students in learning UX design.\n\n* Organized workshops to help students understand UX basics.\n\n* Helped students accomplish a full UX project by the end of the program."
+        }
+      ]
+    },
+    {
+      "key": "education",
+      "label": "Education",
+      "items": [
+        {
+          "id": "master-in-software-engineering-at-ecole-polytechnique-sousse",
+          "year": "2020 — 2023",
+          "heading": "Master in Software Engineering at Ecole Polytechnique Sousse",
+          "role": "Master in Software Engineering",
+          "org": "Ecole Polytechnique Sousse",
+          "location": "Sousse, Tunisia",
+          "description": "* Graduated with an excellent grade and jury honors"
+        },
+        {
+          "id": "bachelor-in-computer-science-at-higher-institute-of-computer-science-and-management-of-kairouan",
+          "year": "2017 — 2020",
+          "heading": "Bachelor in Computer Science at Higher Institute of Computer Science and Management of Kairouan",
+          "role": "Bachelor in Computer Science",
+          "org": "Higher Institute of Computer Science and Management of Kairouan",
+          "location": "Kairouan, Tunisia",
+          "description": "* Graduated with an excellent grade and jury honors"
+        }
+      ]
+    },
+    {
+      "key": "awards",
+      "label": "Awards",
+      "items": [
+        {
+          "id": "best-website-design-silver-award-from-tunisia-digital-awards",
+          "year": "2021",
+          "heading": "Best website design (Silver award) from Tunisia Digital Awards",
+          "role": "Best website design (Silver award)",
+          "org": "Tunisia Digital Awards",
+          "media": [
+            {
+              "file": "Best-website-design-Silver-award-from-Tunisia-Digital-Awards-1.jpg",
+              "width": 984,
+              "height": 738
+            },
+            {
+              "file": "Best-website-design-Silver-award-from-Tunisia-Digital-Awards-2.mp4",
+              "width": 1920,
+              "height": 1080
+            },
+            {
+              "file": "Best-website-design-Silver-award-from-Tunisia-Digital-Awards-3.jpg",
+              "width": 959,
+              "height": 959
+            }
+          ]
+        },
+        {
+          "id": "1st-place-winner-of-code-camping-from-mentor-nations",
+          "year": "2019",
+          "heading": "1st place winner of Code Camping from Mentor Nations",
+          "role": "1st place winner of Code Camping",
+          "org": "Mentor Nations",
+          "media": [
+            {
+              "file": "1st-place-winner-of-Code-Camping-from-Mentor-Nations.jpg",
+              "width": 1802,
+              "height": 1130
+            }
+          ]
+        },
+        {
+          "id": "1st-place-winner-of-innovation-camp-from-injaz-tunisia",
+          "year": "2019",
+          "heading": "1st place winner of Innovation Camp from Injaz Tunisia",
+          "role": "1st place winner of Innovation Camp",
+          "org": "Injaz Tunisia",
+          "media": [
+            {
+              "file": "1st-place-winner-of-Innovation-Camp-from-Injaz-Tunisia.jpg",
+              "width": 1802,
+              "height": 1075
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "speaking",
+      "label": "Speaking",
+      "items": [
+        {
+          "id": "designer-s-toolbox-tips-and-tricks-at-ellevate-women",
+          "year": "2024",
+          "heading": "Designer's Toolbox: Tips and Tricks at Ellevate Women",
+          "role": "Designer's Toolbox: Tips and Tricks",
+          "org": "Ellevate Women",
+          "location": "Tunis - Tunisia"
+        },
+        {
+          "id": "design-for-non-designers-at-rna-ai-with-biontech",
+          "year": "2023",
+          "heading": "Design for non-designers at RNA.AI (with BioNTech)",
+          "role": "Design for non-designers",
+          "org": "RNA.AI (with BioNTech)",
+          "location": "Mainz - Germany",
+          "media": [
+            {
+              "file": "Design-for-non-designers-at-RNAAI-with-BioNTech.mp4",
+              "width": 852,
+              "height": 480
+            }
+          ]
+        },
+        {
+          "id": "design-for-non-designers-at-gomycode-hackathon",
+          "year": "2022",
+          "heading": "Design for non-designers at GoMyCode Hackathon",
+          "role": "Design for non-designers",
+          "org": "GoMyCode Hackathon",
+          "location": "Sousse - Tunisia",
+          "media": [
+            {
+              "file": "Design-for-non-designers-at-GoMyCode-Hackathon-1.jpg",
+              "width": 661,
+              "height": 512
+            },
+            {
+              "file": "Design-for-non-designers-at-GoMyCode-Hackathon-2.jpg",
+              "width": 768,
+              "height": 512
+            }
+          ]
+        },
+        {
+          "id": "design-boost-at-google-developers-group-event",
+          "year": "2021",
+          "heading": "Design Boost at Google Developers Group Event",
+          "role": "Design Boost",
+          "org": "Google Developers Group Event",
+          "location": "Sousse - Tunisia"
+        }
+      ]
+    },
+    {
+      "key": "certifications",
+      "label": "Certifications",
+      "items": [
+        {
+          "id": "user-experience-the-beginner-s-guide-from-interaction-design-foundation",
+          "year": "2024",
+          "heading": "User Experience: The Beginner's Guide from Interaction Design Foundation",
+          "role": "User Experience: The Beginner's Guide",
+          "org": "Interaction Design Foundation",
+          "url": "https://www.interaction-design.org/members/haythem/certificate/course/4dd7c189-54b3-47d1-a8e0-90d75a2ce5b4",
+          "description": "Distinction: Top 10% in class",
+          "media": [
+            {
+              "file": "User-Experience-The-Beginners-Guide-from-Interaction-Design-Foundation.jpg",
+              "width": 1920,
+              "height": 1408
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "features",
+      "label": "Features",
+      "items": [
+        {
+          "id": "logo-featured-on-logosystems-co",
+          "year": "2024",
+          "heading": "Logo featured on LogoSystems.co",
+          "role": "Logo featured on LogoSystems.co",
+          "url": "https://logosystem.co/logo/lexit"
+        },
+        {
+          "id": "photographer-on-buchhalter-international-group",
+          "year": "2021",
+          "heading": "Photographer on Buchhalter International Group",
+          "role": "Photographer",
+          "org": "Buchhalter International Group",
+          "url": "https://issuu.com/franze.buchhalter/docs/design_destinations_magazine_fall_2021"
+        }
+      ]
+    },
+    {
+      "key": "volunteering",
+      "label": "Volunteering",
+      "items": [
+        {
+          "id": "graphic-designer-at-i-rise",
+          "year": "2018 — 2023",
+          "heading": "Graphic designer at I Rise",
+          "role": "Graphic designer",
+          "org": "I Rise",
+          "url": "https://www.facebook.com/I.Rise.Ksour.Essef/",
+          "location": "Mahdia, Tunisia",
+          "description": "Designed social media content and print materials that boosted event attendance and engagement., and organized an initiative to transform a neglected forest into a welcoming green space for families and children, fostering a sense of safety and community.",
+          "media": [
+            {
+              "file": "Graphic-designer-at-I-Rise-1.png",
+              "width": 2400,
+              "height": 1800
+            },
+            {
+              "file": "Graphic-designer-at-I-Rise-2.png",
+              "width": 2400,
+              "height": 1800
+            },
+            {
+              "file": "Graphic-designer-at-I-Rise-3.png",
+              "width": 2400,
+              "height": 1800
+            },
+            {
+              "file": "Graphic-designer-at-I-Rise-4.png",
+              "width": 2400,
+              "height": 1800
+            }
+          ]
+        },
+        {
+          "id": "graphic-designer-at-mouch-shih",
+          "year": "2020 — 2020",
+          "heading": "Graphic Designer at Mouch Shih",
+          "role": "Graphic Designer",
+          "org": "Mouch Shih",
+          "url": "https://www.facebook.com/mouchshihtn",
+          "location": "Online",
+          "description": "Designed persuasive social media visuals for a COVID-19 fact-checking project. This effort aimed to counter misinformation, educating the public about accurate health practices during the pandemic.",
+          "media": [
+            {
+              "file": "Graphic-Designer-at-Mouch-Shih.png",
+              "width": 2400,
+              "height": 1800
+            }
+          ]
+        },
+        {
+          "id": "co-founder-and-head-of-design-at-google-club-isigk",
+          "year": "2018 — 2020",
+          "heading": "Co-Founder and Head of design at Google Club ISIGK",
+          "role": "Co-Founder and Head of design",
+          "org": "Google Club ISIGK",
+          "location": "Kairouan, Tunisia",
+          "description": "Co-led the organization and branding of events and workshops to share tech knowledge, attracting students and community members."
+        },
+        {
+          "id": "photographer-and-designer-at-we-are-kairouan-a-tunivision-initiative",
+          "year": "2019 — 2020",
+          "heading": "Photographer and Designer at We Are Kairouan (a Tunivision initiative)",
+          "role": "Photographer and Designer",
+          "org": "We Are Kairouan (a Tunivision initiative)",
+          "location": "Kairouan, Tunisia",
+          "description": "Responsible for capturing the historic beauty of Kairouan. Highlighted the city’s rich heritage, contributing to local tourism awareness and community pride.",
+          "media": [
+            {
+              "file": "Photographer-and-Designer-at-We-Are-Kairouan-a-Tunivision-initiative-1.png",
+              "width": 2400,
+              "height": 1800
+            },
+            {
+              "file": "Photographer-and-Designer-at-We-Are-Kairouan-a-Tunivision-initiative-2.png",
+              "width": 2400,
+              "height": 1800
+            },
+            {
+              "file": "Photographer-and-Designer-at-We-Are-Kairouan-a-Tunivision-initiative-3.png",
+              "width": 2400,
+              "height": 1800
+            },
+            {
+              "file": "Photographer-and-Designer-at-We-Are-Kairouan-a-Tunivision-initiative-4.png",
+              "width": 2400,
+              "height": 1800
+            },
+            {
+              "file": "Photographer-and-Designer-at-We-Are-Kairouan-a-Tunivision-initiative-5.png",
+              "width": 2400,
+              "height": 1800
+            },
+            {
+              "file": "Photographer-and-Designer-at-We-Are-Kairouan-a-Tunivision-initiative-6.png",
+              "width": 2400,
+              "height": 1800
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "contact": {
+    "label": "Contact",
+    "items": [
+      {
+        "id": "contact-email",
+        "platform": "Email",
+        "handle": "gataa.haythem@gmail.com",
+        "url": "mailto:gataa.haythem@gmail.com"
+      },
+      {
+        "id": "contact-linkedin",
+        "platform": "LinkedIn",
+        "handle": "haythem-gataa",
+        "url": "https://linkedin.com/in/haythem-gataa"
+      },
+      {
+        "id": "contact-dribbble",
+        "platform": "Dribbble",
+        "handle": "haythemgataa",
+        "url": "https://dribbble.com/haythemgataa"
+      },
+      {
+        "id": "contact-twitter",
+        "platform": "Twitter",
+        "handle": "HaythemGataa",
+        "url": "https://twitter.com/HaythemGataa"
+      },
+      {
+        "id": "contact-unsplash",
+        "platform": "Unsplash",
+        "handle": "@haythemgataa",
+        "url": "https://unsplash.com/@haythemgataa"
+      }
+    ]
+  }
+}

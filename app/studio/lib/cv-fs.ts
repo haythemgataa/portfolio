@@ -6,65 +6,111 @@ import type {
   CvFile,
   CvItem,
   CvSection,
-  MediaEntry,
+  MediaAsset,
 } from '../../lib/contentTypes';
 import { inferMediaType } from '../../lib/contentTypes';
+import type { GalleryFile } from '../../lib/galleryTypes';
 import {
-  CV_MEDIA_ROOT,
   CV_PATH,
+  GALLERY_PATH,
+  MEDIA_PATH,
+  POOL_ROOT,
   StudioError,
   assertSafeSegment,
-  itemMediaPath,
+  poolPath,
 } from './paths';
 
 /**
- * All Studio mutations are read-modify-write on content/cv.json.
+ * All Studio mutations are read-modify-write over content/cv.json and
+ * content/media.json.
  *
- * Two guards make a whole-file rewrite safe (see CONTENT-SCHEMA.md):
- *   1. the write is atomic — temp file then rename;
- *   2. a stale write is rejected by comparing the caller's content hash.
- * Without (2), a tab left open overnight would silently revert the whole CV.
+ * Three guards make whole-file rewrites safe (see CONTENT-SCHEMA.md):
+ *   1. each write is atomic — temp file then rename;
+ *   2. a stale write is rejected by comparing the caller's content hash, which
+ *      covers BOTH files, so a change to either invalidates a pending edit;
+ *   3. media is only deleted from the pool once nothing references it.
+ *
+ * gallery.json is read but never written here: the Studio does not edit the
+ * gallery yet, but it must count gallery references before deleting any asset,
+ * or removing a CV thumbnail could delete a file the gallery still shows.
  */
 
-export type Doc = { cv: CvFile; hash: string };
+export type Doc = {
+  cv: CvFile;
+  gallery: GalleryFile;
+  assets: Record<string, MediaAsset>;
+  hash: string;
+};
 
-function hashOf(contents: string): string {
-  return createHash('sha256').update(contents).digest('hex').slice(0, 16);
+function hashOf(...parts: string[]): string {
+  return createHash('sha256').update(parts.join('\0')).digest('hex').slice(0, 16);
+}
+
+async function readMaybe(path: string): Promise<string | null> {
+  try {
+    return await fs.readFile(path, 'utf8');
+  } catch {
+    return null;
+  }
 }
 
 export async function readDoc(): Promise<Doc> {
-  let contents: string;
-  try {
-    contents = await fs.readFile(CV_PATH, 'utf8');
-  } catch {
+  const cvRaw = await readMaybe(CV_PATH);
+  if (cvRaw === null) {
     throw new StudioError('content/cv.json not found — run the migration first', 404);
   }
-  let cv: CvFile;
-  try {
-    cv = JSON.parse(contents) as CvFile;
-  } catch (error) {
-    throw new StudioError(`content/cv.json is not valid JSON: ${error}`);
+  const mediaRaw = await readMaybe(MEDIA_PATH);
+  if (mediaRaw === null) {
+    throw new StudioError('content/media.json not found — run the migration first', 404);
   }
-  return { cv, hash: hashOf(contents) };
+  const galleryRaw = (await readMaybe(GALLERY_PATH)) ?? '{"items":[]}';
+
+  let cv: CvFile;
+  let assets: Record<string, MediaAsset>;
+  let gallery: GalleryFile;
+  try {
+    cv = JSON.parse(cvRaw) as CvFile;
+    assets = (JSON.parse(mediaRaw) as { assets?: Record<string, MediaAsset> }).assets ?? {};
+    gallery = JSON.parse(galleryRaw) as GalleryFile;
+  } catch (error) {
+    throw new StudioError(`Content JSON is invalid: ${error}`);
+  }
+
+  return { cv, gallery, assets, hash: hashOf(cvRaw, mediaRaw) };
 }
 
-export async function writeDoc(cv: CvFile, expectedHash?: string): Promise<string> {
+async function writeAtomic(path: string, contents: string): Promise<void> {
+  const tmp = `${path}.tmp`;
+  await fs.writeFile(tmp, contents, 'utf8');
+  // rename is atomic within a filesystem, so no reader sees a partial file.
+  await fs.rename(tmp, path);
+}
+
+export async function writeDoc(
+  cv: CvFile,
+  assets: Record<string, MediaAsset>,
+  expectedHash?: string
+): Promise<string> {
   if (expectedHash) {
     const { hash } = await readDoc();
     if (hash !== expectedHash) {
       throw new StudioError(
-        'content/cv.json changed since this page loaded. Reload the Studio and redo this edit.',
+        'Content changed since this page loaded. Reload the Studio and redo this edit.',
         409
       );
     }
   }
 
-  const contents = JSON.stringify(cv, null, 2) + '\n';
-  const tmp = `${CV_PATH}.tmp`;
-  await fs.writeFile(tmp, contents, 'utf8');
-  // rename is atomic within a filesystem, so no reader sees a partial file.
-  await fs.rename(tmp, CV_PATH);
-  return hashOf(contents);
+  const cvContents = JSON.stringify(cv, null, 2) + '\n';
+  // Keys sorted so the registry stays diff-friendly as assets come and go.
+  const sorted: Record<string, MediaAsset> = {};
+  for (const key of Object.keys(assets).sort()) sorted[key] = assets[key];
+  const mediaContents = JSON.stringify({ version: 1, assets: sorted }, null, 2) + '\n';
+
+  await writeAtomic(CV_PATH, cvContents);
+  await writeAtomic(MEDIA_PATH, mediaContents);
+
+  return hashOf(cvContents, mediaContents);
 }
 
 // ---------------------------------------------------------------------------
@@ -83,7 +129,6 @@ export function slugify(input: string, fallback = 'item'): string {
   return slug || fallback;
 }
 
-/** Every id in the document — ids name media folders, so they must be unique. */
 function allIds(cv: CvFile): Set<string> {
   const ids = new Set<string>();
   for (const section of cv.sections ?? []) {
@@ -125,18 +170,100 @@ function applyOrder<T>(list: T[], order: string[], keyOf: (item: T) => string): 
 }
 
 /** Drop keys the caller cleared, so nothing is written as "". */
-function mergePatch<T extends Record<string, any>>(
+function mergePatch<T extends Record<string, unknown>>(
   target: T,
   patch: Record<string, unknown>,
   protectedKeys: string[] = ['id']
 ): T {
-  const next: Record<string, any> = { ...target };
+  const next: Record<string, unknown> = { ...target };
   for (const [key, value] of Object.entries(patch)) {
     if (protectedKeys.includes(key)) continue;
     if (value === '' || value === null || value === undefined) delete next[key];
     else next[key] = value;
   }
   return next as T;
+}
+
+// ---------------------------------------------------------------------------
+// Media references — the pool is shared, so nothing is deleted while in use
+// ---------------------------------------------------------------------------
+
+/**
+ * Every filename referenced anywhere: CV item media, the profile photo, gallery
+ * entries, and poster frames declared in the registry.
+ */
+export function collectReferences(
+  cv: CvFile,
+  gallery: GalleryFile,
+  assets: Record<string, MediaAsset>
+): Map<string, number> {
+  const counts = new Map<string, number>();
+  const bump = (file?: string) => {
+    if (!file) return;
+    counts.set(file, (counts.get(file) ?? 0) + 1);
+  };
+
+  if (cv.profile?.photo) bump(cv.profile.photo);
+  for (const section of cv.sections ?? []) {
+    for (const item of section.items ?? []) for (const file of item.media ?? []) bump(file);
+  }
+  for (const entry of gallery.items ?? []) bump(entry.file);
+  // A poster is only reachable through its video, so it counts as referenced
+  // exactly when that video is.
+  for (const [file, asset] of Object.entries(assets)) {
+    if (asset.poster && counts.has(file)) bump(asset.poster);
+  }
+
+  return counts;
+}
+
+/**
+ * Work out which assets are now unreferenced, without touching disk.
+ *
+ * Kept pure and separate from the deletion so the caller can order things
+ * safely: verify the write is not stale, write the JSON, and only then remove
+ * files. Deleting first would destroy media even when the write is rejected.
+ *
+ * Removing a video can orphan its poster, so freed posters are re-queued.
+ */
+export function planGarbage(
+  cv: CvFile,
+  gallery: GalleryFile,
+  assets: Record<string, MediaAsset>,
+  candidates: string[]
+): { assets: Record<string, MediaAsset>; remove: string[] } {
+  const next = { ...assets };
+  const remove: string[] = [];
+  const queue = [...new Set(candidates)];
+
+  while (queue.length) {
+    const file = queue.pop()!;
+    if (!file || !next[file]) continue;
+
+    const counts = collectReferences(cv, gallery, next);
+    if ((counts.get(file) ?? 0) > 0) continue;
+
+    const poster = next[file].poster;
+    delete next[file];
+    remove.push(file);
+    if (poster) queue.push(poster);
+  }
+
+  return { assets: next, remove };
+}
+
+/** Delete pool files. Best effort — a stranded file shows up as an orphan. */
+export async function removeFiles(files: string[]): Promise<string[]> {
+  const deleted: string[] = [];
+  for (const file of files) {
+    try {
+      await fs.rm(poolPath(file), { force: true });
+      deleted.push(file);
+    } catch {
+      // The registry is the source of truth; a leftover file is inert.
+    }
+  }
+  return deleted;
 }
 
 // ---------------------------------------------------------------------------
@@ -155,16 +282,19 @@ export function reorderSections(cv: CvFile, order: string[]): CvFile {
   return { ...cv, sections: applyOrder(cv.sections ?? [], order, (s) => s.key) };
 }
 
+/** A bare identifier keeps its casing, so "sideProjects" stays camelCase. */
+function toSectionKey(label: string): string {
+  const trimmed = String(label || '').trim();
+  if (/^[A-Za-z][A-Za-z0-9]*$/.test(trimmed)) return trimmed;
+  return slugify(trimmed, '').replace(/-([a-z0-9])/g, (_, c) => c.toUpperCase());
+}
+
 export function createSection(cv: CvFile, label: string): { cv: CvFile; key: string } {
   const trimmed = String(label || '').trim();
   if (!trimmed) throw new StudioError('Section name is required');
 
-  // Keep a bare identifier's casing so "sideProjects" stays camelCase.
-  const key = /^[A-Za-z][A-Za-z0-9]*$/.test(trimmed)
-    ? trimmed
-    : slugify(trimmed, '').replace(/-([a-z0-9])/g, (_, c) => c.toUpperCase());
+  const key = toSectionKey(trimmed);
   if (!key) throw new StudioError('Section name is required');
-
   if ((cv.sections ?? []).some((s) => s.key.toLowerCase() === key.toLowerCase())) {
     throw new StudioError(`A section with key "${key}" already exists`);
   }
@@ -183,13 +313,11 @@ export function renameSection(cv: CvFile, key: string, label: string): CvFile {
   };
 }
 
-/** Returns the ids whose media folders should be removed alongside the section. */
-export function deleteSection(cv: CvFile, key: string): { cv: CvFile; removedIds: string[] } {
+/** Returns the files the section referenced, as garbage-collection candidates. */
+export function deleteSection(cv: CvFile, key: string): { cv: CvFile; freed: string[] } {
   const section = findSection(cv, key);
-  return {
-    cv: { ...cv, sections: cv.sections.filter((s) => s.key !== key) },
-    removedIds: (section.items ?? []).map((i) => i.id),
-  };
+  const freed = (section.items ?? []).flatMap((i) => i.media ?? []);
+  return { cv: { ...cv, sections: cv.sections.filter((s) => s.key !== key) }, freed };
 }
 
 // ---------------------------------------------------------------------------
@@ -212,7 +340,7 @@ export function createItem(
 ): { cv: CvFile; itemId: string } {
   const section = findSection(cv, sectionKey);
   const id = uniqueId(cv, slugify(String(data.heading ?? ''), 'item'));
-  const item = mergePatch({ id } as CvItem, data);
+  const item = mergePatch({ id } as unknown as Record<string, unknown>, data) as unknown as CvItem;
   return {
     cv: {
       ...cv,
@@ -240,26 +368,38 @@ export function updateItem(
         : {
             ...s,
             items: s.items.map((i) =>
-              i.id !== itemId ? i : mergePatch(i, patch)
+              i.id !== itemId
+                ? i
+                : (mergePatch(
+                    i as unknown as Record<string, unknown>,
+                    patch
+                  ) as unknown as CvItem)
             ),
           }
     ),
   };
 }
 
-export function deleteItem(cv: CvFile, sectionKey: string, itemId: string): CvFile {
+export function deleteItem(
+  cv: CvFile,
+  sectionKey: string,
+  itemId: string
+): { cv: CvFile; freed: string[] } {
   const section = findSection(cv, sectionKey);
-  findItem(section, itemId);
+  const item = findItem(section, itemId);
   return {
-    ...cv,
-    sections: cv.sections.map((s) =>
-      s.key !== sectionKey ? s : { ...s, items: s.items.filter((i) => i.id !== itemId) }
-    ),
+    cv: {
+      ...cv,
+      sections: cv.sections.map((s) =>
+        s.key !== sectionKey ? s : { ...s, items: s.items.filter((i) => i.id !== itemId) }
+      ),
+    },
+    freed: item.media ?? [],
   };
 }
 
 // ---------------------------------------------------------------------------
-// Contact (pinned bottom — position is fixed, its items are not)
+// Contact (pinned bottom — position fixed, its items are not)
 // ---------------------------------------------------------------------------
 
 function contactOf(cv: CvFile) {
@@ -286,7 +426,10 @@ export function createContactItem(
 ): { cv: CvFile; itemId: string } {
   const contact = contactOf(cv);
   const id = uniqueId(cv, `contact-${slugify(String(data.platform ?? ''), 'row')}`);
-  const item = mergePatch({ id, platform: '', handle: '' } as ContactItem, data);
+  const item = mergePatch(
+    { id, platform: '', handle: '' } as unknown as Record<string, unknown>,
+    data
+  ) as unknown as ContactItem;
   return {
     cv: { ...cv, contact: { ...contact, items: [...(contact.items ?? []), item] } },
     itemId: id,
@@ -306,7 +449,14 @@ export function updateContactItem(
     ...cv,
     contact: {
       ...contact,
-      items: contact.items.map((i) => (i.id !== itemId ? i : mergePatch(i, patch))),
+      items: contact.items.map((i) =>
+        i.id !== itemId
+          ? i
+          : (mergePatch(
+              i as unknown as Record<string, unknown>,
+              patch
+            ) as unknown as ContactItem)
+      ),
     },
   };
 }
@@ -320,7 +470,7 @@ export function deleteContactItem(cv: CvFile, itemId: string): CvFile {
 }
 
 // ---------------------------------------------------------------------------
-// Media — the JSON's `media` array is authoritative; disk follows it
+// Media — cv.json holds the order, media.json holds the facts
 // ---------------------------------------------------------------------------
 
 export function reorderMedia(
@@ -331,106 +481,119 @@ export function reorderMedia(
 ): CvFile {
   const section = findSection(cv, sectionKey);
   const item = findItem(section, itemId);
-  const media = applyOrder(item.media ?? [], order, (m) => m.file);
+  const media = applyOrder(item.media ?? [], order, (file) => file);
   return updateItem(cv, sectionKey, itemId, { media });
 }
 
-export async function deleteMedia(
+/**
+ * Remove one reference. The file itself survives if anything else still uses it,
+ * which is the whole point of a shared pool.
+ */
+export function removeMediaRef(
   cv: CvFile,
   sectionKey: string,
   itemId: string,
   file: string
-): Promise<CvFile> {
+): { cv: CvFile; freed: string[] } {
   assertSafeSegment(file, 'filename');
   const section = findSection(cv, sectionKey);
   const item = findItem(section, itemId);
-  const media = (item.media ?? []).filter((m) => m.file !== file);
-  await fs.rm(itemMediaPath(itemId, file), { force: true });
-  return updateItem(cv, sectionKey, itemId, { media: media.length ? media : undefined });
-}
-
-/**
- * Write an uploaded file into the item's media folder and return the authored
- * entry, measuring images so dimensions are always stored.
- */
-export async function writeMedia(
-  itemId: string,
-  originalName: string,
-  bytes: Buffer
-): Promise<MediaEntry> {
-  assertSafeSegment(itemId, 'item id');
-
-  const ext = (originalName.split('.').pop() ?? '').toLowerCase();
-  const base = slugify(originalName.replace(/\.[^.]+$/, ''), 'media');
-  if (inferMediaType(`${base}.${ext}`) === null) {
-    throw new StudioError(`Unsupported media type: ${originalName}`);
-  }
-
-  const dir = itemMediaPath(itemId);
-  await fs.mkdir(dir, { recursive: true });
-
-  let file = `${base}.${ext}`;
-  let n = 2;
-  while (await exists(join(dir, file))) {
-    file = `${base}-${n}.${ext}`;
-    n++;
-  }
-
-  const absolute = join(dir, file);
-  await fs.writeFile(absolute, bytes);
-
-  const type = inferMediaType(file)!;
-  const measured = type === 'image' ? await measureImage(absolute) : null;
-  if (!measured) {
-    // Video cannot be measured here. 16:9 keeps the layout sane, and the route
-    // reports it so the author can correct the numbers.
-    return { file, width: 1600, height: 900 };
-  }
-  return { file, width: measured.width, height: measured.height };
+  const media = (item.media ?? []).filter((f) => f !== file);
+  return {
+    cv: updateItem(cv, sectionKey, itemId, { media: media.length ? media : undefined }),
+    freed: [file],
+  };
 }
 
 export function appendMedia(
   cv: CvFile,
   sectionKey: string,
   itemId: string,
-  entries: MediaEntry[]
+  files: string[]
 ): CvFile {
   const section = findSection(cv, sectionKey);
   const item = findItem(section, itemId);
-  const existing = item.media ?? [];
-  const byFile = new Map(existing.map((m) => [m.file, m]));
-  for (const entry of entries) byFile.set(entry.file, entry);
-  return updateItem(cv, sectionKey, itemId, { media: [...byFile.values()] });
+  const next = [...(item.media ?? [])];
+  for (const file of files) if (!next.includes(file)) next.push(file);
+  return updateItem(cv, sectionKey, itemId, { media: next });
 }
 
-/** Remove media folders for deleted items. Best effort — never blocks a write. */
-export async function removeMediaFolders(itemIds: string[]): Promise<void> {
-  for (const id of itemIds) {
+/**
+ * Write an uploaded file into the pool and return its registry entry.
+ *
+ * Identical bytes already in the pool resolve to the existing asset instead of a
+ * second copy — this is what stops the CV and the gallery from each carrying
+ * their own copy of the same video.
+ */
+export async function writeToPool(
+  originalName: string,
+  bytes: Buffer,
+  assets: Record<string, MediaAsset>
+): Promise<{ file: string; asset: MediaAsset; deduped: boolean }> {
+  const ext = (originalName.split('.').pop() ?? '').toLowerCase();
+  const base = slugify(originalName.replace(/\.[^.]+$/, ''), 'media');
+  if (inferMediaType(`${base}.${ext}`) === null) {
+    throw new StudioError(`Unsupported media type: ${originalName}`);
+  }
+
+  await fs.mkdir(POOL_ROOT, { recursive: true });
+
+  const incoming = createHash('sha256').update(bytes).digest('hex');
+  for (const existing of Object.keys(assets)) {
     try {
-      await fs.rm(itemMediaPath(id), { recursive: true, force: true });
+      const current = createHash('sha256')
+        .update(await fs.readFile(poolPath(existing)))
+        .digest('hex');
+      if (current === incoming) {
+        return { file: existing, asset: assets[existing], deduped: true };
+      }
     } catch {
-      // The JSON is the source of truth; a stranded folder is harmless.
+      // Registered but missing from disk — surfaced separately as an orphan.
     }
   }
+
+  let file = `${base}.${ext}`;
+  let n = 2;
+  while (assets[file] || (await exists(poolPath(file)))) {
+    file = `${base}-${n}.${ext}`;
+    n++;
+  }
+
+  const absolute = poolPath(file);
+  await fs.writeFile(absolute, bytes);
+
+  const type = inferMediaType(file)!;
+  const measured = type === 'image' ? await measureImage(absolute) : null;
+  // Video cannot be measured here; 16:9 keeps the layout sane and the route
+  // reports it so the author can correct the numbers.
+  const asset: MediaAsset = measured ?? { width: 1600, height: 900 };
+  assets[file] = asset;
+
+  return { file, asset, deduped: false };
 }
 
-/** Files on disk that the JSON does not list, per item id. */
-export async function findOrphanMedia(cv: CvFile): Promise<Record<string, string[]>> {
-  const orphans: Record<string, string[]> = {};
-  for (const section of cv.sections ?? []) {
-    for (const item of section.items ?? []) {
-      let files: string[];
-      try {
-        files = await fs.readdir(itemMediaPath(item.id));
-      } catch {
-        continue;
-      }
-      const listed = new Set((item.media ?? []).map((m) => m.file));
-      const extra = files.filter((f) => inferMediaType(f) !== null && !listed.has(f));
-      if (extra.length) orphans[item.id] = extra;
-    }
+/**
+ * Pool files absent from the registry, and registry entries nothing references.
+ * Both are inert rather than broken, so they are surfaced, never auto-deleted.
+ */
+export async function findOrphans(doc: Doc): Promise<{
+  unregistered: string[];
+  unreferenced: string[];
+}> {
+  let files: string[] = [];
+  try {
+    files = (await fs.readdir(POOL_ROOT, { withFileTypes: true }))
+      .filter((e) => e.isFile() && inferMediaType(e.name) !== null)
+      .map((e) => e.name);
+  } catch {
+    // No pool yet.
   }
-  return orphans;
+
+  const counts = collectReferences(doc.cv, doc.gallery, doc.assets);
+  return {
+    unregistered: files.filter((f) => !doc.assets[f]),
+    unreferenced: Object.keys(doc.assets).filter((f) => (counts.get(f) ?? 0) === 0),
+  };
 }
 
 async function measureImage(path: string): Promise<{ width: number; height: number } | null> {
@@ -452,4 +615,4 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
-export { CV_MEDIA_ROOT };
+export { POOL_ROOT };

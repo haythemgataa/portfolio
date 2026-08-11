@@ -5,7 +5,8 @@ import styles from './Studio.module.css';
 import { CONTACT_FIELDS, ITEM_FIELDS, PROFILE_FIELDS, SECTION_SUGGESTIONS } from './lib/schema';
 import type { FieldDef } from './lib/schema';
 import { inferMediaType } from '../lib/contentTypes';
-import type { ContactItem, CvFile, CvItem, CvSection, MediaEntry } from '../lib/contentTypes';
+import type { ContactItem, CvFile, CvItem, CvSection, MediaAsset } from '../lib/contentTypes';
+import type { GalleryFile } from '../lib/galleryTypes';
 
 type Status = { kind: 'idle' | 'busy' | 'saved' | 'error'; message?: string };
 
@@ -68,21 +69,33 @@ function useDragHandlers(onReorder: (from: number, to: number) => void) {
   return { source, target, over };
 }
 
+type Orphans = { unregistered: string[]; unreferenced: string[] };
+
 type StudioProps = {
   initialCv?: CvFile;
+  initialAssets?: Record<string, MediaAsset>;
+  initialGallery?: GalleryFile;
   initialHash?: string;
-  initialOrphans?: Record<string, string[]>;
+  initialOrphans?: Orphans;
   loadError?: string;
 };
 
+const NO_ORPHANS: Orphans = { unregistered: [], unreferenced: [] };
+
 export default function Studio({
   initialCv,
+  initialAssets = {},
+  initialGallery = { items: [] },
   initialHash = '',
-  initialOrphans = {},
+  initialOrphans = NO_ORPHANS,
   loadError,
 }: StudioProps) {
   const [cv, setCv] = useState<CvFile | null>(initialCv ?? null);
-  const [orphans, setOrphans] = useState<Record<string, string[]>>(initialOrphans);
+  /** content/media.json — the single description of every pooled asset. */
+  const [assets, setAssets] = useState<Record<string, MediaAsset>>(initialAssets);
+  /** Read-only here; used to show which assets the gallery also uses. */
+  const [gallery, setGallery] = useState<GalleryFile>(initialGallery);
+  const [orphans, setOrphans] = useState<Orphans>(initialOrphans);
   const [selection, setSelection] = useState<Selection>({ kind: 'profile' });
   const [itemId, setItemId] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>(
@@ -100,8 +113,10 @@ export default function Studio({
     const json = await res.json();
     if (!res.ok) throw new Error(json.error || 'Failed to load content');
     setCv(json.cv);
+    setAssets(json.assets ?? {});
+    setGallery(json.gallery ?? { items: [] });
     hashRef.current = json.hash;
-    setOrphans(json.orphans ?? {});
+    setOrphans(json.orphans ?? NO_ORPHANS);
     return json.cv as CvFile;
   }, []);
 
@@ -234,16 +249,22 @@ export default function Studio({
     [rows, selection, mutate, run]
   );
 
-  const media = useMemo<MediaEntry[]>(
+  const media = useMemo<string[]>(
     () =>
       selection.kind === 'section' && activeItem ? ((activeItem as CvItem).media ?? []) : [],
     [selection, activeItem]
   );
 
+  /** Filenames the gallery also references, so the UI can warn before removing. */
+  const galleryUses = useMemo(
+    () => new Set((gallery.items ?? []).map((e) => e.file)),
+    [gallery]
+  );
+
   const reorderMedia = useCallback(
     (from: number, to: number) => {
       if (selection.kind !== 'section' || !activeItem) return;
-      const order = move(media, from, to).map((m) => m.file);
+      const order = move(media, from, to);
       run(
         () => mutate('media.reorder', { sectionKey: selection.key, itemId: activeItem.id, order }),
         'Media reordered'
@@ -365,10 +386,14 @@ export default function Studio({
 
   const removeMedia = (file: string) => {
     if (selection.kind !== 'section' || !activeItem) return;
-    if (!window.confirm(`Delete ${file} from disk?`)) return;
+    const shared = galleryUses.has(file);
+    const message = shared
+      ? `Remove ${file} from this item?\n\nThe gallery also uses it, so the file stays in public/media/.`
+      : `Remove ${file} from this item?\n\nNothing else references it, so the file will be deleted from public/media/.`;
+    if (!window.confirm(message)) return;
     run(
-      () => mutate('media.delete', { sectionKey: selection.key, itemId: activeItem.id, file }),
-      'Media deleted'
+      () => mutate('media.remove', { sectionKey: selection.key, itemId: activeItem.id, file }),
+      shared ? 'Reference removed (file kept — shared)' : 'Media deleted'
     );
   };
 
@@ -576,9 +601,6 @@ export default function Studio({
                               (row as CvItem).media?.length
                                 ? `${(row as CvItem).media!.length} media`
                                 : null,
-                              orphans[row.id]?.length
-                                ? `${orphans[row.id].length} unlisted`
-                                : null,
                             ]
                               .filter(Boolean)
                               .join(' · ')}
@@ -696,10 +718,14 @@ export default function Studio({
                       </label>
                     </div>
 
-                    {orphans[activeItem.id]?.length ? (
+                    {orphans.unregistered.length || orphans.unreferenced.length ? (
                       <p className={styles.hint}>
-                        On disk but not listed in cv.json, so not rendered:{' '}
-                        {orphans[activeItem.id].join(', ')}
+                        {orphans.unregistered.length
+                          ? `In public/media/ but absent from media.json, so unusable: ${orphans.unregistered.join(', ')}. `
+                          : ''}
+                        {orphans.unreferenced.length
+                          ? `Registered but referenced by nothing: ${orphans.unreferenced.join(', ')}.`
+                          : ''}
                       </p>
                     ) : null}
 
@@ -717,43 +743,51 @@ export default function Studio({
                         </span>
                       ) : (
                         <ul className={styles.mediaGrid}>
-                          {media.map((m, index) => (
-                            <li
-                              key={m.file}
-                              {...mediaDrag.target(index)}
-                              className={[
-                                styles.mediaCard,
-                                mediaDrag.over === index ? styles.rowOver : '',
-                              ].join(' ')}
-                            >
-                              {inferMediaType(m.file) === 'image' ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img alt={m.file} src={`/media/cv/${activeItem.id}/${m.file}`} />
-                              ) : (
-                                <div className={styles.videoThumb}>▶ video</div>
-                              )}
-                              <div className={styles.mediaMeta}>
-                                <span
-                                  className={styles.grip}
-                                  aria-hidden
-                                  {...mediaDrag.source(index)}
-                                >
-                                  ⠿
-                                </span>
-                                <span title={m.file}>{m.file}</span>
-                                <span className={styles.rowMeta}>
-                                  {m.width}×{m.height}
-                                </span>
-                              </div>
-                              <button
-                                className={styles.mediaDelete}
-                                title="Delete file"
-                                onClick={() => removeMedia(m.file)}
+                          {media.map((file, index) => {
+                            const asset = assets[file];
+                            return (
+                              <li
+                                key={file}
+                                {...mediaDrag.target(index)}
+                                className={[
+                                  styles.mediaCard,
+                                  mediaDrag.over === index ? styles.rowOver : '',
+                                ].join(' ')}
                               >
-                                ×
-                              </button>
-                            </li>
-                          ))}
+                                {inferMediaType(file) === 'image' ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img alt={file} src={`/media/${file}`} />
+                                ) : (
+                                  <div className={styles.videoThumb}>▶ video</div>
+                                )}
+                                <div className={styles.mediaMeta}>
+                                  <span
+                                    className={styles.grip}
+                                    aria-hidden
+                                    {...mediaDrag.source(index)}
+                                  >
+                                    ⠿
+                                  </span>
+                                  <span title={file}>{file}</span>
+                                  <span className={styles.rowMeta}>
+                                    {asset ? `${asset.width}×${asset.height}` : 'not in media.json'}
+                                    {galleryUses.has(file) ? ' · shared with gallery' : ''}
+                                  </span>
+                                </div>
+                                <button
+                                  className={styles.mediaDelete}
+                                  title={
+                                    galleryUses.has(file)
+                                      ? 'Remove reference (file kept — gallery uses it)'
+                                      : 'Remove and delete file'
+                                  }
+                                  onClick={() => removeMedia(file)}
+                                >
+                                  ×
+                                </button>
+                              </li>
+                            );
+                          })}
                         </ul>
                       )}
                     </div>

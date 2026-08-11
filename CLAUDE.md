@@ -18,16 +18,16 @@ No test framework is configured.
 
 ### Content Studio (`localhost:3000/studio`)
 
-A dev-only editor for `content/cv.json` — reorder/add/rename/delete sections and
-items, edit profile, item and contact fields, and manage each item's media. Every
-mutation is a read-modify-write of the one JSON file; `git checkout -- content public/media`
-is the undo.
+A dev-only editor for `content/cv.json` + `content/media.json` — reorder/add/rename/delete
+sections and items, edit profile, item and contact fields, and manage media. Every mutation is a
+read-modify-write of those files; `git checkout -- content public/media` is the undo.
 
 Two guards make whole-file rewrites safe, and both are load-bearing:
 
 - **Atomic write** — `cv.json.tmp` then `fs.rename`, so no reader sees a partial file.
 - **Stale-write rejection** — the UI sends the content hash it loaded and the route
-  refuses a mismatch with a 409. Without it, a tab left open would silently revert
+  refuses a mismatch with a 409. The hash covers `cv.json` *and* `media.json`, so a change
+  to either invalidates a pending edit. Without it, a tab left open would silently revert
   the whole CV on its next keystroke.
 
 `Studio.module.css` positions the tool `fixed; inset: 0` because `/studio` sits under
@@ -68,13 +68,11 @@ There is no database or CMS. Content is **two JSON files plus a media tree**:
 
 ```
 content/                      # build-time input — NOT served
-  cv.json
-  gallery.json
+  cv.json                     # sections, items, order
+  gallery.json                # gallery entries and captions
+  media.json                  # per-asset facts, keyed by filename
   case-studies/<slug>.md      # markdown stays as files
-public/media/
-  profile/<file>
-  cv/<itemId>/<file>
-  gallery/<file>
+public/media/<file>           # ONE flat pool, shared by the CV and the gallery
 ```
 
 `content/` sits outside `public/` deliberately: it is compiler input, not a static asset.
@@ -94,12 +92,20 @@ The schema and its rationale are documented in **`CONTENT-SCHEMA.md`**; the type
   contact layout if the section was renamed.
 - **`section.key` is machine-facing and stable; `section.label` is free text** and safe to rename.
   This replaced the hardcoded `SECTION_MAP`, so adding a section needs no code change.
-- **`item.id` is stable and unique across the whole document** — it names the media folder
-  (`public/media/cv/<id>/`), so a collision would make two items share images. `contentLoader.ts`
+- **`item.id` is stable and unique across the whole document.** It no longer names anything on
+  disk, but it is still a React key and the Studio's addressing scheme, so `contentLoader.ts`
   throws on a duplicate rather than shipping it.
-- **Media dimensions are always authored**, so the build never runs `sharp`. `media[].file` is a
-  bare filename; `type` is inferred from the extension rather than stored, so there is one source
-  of truth for it.
+- **Media lives in one flat pool, described once in `media.json`.** `cv.json` and `gallery.json`
+  reference filenames only. This replaced per-item folders because a file used by both tabs had
+  two dimension records that drifted — the awards video was recorded 1920x1080 (the 16:9 fallback,
+  since `sharp` cannot measure video) against a true 1254x704. Dedup saved 6.5 MB of 51.7 MB, but
+  the point is that an asset can no longer disagree with itself.
+- **Deleting media is reference-counted.** A file goes only when nothing references it — CV items,
+  the profile photo, gallery entries and poster frames all count, so the Studio reads `gallery.json`
+  even though it never writes it. `planGarbage()` is pure and the route writes JSON *before*
+  deleting files, so a rejected write cannot destroy media.
+- **Dimensions are always authored**, so the build never runs `sharp`; `type` is inferred from the
+  extension rather than stored, so there is one source of truth for it.
 - Optional fields are **omitted, not written as `""`**.
 
 One naming seam to know about: media is authored under `media` but the loader resolves it to
@@ -118,7 +124,8 @@ the CV sections:
 
 - `content/gallery.json` — an **ordered** `items` array; array order is display order.
 - `app/lib/galleryLoader.ts` — resolves entries to `GalleryItem`s, typed in
-  `app/lib/galleryTypes.ts`. Media resolves against `public/media/gallery/`.
+  `app/lib/galleryTypes.ts`. Entries reference the shared pool; dimensions come from
+  `media.json` via `app/lib/mediaRegistry.ts`, which both loaders share.
 - Each entry carries a **required, authored `id`**. It used to be derived from the array index
   (`${index}-${entry.file}`), which meant every id changed whenever the gallery was reordered.
 - `width`/`height` are **required**, not measured. This retires a live footgun: `sharp` cannot

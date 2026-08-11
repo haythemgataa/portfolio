@@ -2,11 +2,12 @@ import { join, resolve, sep } from 'path';
 
 /** Build-time content input. Deliberately outside public/ — never served. */
 export const CONTENT_ROOT = join(process.cwd(), 'content');
-/** Served media. Per-item folders are keyed by the item's stable id. */
-export const MEDIA_ROOT = join(process.cwd(), 'public', 'media');
+/** One flat pool of served media, shared by the CV and the gallery. */
+export const POOL_ROOT = join(process.cwd(), 'public', 'media');
 
 export const CV_PATH = join(CONTENT_ROOT, 'cv.json');
-export const CV_MEDIA_ROOT = join(MEDIA_ROOT, 'cv');
+export const MEDIA_PATH = join(CONTENT_ROOT, 'media.json');
+export const GALLERY_PATH = join(CONTENT_ROOT, 'gallery.json');
 
 /** A message safe to surface to the Studio UI. */
 export class StudioError extends Error {
@@ -44,9 +45,9 @@ function underRoot(root: string, segments: string[]): string {
   return full;
 }
 
-/** public/media/cv/<itemId>[/<file>] */
-export function itemMediaPath(itemId: string, ...rest: string[]): string {
-  return underRoot(CV_MEDIA_ROOT, [itemId, ...rest]);
+/** public/media/<file> — the pool is flat, so exactly one segment. */
+export function poolPath(file: string): string {
+  return underRoot(POOL_ROOT, [file]);
 }
 
 /**

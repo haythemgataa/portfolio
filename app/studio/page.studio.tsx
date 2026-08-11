@@ -1,6 +1,7 @@
 import Studio from './Studio';
-import { findOrphanMedia, readDoc } from './lib/cv-fs';
-import type { CvFile } from '../lib/contentTypes';
+import { findOrphans, readDoc } from './lib/cv-fs';
+import type { CvFile, MediaAsset } from '../lib/contentTypes';
+import type { GalleryFile } from '../lib/galleryTypes';
 
 export const metadata = {
   title: 'Content Studio',
@@ -16,14 +17,26 @@ export const metadata = {
  * /studio/api/tree route still exists for re-reading after each mutation.
  */
 export default async function StudioPage() {
-  let loaded: { cv: CvFile; hash: string; orphans: Record<string, string[]> } | null = null;
+  let loaded: {
+    cv: CvFile;
+    assets: Record<string, MediaAsset>;
+    gallery: GalleryFile;
+    hash: string;
+    orphans: { unregistered: string[]; unreferenced: string[] };
+  } | null = null;
   let loadError: string | undefined;
 
   // Only the read is guarded — constructing JSX inside try/catch would swallow
   // render errors that belong to an error boundary.
   try {
-    const { cv, hash } = await readDoc();
-    loaded = { cv, hash, orphans: await findOrphanMedia(cv) };
+    const doc = await readDoc();
+    loaded = {
+      cv: doc.cv,
+      assets: doc.assets,
+      gallery: doc.gallery,
+      hash: doc.hash,
+      orphans: await findOrphans(doc),
+    };
   } catch (error) {
     loadError = (error as Error).message;
   }
@@ -33,6 +46,8 @@ export default async function StudioPage() {
   return (
     <Studio
       initialCv={loaded.cv}
+      initialAssets={loaded.assets}
+      initialGallery={loaded.gallery}
       initialHash={loaded.hash}
       initialOrphans={loaded.orphans}
     />

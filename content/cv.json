@@ -4,7 +4,7 @@
     "displayName": "Haythem Gataa",
     "byline": "Software Designer & Engineer in Tunisia",
     "about": "I'm a detail-oriented Software Designer, passionate about micro interactions, animations, and the art of design. With a track record of bringing products to life and enhancing existing ones (over 5+ years), I blend creativity with my engineering background to deliver mindful user experiences.",
-    "photo": "profilePhoto.jpg"
+    "photo": "profile.jpg"
   },
   "sections": [
     {
@@ -21,26 +21,10 @@
           "location": "Tunis, Tunisia",
           "description": "* Collaborating on a design system to help accelerate new projects’ creation, and insure consistency across non-branded projects\n\n* Creating fun animations and micro-interactions to make our products feel dynamic (which increased the wow! effect by 2 wows/user).\n\n* Introduced tools like Rive, Lottie, and Framer, which helped us reduce developer frustration and reduce development time by up to one week on average.\n\n* Redesigned a couple of products, improving the UX and modernizing the UI. Which for some projects, paired with great enhancement by the AI team, tripled the product usage over less than 1 year.\n\n* Brought to life many innovative AI related projects.",
           "media": [
-            {
-              "file": "Product-designer-at-InstaDeep-1.png",
-              "width": 2000,
-              "height": 1500
-            },
-            {
-              "file": "Product-designer-at-InstaDeep-2.png",
-              "width": 2000,
-              "height": 1500
-            },
-            {
-              "file": "Product-designer-at-InstaDeep-3.png",
-              "width": 2000,
-              "height": 1500
-            },
-            {
-              "file": "Product-designer-at-InstaDeep-4.png",
-              "width": 2000,
-              "height": 1500
-            }
+            "instadeep-1.png",
+            "instadeep-2.png",
+            "instadeep-3.png",
+            "instadeep-4.png"
           ]
         },
         {
@@ -53,26 +37,10 @@
           "location": "Sousse, Tunisia",
           "description": "* Designed an award-winning platform (Sehaty Online).\n\n* Designed a high-fidelity wireframe, and assisted during user testing sessions for [WFP's Last Mile Ecosystem](https://innovation.wfp.org/project/last-mile-ecosystem), a Nobel-awarded project.\n\n* Designing and ensuring the good delivery Of our work from UX to UI, then to the dev team.\n\n* Helped leading and integrating new designers to the team",
           "media": [
-            {
-              "file": "UI-Designer-at-Weare-Moon-1.png",
-              "width": 2000,
-              "height": 1500
-            },
-            {
-              "file": "UI-Designer-at-Weare-Moon-2.png",
-              "width": 2000,
-              "height": 1500
-            },
-            {
-              "file": "UI-Designer-at-Weare-Moon-3.png",
-              "width": 2000,
-              "height": 1500
-            },
-            {
-              "file": "UI-Designer-at-Weare-Moon-4.png",
-              "width": 2000,
-              "height": 1500
-            }
+            "weare-moon-1.png",
+            "weare-moon-2.png",
+            "weare-moon-3.png",
+            "weare-moon-4.png"
           ]
         },
         {
@@ -85,11 +53,7 @@
           "location": "Sousse, Tunisia",
           "description": "* Created the course plan, exercises, and exams.\n\n* Ensured the good flow of the lesson while keeping the students entertained.\n\n* Organized workshops to help students practice the newly acquired information.",
           "media": [
-            {
-              "file": "UXUI-teacher-Part-time-at-Ecole-Polytechnique-Sousse.jpg",
-              "width": 984,
-              "height": 984
-            }
+            "ecole-polytechnique-sousse.jpg"
           ]
         },
         {
@@ -139,21 +103,9 @@
           "role": "Best website design (Silver award)",
           "org": "Tunisia Digital Awards",
           "media": [
-            {
-              "file": "Best-website-design-Silver-award-from-Tunisia-Digital-Awards-1.jpg",
-              "width": 984,
-              "height": 738
-            },
-            {
-              "file": "Best-website-design-Silver-award-from-Tunisia-Digital-Awards-2.mp4",
-              "width": 1254,
-              "height": 704
-            },
-            {
-              "file": "Best-website-design-Silver-award-from-Tunisia-Digital-Awards-3.jpg",
-              "width": 959,
-              "height": 959
-            }
+            "tunisia-digital-awards-1.jpg",
+            "award-ceremony.mp4",
+            "tunisia-digital-awards-3.jpg"
           ]
         },
         {
@@ -163,11 +115,7 @@
           "role": "1st place winner of Code Camping",
           "org": "Mentor Nations",
           "media": [
-            {
-              "file": "1st-place-winner-of-Code-Camping-from-Mentor-Nations.jpg",
-              "width": 1802,
-              "height": 1130
-            }
+            "mentor-nations.jpg"
           ]
         },
         {
@@ -177,11 +125,7 @@
           "role": "1st place winner of Innovation Camp",
           "org": "Injaz Tunisia",
           "media": [
-            {
-              "file": "1st-place-winner-of-Innovation-Camp-from-Injaz-Tunisia.jpg",
-              "width": 1802,
-              "height": 1075
-            }
+            "injaz-tunisia.jpg"
           ]
         }
       ]
@@ -206,11 +150,7 @@
           "org": "RNA.AI (with BioNTech)",
           "location": "Mainz - Germany",
           "media": [
-            {
-              "file": "Design-for-non-designers-at-RNAAI-with-BioNTech.mp4",
-              "width": 852,
-              "height": 480
-            }
+            "conference-talk.mp4"
           ]
         },
         {
@@ -221,16 +161,8 @@
           "org": "GoMyCode Hackathon",
           "location": "Sousse - Tunisia",
           "media": [
-            {
-              "file": "Design-for-non-designers-at-GoMyCode-Hackathon-1.jpg",
-              "width": 661,
-              "height": 512
-            },
-            {
-              "file": "Design-for-non-designers-at-GoMyCode-Hackathon-2.jpg",
-              "width": 768,
-              "height": 512
-            }
+            "gomycode-hackathon-1.jpg",
+            "gomycode-hackathon-2.jpg"
           ]
         },
         {
@@ -256,11 +188,7 @@
           "url": "https://www.interaction-design.org/members/haythem/certificate/course/4dd7c189-54b3-47d1-a8e0-90d75a2ce5b4",
           "description": "Distinction: Top 10% in class",
           "media": [
-            {
-              "file": "User-Experience-The-Beginners-Guide-from-Interaction-Design-Foundation.jpg",
-              "width": 1920,
-              "height": 1408
-            }
+            "interaction-design-foundation.jpg"
           ]
         }
       ]
@@ -300,26 +228,10 @@
           "location": "Mahdia, Tunisia",
           "description": "Designed social media content and print materials that boosted event attendance and engagement., and organized an initiative to transform a neglected forest into a welcoming green space for families and children, fostering a sense of safety and community.",
           "media": [
-            {
-              "file": "Graphic-designer-at-I-Rise-1.png",
-              "width": 2400,
-              "height": 1800
-            },
-            {
-              "file": "Graphic-designer-at-I-Rise-2.png",
-              "width": 2400,
-              "height": 1800
-            },
-            {
-              "file": "Graphic-designer-at-I-Rise-3.png",
-              "width": 2400,
-              "height": 1800
-            },
-            {
-              "file": "Graphic-designer-at-I-Rise-4.png",
-              "width": 2400,
-              "height": 1800
-            }
+            "i-rise-1.png",
+            "i-rise-2.png",
+            "i-rise-3.png",
+            "i-rise-4.png"
           ]
         },
         {
@@ -332,11 +244,7 @@
           "location": "Online",
           "description": "Designed persuasive social media visuals for a COVID-19 fact-checking project. This effort aimed to counter misinformation, educating the public about accurate health practices during the pandemic.",
           "media": [
-            {
-              "file": "Graphic-Designer-at-Mouch-Shih.png",
-              "width": 2400,
-              "height": 1800
-            }
+            "mouch-shih.png"
           ]
         },
         {
@@ -357,36 +265,12 @@
           "location": "Kairouan, Tunisia",
           "description": "Responsible for capturing the historic beauty of Kairouan. Highlighted the city’s rich heritage, contributing to local tourism awareness and community pride.",
           "media": [
-            {
-              "file": "Photographer-and-Designer-at-We-Are-Kairouan-a-Tunivision-initiative-1.png",
-              "width": 2400,
-              "height": 1800
-            },
-            {
-              "file": "Photographer-and-Designer-at-We-Are-Kairouan-a-Tunivision-initiative-2.png",
-              "width": 2400,
-              "height": 1800
-            },
-            {
-              "file": "Photographer-and-Designer-at-We-Are-Kairouan-a-Tunivision-initiative-3.png",
-              "width": 2400,
-              "height": 1800
-            },
-            {
-              "file": "Photographer-and-Designer-at-We-Are-Kairouan-a-Tunivision-initiative-4.png",
-              "width": 2400,
-              "height": 1800
-            },
-            {
-              "file": "Photographer-and-Designer-at-We-Are-Kairouan-a-Tunivision-initiative-5.png",
-              "width": 2400,
-              "height": 1800
-            },
-            {
-              "file": "Photographer-and-Designer-at-We-Are-Kairouan-a-Tunivision-initiative-6.png",
-              "width": 2400,
-              "height": 1800
-            }
+            "we-are-kairouan-a-tunivision-initiative-1.png",
+            "we-are-kairouan-a-tunivision-initiative-2.png",
+            "we-are-kairouan-a-tunivision-initiative-3.png",
+            "we-are-kairouan-a-tunivision-initiative-4.png",
+            "we-are-kairouan-a-tunivision-initiative-5.png",
+            "we-are-kairouan-a-tunivision-initiative-6.png"
           ]
         }
       ]

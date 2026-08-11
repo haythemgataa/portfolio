@@ -2,7 +2,11 @@ export type GalleryMediaType = 'image' | 'video';
 
 /**
  * Shape of a single entry in content/gallery.json.
- * See CONTENT-SCHEMA.md for the authoring contract.
+ *
+ * Entries carry only *presentation* — which asset, in what order, with what
+ * caption. Intrinsic facts about the file (dimensions, poster frame) live once
+ * in content/media.json, so an asset shared with the CV cannot end up with two
+ * conflicting records. See CONTENT-SCHEMA.md.
  */
 export type GalleryEntry = {
   /**
@@ -10,21 +14,10 @@ export type GalleryEntry = {
    * meant every id changed whenever the gallery was reordered.
    */
   id: string;
-  /** Filename inside public/media/gallery/. Required. */
+  /** Filename in the public/media/ pool; must exist in content/media.json. */
   file: string;
   title?: string;
   caption?: string;
-  /** Overrides the extension-based guess. Rarely needed. */
-  type?: GalleryMediaType;
-  /**
-   * Intrinsic pixel dimensions. Required — video cannot be measured during the
-   * build, so leaving these to be inferred silently mis-sized every video. The
-   * migration and the Studio always write them.
-   */
-  width: number;
-  height: number;
-  /** Poster frame filename for video, also inside public/media/gallery/. */
-  poster?: string;
   /** Free-form date label shown with the caption, e.g. "2026" or "March 2026". */
   date?: string;
 };

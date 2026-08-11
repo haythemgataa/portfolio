@@ -7,10 +7,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run dev` — Start dev server (localhost:3000)
 - `npm run build` — Build static export to `out/`, then strip the placeholder route (`scripts/clean-export.mjs`)
 - `npm run lint` — Run ESLint (flat config in `eslint.config.mjs`)
-- `npm run migrate` — **Obsolete.** Points at `scripts/migrate-content.ts`, which migrated a
-  monolithic `profileData.json` into the old `NNN-` directory tree. Neither its input nor its
-  output format exists any more. `scripts/migrate-to-json.ts` (with `--dry-run`) is the migration
-  that produced the current `content/cv.json`; it has already been run.
+
+`scripts/migrate-to-json.ts` (supports `--dry-run`) is the one-shot migration that produced the
+current `content/cv.json` from the old `NNN-` directory tree. It has already been run and the old
+tree is gone, so it is kept for provenance rather than reuse.
 
 No test framework is configured.
 

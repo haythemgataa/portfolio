@@ -1,0 +1,166 @@
+{
+  "version": 1,
+  "assets": {
+    "award-ceremony-poster.jpg": {
+      "width": 1254,
+      "height": 704
+    },
+    "award-ceremony.mp4": {
+      "width": 1254,
+      "height": 704,
+      "poster": "award-ceremony-poster.jpg"
+    },
+    "brand-system.png": {
+      "width": 1080,
+      "height": 810
+    },
+    "code-camping.jpg": {
+      "width": 1080,
+      "height": 677
+    },
+    "conference-talk.mp4": {
+      "width": 852,
+      "height": 480
+    },
+    "dashboard-explorations.png": {
+      "width": 1080,
+      "height": 810
+    },
+    "ecole-polytechnique-sousse.jpg": {
+      "width": 984,
+      "height": 984
+    },
+    "files-shelf-1.png": {
+      "width": 2000,
+      "height": 1250
+    },
+    "files-shelf-2.png": {
+      "width": 2000,
+      "height": 1250
+    },
+    "files-shelf-3.png": {
+      "width": 2000,
+      "height": 1250
+    },
+    "gomycode-hackathon-1.jpg": {
+      "width": 661,
+      "height": 512
+    },
+    "gomycode-hackathon-2.jpg": {
+      "width": 768,
+      "height": 512
+    },
+    "i-rise-1.png": {
+      "width": 2400,
+      "height": 1800
+    },
+    "i-rise-2.png": {
+      "width": 2400,
+      "height": 1800
+    },
+    "i-rise-3.png": {
+      "width": 2400,
+      "height": 1800
+    },
+    "i-rise-4.png": {
+      "width": 2400,
+      "height": 1800
+    },
+    "injaz-tunisia.jpg": {
+      "width": 1802,
+      "height": 1075
+    },
+    "instadeep-1.png": {
+      "width": 2000,
+      "height": 1500
+    },
+    "instadeep-2.png": {
+      "width": 2000,
+      "height": 1500
+    },
+    "instadeep-3.png": {
+      "width": 2000,
+      "height": 1500
+    },
+    "instadeep-4.png": {
+      "width": 2000,
+      "height": 1500
+    },
+    "kairouan-street.png": {
+      "width": 1080,
+      "height": 810
+    },
+    "mentor-nations.jpg": {
+      "width": 1802,
+      "height": 1130
+    },
+    "mobile-app-flow.png": {
+      "width": 1080,
+      "height": 810
+    },
+    "mouch-shih.png": {
+      "width": 2400,
+      "height": 1800
+    },
+    "poster-series.png": {
+      "width": 1080,
+      "height": 1440
+    },
+    "profile.jpg": {
+      "width": 400,
+      "height": 400
+    },
+    "tunisia-digital-awards-1.jpg": {
+      "width": 984,
+      "height": 738
+    },
+    "tunisia-digital-awards-3.jpg": {
+      "width": 959,
+      "height": 959
+    },
+    "we-are-kairouan-a-tunivision-initiative-1.png": {
+      "width": 2400,
+      "height": 1800
+    },
+    "we-are-kairouan-a-tunivision-initiative-2.png": {
+      "width": 2400,
+      "height": 1800
+    },
+    "we-are-kairouan-a-tunivision-initiative-3.png": {
+      "width": 2400,
+      "height": 1800
+    },
+    "we-are-kairouan-a-tunivision-initiative-4.png": {
+      "width": 2400,
+      "height": 1800
+    },
+    "we-are-kairouan-a-tunivision-initiative-5.png": {
+      "width": 2400,
+      "height": 1800
+    },
+    "we-are-kairouan-a-tunivision-initiative-6.png": {
+      "width": 2400,
+      "height": 1800
+    },
+    "weare-moon-1.png": {
+      "width": 2000,
+      "height": 1500
+    },
+    "weare-moon-2.png": {
+      "width": 2000,
+      "height": 1500
+    },
+    "weare-moon-3.png": {
+      "width": 2000,
+      "height": 1500
+    },
+    "weare-moon-4.png": {
+      "width": 2000,
+      "height": 1500
+    },
+    "workshop-room.jpg": {
+      "width": 661,
+      "height": 512
+    }
+  }
+}

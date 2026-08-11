@@ -1,28 +1,40 @@
 /**
- * Schema for content/cv.json. See CONTENT-SCHEMA.md for the authoring contract.
+ * Schema for content/cv.json, content/gallery.json and content/media.json.
+ * See CONTENT-SCHEMA.md for the authoring contract.
  *
- * Two naming notes that are deliberate:
+ * Three naming/shape notes that are deliberate:
  *
- * - Authored media lives under `media`; the loader resolves it to `attachments`
- *   because that is the prop `Attachments.tsx` already takes. Renaming the
- *   component prop is a separate change from migrating the data.
+ * - Per-asset facts (dimensions, poster) live ONCE in content/media.json, keyed
+ *   by filename. cv.json and gallery.json only reference filenames. A file used
+ *   by both tabs previously had two dimension records and they drifted apart.
+ * - Authored media is a list of filenames; the loader resolves it to
+ *   `attachments` because that is the prop Attachments.tsx already takes.
  * - Media `type` is inferred from the file extension rather than stored, so
  *   there is only one source of truth for it.
  */
 
 export type MediaType = 'image' | 'video';
 
-/** A media file as authored in cv.json. */
-export type MediaEntry = {
-  /** Bare filename, resolved against public/media/cv/<itemId>/. */
-  file: string;
+/**
+ * One entry in the content/media.json registry — the single description of a
+ * file in the public/media/ pool. Keyed by filename, so the same asset cannot
+ * carry two conflicting records.
+ */
+export type MediaAsset = {
   /** Intrinsic pixel dimensions. Always stored so the build never runs sharp. */
   width: number;
   height: number;
+  /** Poster frame filename for video, also in the pool. */
+  poster?: string;
   /** Overrides the extension-based type guess. Rarely needed. */
   type?: MediaType;
-  /** Poster frame filename for video, in the same folder. */
-  poster?: string;
+};
+
+/** content/media.json */
+export type MediaRegistry = {
+  version?: number;
+  /** filename -> facts about that file. */
+  assets: Record<string, MediaAsset>;
 };
 
 /** An item in one of the orderable, timeline-shaped sections. */
@@ -31,14 +43,13 @@ export type CvItem = {
   id: string;
   year?: string;
   heading?: string;
-  /** Structured counterparts to `heading`. Not rendered — a JSON-LD hook. */
-  role?: string;
-  org?: string;
   url?: string;
-  location?: string;
+  /** Free text under the heading — a location, a stack, whatever the section needs. */
+  subheading?: string;
   /** Markdown. */
   description?: string;
-  media?: MediaEntry[];
+  /** Filenames in the public/media/ pool; array order is display order. */
+  media?: string[];
 };
 
 /** A row in the pinned contact section. */
@@ -67,7 +78,7 @@ export type CvProfile = {
   byline?: string;
   /** Markdown. */
   about?: string;
-  /** Bare filename, resolved against public/media/profile/. */
+  /** Filename in the public/media/ pool. */
   photo: string;
 };
 

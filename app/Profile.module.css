@@ -1,15 +1,129 @@
-.profileSection:first-of-type {
-  margin: 36px 0;
+/* The gap between sections is padding, not margin, and that is load-bearing for the sticky
+   titles: a sticky element is confined to its own section box, so with margins there would
+   be a 60px window between sections where the outgoing title has been pushed out and the
+   next one has not arrived. Padding makes consecutive section boxes touch, so the handover
+   is continuous — one title is pushed out at exactly the scroll position the next pins. */
+.profileSection {
+  padding-bottom: 60px;
 }
 
-.profileSection {
-  margin: 60px 0;
+/* Less than it was: the bar above now carries little padding on its underside, and the two
+   gaps used to add up to a hole between the tabs and the first title. */
+.profileSection:first-of-type {
+  padding-top: 16px;
+}
+
+/* Pinned below the tab bar. z-index sits between the page content and the bar itself:
+   above the fade the bar casts (12) so the title is never washed out, but below the bar
+   (20) so the title slides *under* it on its way out rather than over it.
+
+   No background of its own. It used to be full-bleed and opaque — negative margins out to the
+   viewport edges, equal padding back in — to hide content passing beneath it. The fade hanging
+   off the tab bar already covers that band, so the opaque strip was doing the work twice and
+   cutting the fade off flat where the two met. Dropping it also retires the full-bleed
+   construction here, since there is no longer a background that needs to reach the edges. */
+.sectionHeader {
+  position: sticky;
+  top: var(--sticky-top);
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  column-gap: 16px;
+  padding: 6px 0 calc((var(--type-size) * var(--line-height)) / 2);
 }
 
 .profileSection h3 {
   font-size: var(--type-size);
   font-weight: normal;
-  margin-bottom: calc((var(--type-size) * var(--line-height)) / 2);
+}
+
+/* Tertiary: no fill and no border, just muted label text that comes forward on hover. It
+   sits in the sticky header, so it stays reachable for the whole section rather than only
+   at its top — which is also why it stays quiet: a filled pill parked under the tab bar for
+   the length of a section competes with the section title next to it. */
+.detailsToggle {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 2px 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--grey3);
+  font: inherit;
+  font-size: var(--secondary-type-size);
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.detailsToggle:hover {
+  color: var(--grey1);
+}
+
+.detailsToggle:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+/* 0fr -> 1fr is the one way to transition to a height the content decides. */
+.details {
+  display: grid;
+  grid-template-rows: 0fr;
+  /* easeOutCubic. The previous curve was easeOutQuint, which covers most of the distance in
+     its first third — on a box this short that front-loading reads as a snap followed by a
+     crawl rather than as easing. Cubic decelerates gently enough to be legible at 360ms. */
+  transition: grid-template-rows 360ms cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+.details[data-open="true"] {
+  grid-template-rows: 1fr;
+}
+
+/* `overflow: hidden` is what makes the 0fr row actually clip, but it clips horizontally too,
+   and `.description ul` sets `padding-left: 0` with markers `outside` — so the list's discs
+   paint to the *left* of this box and were being cut off. The padding widens the clip region
+   leftwards and the equal negative margin puts the content back where it was, so the markers
+   fall inside the clip while nothing moves. `overflow-y: hidden` alone is not an option:
+   pairing it with a visible `overflow-x` computes the latter to `auto`. */
+.detailsInner {
+  overflow: hidden;
+  min-height: 0;
+  padding-left: 20px;
+  margin-left: -20px;
+  /* Without this the text is at full opacity from the first frame and only the row's height
+     moves, so the reveal reads as a wipe no matter how well the height is eased. Fading it
+     alongside is most of what makes the whole thing feel smooth. */
+  opacity: 0;
+  transition:
+    opacity 220ms cubic-bezier(0.33, 1, 0.68, 1),
+    padding-top 360ms cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+/* Opening, the fade starts slightly late and lands with the height; closing, it runs
+   immediately and finishes early, so the text is gone before the row has finished
+   collapsing rather than being guillotined at the last frame. */
+.details[data-open="true"] .detailsInner {
+  opacity: 1;
+  transition-duration: 300ms;
+  transition-delay: 60ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .details,
+  .detailsToggle {
+    transition: none;
+  }
+
+  /* Transition dropped, but the opacity itself has to be restored or the description would
+     stay invisible in an open row. */
+  .detailsInner,
+  .details[data-open="true"] .detailsInner {
+    opacity: 1;
+    transition: none;
+  }
 }
 
 .experiences {
@@ -103,8 +217,13 @@
 }
 
 
-.subheading ~ .description {
-  margin-top: calc((var(--type-size) * var(--line-height)) / 2);
+/* Spacing between the subheading and the description, applied only while open. `min-height: 0`
+   lets the item shrink inside a 0fr track but padding still contributes to it, so leaving this
+   on unconditionally kept a closed row 11.2px tall — a phantom gap under every subheading. It
+   is inside `.detailsInner` rather than on the wrapper so it is clipped with the text, and it
+   transitions with the row so closing does not yank the description upwards. */
+.subheading ~ .details[data-open="true"] .detailsInner {
+  padding-top: calc((var(--type-size) * var(--line-height)) / 2);
 }
 
 .description ul {
@@ -117,7 +236,6 @@
 
 @media (max-width: 480px) {
   
-  .about .description,
   .experiences,
   .contacts {
     margin-left: 16px;

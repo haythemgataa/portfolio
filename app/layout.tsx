@@ -38,7 +38,30 @@ export default async function RootLayout({
       </head>
       <body>
         <div className={styles.page}>
-          <div className={styles.column}>
+          <div
+            className={styles.column}
+            // Where sticky section headers park. The tab bar is the only thing above them,
+            // and it is not rendered at all while the gallery is empty — in which case they
+            // belong at the very top instead of below a bar that is not there.
+            style={{
+              '--sticky-top': showGallery
+                ? 'calc(var(--tab-bar-height) + var(--tab-bar-gap-top) + var(--tab-bar-gap-bottom))'
+                : '0px',
+            } as React.CSSProperties}>
+            {/* Drawn in CSS, not loaded. Sized against this column rather than the viewport
+                so the glow lands on the content at every browser width, and nested in two
+                elements so the horizontal and vertical falloffs multiply without
+                `mask-composite`. See `.topGradient` in layout.module.css. */}
+            {/* Page grain, under the glow. See `.dotTexture` in layout.module.css. */}
+            <div className={styles.dotTexture} aria-hidden="true" />
+            <div className={styles.topGradient} aria-hidden="true">
+              <div className={styles.topGradientBand} />
+            </div>
+            {/* About sits with the avatar and byline, above the bar, so it reads as one
+                introduction rather than as the CV's first section. It has to live here
+                rather than in the CV page for the same reason the header does: the bar is
+                sticky and shared, so anything above it must be identical on both routes or
+                switching tabs moves the bar. */}
             <ProfileHeader profile={cv.profile} />
             <Tabs showGallery={showGallery} />
             {children}

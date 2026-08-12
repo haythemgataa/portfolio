@@ -2,9 +2,9 @@
   "version": 1,
   "profile": {
     "displayName": "Haythem Gataa",
-    "byline": "Software Designer & Engineer in Tunisia",
-    "about": "I’m a detail-oriented Software Designer, passionate about micro-interactions, animations, and the art of design. With a track record of bringing products to life and enhancing existing ones (over 6 years), I blend creativity with my engineering background to deliver mindful user experiences.",
-    "photo": "profile.jpg"
+    "byline": "Product Designer & Engineer in Tunisia (GMT+1)",
+    "about": "I’m a Product Designer, passionate about micro-interactions, animations, and the art of design. With a track record of bringing products to life and enhancing existing ones (over 6 years), I blend creativity with my engineering background to deliver mindful user experiences.",
+    "photo": "profile.webp"
   },
   "sections": [
     {
@@ -19,10 +19,14 @@
           "subheading": "Tunis, Tunisia",
           "description": "* Collaborating on a design system to accelerate new project creation and ensure consistency across non-branded projects.\n\n* Creating fun animations and micro-interactions to make our products feel dynamic (for the wow effect).\n\n* Introduced tools like Rive, Lottie, and Framer to our team, which helped us reduce developer frustration and cut development time by up to one week on average.\n\n* Redesigned several products, improving the UX and modernizing the UI — paired with major enhancements from the AI team, this tripled usage of some products in under a year.\n\n* Brought to life many innovative AI-related projects.",
           "media": [
-            "instadeep-1.png",
-            "instadeep-2.png",
-            "instadeep-3.png",
-            "instadeep-4.png"
+            "board-view-running.webp",
+            "document-suggestions.webp",
+            "board-setup-net-classes.webp",
+            "timeline-view.webp",
+            "board-setup-net-classes-dragging.webp",
+            "home-grid-view.webp",
+            "base-models-filter.webp",
+            "main-screen.webp"
           ]
         },
         {
@@ -32,22 +36,26 @@
           "subheading": "Sousse, Tunisia",
           "description": "* Designed an award-winning platform (Sehaty Online).\n\n* Designed a high-fidelity wireframe, and assisted during user testing sessions for [WFP’s Last Mile Ecosystem](https://innovation.wfp.org/project/last-mile-ecosystem), a Nobel-awarded project.\n\n* Designed and ensured smooth delivery of our work, from UX to UI and on to the dev team.\n\n* Helped lead and onboard new designers joining the team.",
           "media": [
-            "weare-moon-1.png",
-            "weare-moon-2.png",
-            "weare-moon-3.png",
-            "weare-moon-4.png"
+            "groupado-pro-learning-hero.webp",
+            "rhfacile-dashboard.webp",
+            "greenoffice-hero-evidence.webp",
+            "rizouya-job-matching-homepage.webp",
+            "rhfacile-homepage.webp",
+            "galeries-live-app-landing.webp",
+            "greenoffice-concept-page.webp",
+            "dot-digital-hub-tunisia.webp"
           ],
           "url": "https://www.facebook.com/WeareMoonUX/"
         },
         {
           "id": "ux-ui-teacher-part-time-at-ecole-polytechnique-sousse",
-          "year": "2022 — 2022",
+          "year": "2022",
           "heading": "UX/UI Teacher (Part-time) at Ecole Polytechnique Sousse",
           "url": "https://polytechsousse.tn/",
           "subheading": "Sousse, Tunisia",
           "description": "* Created the course plan, exercises, and exams.\n\n* Kept lessons moving and students entertained.\n\n* Organized workshops to help students practice what they had just learned.",
           "media": [
-            "ecole-polytechnique-sousse.jpg"
+            "ecole-polytechnique-sousse.webp"
           ]
         },
         {
@@ -99,9 +107,9 @@
           "url": "https://www.raycast.com/haythem_gataa/files-shelf",
           "year": "2025",
           "media": [
-            "files-shelf-1.png",
-            "files-shelf-2.png",
-            "files-shelf-3.png"
+            "files-shelf-1.webp",
+            "files-shelf-2.webp",
+            "files-shelf-3.webp"
           ],
           "description": "Another itch I had to scratch. Files Shelf is a Raycast extension that lets you collect files and folders from anywhere on your Mac into a virtual “shelf,” then run batch actions: copy all to a folder, move all, or rename with prefix, suffix, numbering, or find/replace. Handles conflicts and works across volumes."
         },
@@ -131,9 +139,9 @@
           "year": "2021",
           "heading": "Best website design (Silver award) from Tunisia Digital Awards",
           "media": [
-            "tunisia-digital-awards-1.jpg",
-            "award-ceremony.mp4",
-            "tunisia-digital-awards-3.jpg"
+            "tunisia-digital-awards-1.webp",
+            "award-ceremony.webm",
+            "tunisia-digital-awards-3.webp"
           ]
         },
         {
@@ -141,7 +149,7 @@
           "year": "2019",
           "heading": "1st place winner of Code Camping from Mentor Nations",
           "media": [
-            "mentor-nations.jpg"
+            "mentor-nations.webp"
           ]
         },
         {
@@ -149,7 +157,7 @@
           "year": "2019",
           "heading": "1st place winner of Innovation Camp from Injaz Tunisia",
           "media": [
-            "injaz-tunisia.jpg"
+            "injaz-tunisia.webp"
           ]
         }
       ]
@@ -170,7 +178,7 @@
           "heading": "Design for non-designers at RNA.AI (with BioNTech)",
           "subheading": "Mainz, Germany",
           "media": [
-            "conference-talk.mp4"
+            "conference-talk.webm"
           ]
         },
         {
@@ -179,8 +187,8 @@
           "heading": "Design for non-designers at GoMyCode Hackathon",
           "subheading": "Sousse, Tunisia",
           "media": [
-            "gomycode-hackathon-1.jpg",
-            "gomycode-hackathon-2.jpg"
+            "gomycode-hackathon-1.webp",
+            "gomycode-hackathon-2.webp"
           ]
         },
         {
@@ -221,10 +229,10 @@
           "subheading": "Mahdia, Tunisia",
           "description": "Designed social media content and print materials that boosted event attendance and engagement, and organized an initiative to transform a neglected forest into a welcoming green space for families and children, fostering a sense of safety and community.",
           "media": [
-            "i-rise-1.png",
-            "i-rise-2.png",
-            "i-rise-3.png",
-            "i-rise-4.png"
+            "irise-rebrand-teaser.webp",
+            "irise-bachelier-forum-mockups.webp",
+            "irise-guide-forum-orientation-70.webp",
+            "irise-archery-camp-photos.webp"
           ]
         },
         {
@@ -235,7 +243,7 @@
           "subheading": "Online",
           "description": "Designed persuasive social media visuals for a COVID-19 fact-checking project. This effort aimed to counter misinformation, educating the public about accurate health practices during the pandemic.",
           "media": [
-            "mouch-shih.png"
+            "mouch-shih-campaign-mockups.webp"
           ]
         },
         {
@@ -252,12 +260,12 @@
           "subheading": "Kairouan, Tunisia",
           "description": "Captured the historic beauty of Kairouan, highlighting the city’s rich heritage and contributing to local tourism awareness and community pride.",
           "media": [
-            "we-are-kairouan-a-tunivision-initiative-1.png",
-            "we-are-kairouan-a-tunivision-initiative-2.png",
-            "we-are-kairouan-a-tunivision-initiative-3.png",
-            "we-are-kairouan-a-tunivision-initiative-4.png",
-            "we-are-kairouan-a-tunivision-initiative-5.png",
-            "we-are-kairouan-a-tunivision-initiative-6.png"
+            "kairouan-mosque-photos.webp",
+            "kairouan-mosque-portrait.webp",
+            "we-are-kairouan-ramadan-night.webp",
+            "we-are-kairouan-sidi-amor-abada.webp",
+            "we-are-kairouan-recruiting.webp",
+            "we-are-kairouan-hero.webp"
           ]
         }
       ]

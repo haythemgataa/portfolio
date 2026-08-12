@@ -95,6 +95,41 @@ type StudioProps = {
 
 const NO_ORPHANS: Orphans = { unregistered: [], unreferenced: [] };
 
+/**
+ * A pending question — either "are you sure" or "what should this be called".
+ *
+ * This exists because `window.confirm` and `window.prompt` cannot be relied on to ask. Chrome
+ * offers a "Prevent this page from creating additional dialogs" checkbox once a page has
+ * produced a few in a row, and the Studio produced one for every add, rename and delete — so
+ * it was easy to tick without meaning to. From then on both calls return immediately with
+ * nothing shown, which turned every one of those buttons into a silent no-op: clicking ×
+ * simply did nothing, for the rest of the page's life, reporting no error and leaving no way
+ * to tell that from a broken button. Some embedded webviews no-op dialogs the same way.
+ *
+ * So the Studio has no native dialogs left. Both halves matter: the confirmations are the ones
+ * that failed dangerously, and the prompts are what got the checkbox ticked in the first
+ * place. An in-app dialog cannot be suppressed by the browser, so a click always produces
+ * either a question or an action.
+ */
+type Ask = {
+  title: string;
+  /** Lines of explanation — what will change, and what survives. */
+  detail?: string[];
+  /** Present when the dialog collects a value rather than just consent. */
+  input?: { label: string; placeholder?: string; initial?: string };
+  confirmLabel: string;
+  /** Styles the confirm button as destructive. */
+  danger?: boolean;
+  /** Receives the trimmed input value, or '' for a plain confirmation. */
+  onConfirm: (value: string) => void;
+};
+
+/**
+ * The 409 from the stale-write guard, told apart from a real failure so one
+ * operation can be replayed against the refreshed document. See `run()`.
+ */
+class StaleContentError extends Error {}
+
 export default function Studio({
   initialCv,
   initialAssets = {},
@@ -116,6 +151,8 @@ export default function Studio({
   const [status, setStatus] = useState<Status>(
     loadError ? { kind: 'error', message: loadError } : { kind: 'idle' }
   );
+  /** The open dialog, if any. See the `Ask` type for why these are not native dialogs. */
+  const [ask, setAsk] = useState<Ask | null>(null);
 
   /**
    * The content hash last seen by this tab. Sent with every write so the server
@@ -142,7 +179,10 @@ export default function Studio({
       body: JSON.stringify({ op, hash: hashRef.current, ...payload }),
     });
     const json = await res.json().catch(() => ({ error: res.statusText }));
-    if (!res.ok) throw new Error(json.error || 'Request failed');
+    if (!res.ok) {
+      const message = json.error || 'Request failed';
+      throw res.status === 409 ? new StaleContentError(message) : new Error(message);
+    }
     if (json.hash) hashRef.current = json.hash;
     return json;
   }, []);
@@ -152,13 +192,32 @@ export default function Studio({
       setStatus({ kind: 'busy' });
       try {
         await fn();
-        await refresh();
-        setStatus({ kind: 'saved', message: successMessage });
       } catch (error) {
-        setStatus({ kind: 'error', message: (error as Error).message });
-        // Resync so the next edit is not also rejected as stale.
-        await refresh().catch(() => {});
+        // A stale hash means the files moved under an open tab: a git checkout,
+        // an editor, another Studio window. Resyncing here is not enough on its
+        // own — it used to leave the click itself unapplied, which read as a
+        // dead button. Every operation routed through `run` is addressed by id,
+        // or (for a reorder) validated against the document and rejected on a
+        // mismatch, so replaying one against the refreshed document does what
+        // was asked. Field edits deliberately do not come through here: their
+        // payload is a whole value, and replaying that could overwrite a change
+        // this tab never saw.
+        if (!(error instanceof StaleContentError)) {
+          setStatus({ kind: 'error', message: (error as Error).message });
+          await refresh().catch(() => {});
+          return;
+        }
+        try {
+          await refresh();
+          await fn();
+        } catch (retryError) {
+          setStatus({ kind: 'error', message: (retryError as Error).message });
+          await refresh().catch(() => {});
+          return;
+        }
       }
+      await refresh();
+      setStatus({ kind: 'saved', message: successMessage });
     },
     [refresh]
   );
@@ -261,10 +320,14 @@ export default function Studio({
   };
 
   /** Correct an asset's intrinsic facts — the only way to fix video dimensions. */
-  const saveAssetField = (file: string, key: string, value: string) => {
+  const saveAssetField = (file: string, key: string, value: string | boolean) => {
+    // The optimistic copy has to be typed the way the registry stores it, or a flag round-trips
+    // through Number() and comes back as 0.
+    const local =
+      typeof value === 'boolean' || key === 'poster' ? value : Number(value) || 0;
     setAssets((prev) => ({
       ...prev,
-      [file]: { ...prev[file], [key]: key === 'poster' ? value : Number(value) || 0 },
+      [file]: { ...prev[file], [key]: local },
     }));
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
@@ -306,10 +369,26 @@ export default function Studio({
     [selection, activeItem]
   );
 
+  /**
+   * Pooled assets this item does not already show — what `+ From pool` offers.
+   * A file detached from one item shows up here for every other item, which is
+   * how a removal is undone or reassigned.
+   */
+  const unusedPoolFiles = useMemo(
+    () => poolFiles.filter((file) => !media.includes(file)),
+    [poolFiles, media]
+  );
+
   /** Filenames the gallery also references, so the UI can warn before removing. */
   const galleryUses = useMemo(
     () => new Set((gallery.items ?? []).map((e) => e.file)),
     [gallery]
+  );
+
+  /** Pooled assets the gallery does not show yet — what its `+ From pool` offers. */
+  const ungalleriedPoolFiles = useMemo(
+    () => poolFiles.filter((file) => !galleryUses.has(file)),
+    [poolFiles, galleryUses]
   );
 
   /** The mirror image: filenames the CV references, for the gallery pane. */
@@ -340,81 +419,116 @@ export default function Studio({
 
   // ---- create / delete ----------------------------------------------------
   const addSection = () => {
-    const label = window.prompt(
-      `New section heading.\n\nAny name works — the heading is what renders and nothing branches on it. Keys already in use:\n${SECTION_SUGGESTIONS.join(', ')}`
-    );
-    if (!label) return;
-    run(async () => {
-      const res: { sectionKey?: string } = await mutate('section.create', { label });
-      if (res.sectionKey) setSelection({ kind: 'section', key: res.sectionKey });
-      setItemId(null);
-    }, 'Section created');
+    setAsk({
+      title: 'New section',
+      detail: [
+        'Any name works — the heading is what renders and nothing branches on it.',
+        `Keys already in use: ${SECTION_SUGGESTIONS.join(', ')}`,
+      ],
+      input: { label: 'Heading', placeholder: 'Speaking' },
+      confirmLabel: 'Create section',
+      onConfirm: (label) =>
+        run(async () => {
+          const res: { sectionKey?: string } = await mutate('section.create', { label });
+          if (res.sectionKey) setSelection({ kind: 'section', key: res.sectionKey });
+          setItemId(null);
+        }, 'Section created'),
+    });
   };
 
   const renameRegion = () => {
     if (selection.kind === 'contact') {
-      const label = window.prompt('Contact heading', cv?.contact?.label ?? 'Contact');
-      if (!label) return;
-      run(() => mutate('contact.rename', { label }), 'Contact renamed');
+      setAsk({
+        title: 'Rename the contact section',
+        input: { label: 'Heading', initial: cv?.contact?.label ?? 'Contact' },
+        confirmLabel: 'Rename',
+        onConfirm: (label) => run(() => mutate('contact.rename', { label }), 'Contact renamed'),
+      });
       return;
     }
     if (!section) return;
-    const label = window.prompt(
-      'Section heading — safe to change, nothing branches on it',
-      section.label
-    );
-    if (!label || label === section.label) return;
-    run(() => mutate('section.rename', { sectionKey: section.key, label }), 'Section renamed');
+    const current = section.label;
+    setAsk({
+      title: `Rename "${current}"`,
+      detail: ['Safe to change — nothing branches on it. The section key stays as it is.'],
+      input: { label: 'Heading', initial: current },
+      confirmLabel: 'Rename',
+      onConfirm: (label) => {
+        if (label === current) return;
+        run(() => mutate('section.rename', { sectionKey: section.key, label }), 'Section renamed');
+      },
+    });
   };
 
   const removeSection = (target: CvSection) => {
     const count = target.items.length;
-    const confirmed = window.confirm(
-      `Delete the "${target.label}" section?\n\nRemoves ${count} item${count === 1 ? '' : 's'} from cv.json and deletes their media folders.\n\nUndo with: git checkout -- content public/media`
-    );
-    if (!confirmed) return;
-    run(async () => {
-      await mutate('section.delete', { sectionKey: target.key });
-      if (selection.kind === 'section' && selection.key === target.key) {
-        setSelection({ kind: 'profile' });
-        setItemId(null);
-      }
-    }, 'Section deleted');
+    setAsk({
+      title: `Delete the "${target.label}" section?`,
+      detail: [
+        `Removes ${count} item${count === 1 ? '' : 's'} from cv.json. Any media of theirs that nothing else references is deleted from the pool.`,
+        'Undo with: git checkout -- content public/media',
+      ],
+      confirmLabel: 'Delete section',
+      danger: true,
+      onConfirm: () =>
+        run(async () => {
+          await mutate('section.delete', { sectionKey: target.key });
+          if (selection.kind === 'section' && selection.key === target.key) {
+            setSelection({ kind: 'profile' });
+            setItemId(null);
+          }
+        }, 'Section deleted'),
+    });
   };
 
   const addRow = () => {
     if (selection.kind === 'contact') {
-      const platform = window.prompt('Platform (e.g. Email)');
-      if (!platform) return;
-      run(async () => {
-        const res: { itemId?: string } = await mutate('contact.create', {
-          data: { platform, handle: '' },
-        });
-        if (res.itemId) setItemId(res.itemId);
-      }, 'Contact row added');
-      return;
-    }
-    if (selection.kind === 'gallery') {
-      const file = window.prompt(
-        `Filename of a pooled asset to add.\n\nOr cancel and use "+ Upload" for a new file.\n\nIn the pool:\n${poolFiles.join('\n')}`
-      );
-      if (!file) return;
-      run(async () => {
-        const res: { itemId?: string } = await mutate('gallery.create', { file });
-        if (res.itemId) setItemId(res.itemId);
-      }, 'Gallery entry added');
+      setAsk({
+        title: 'New contact row',
+        detail: ['The handle and link are editable once the row exists.'],
+        input: { label: 'Platform', placeholder: 'Email' },
+        confirmLabel: 'Add row',
+        onConfirm: (platform) =>
+          run(async () => {
+            const res: { itemId?: string } = await mutate('contact.create', {
+              data: { platform, handle: '' },
+            });
+            if (res.itemId) setItemId(res.itemId);
+          }, 'Contact row added'),
+      });
       return;
     }
     if (selection.kind !== 'section') return;
-    const heading = window.prompt('Heading (e.g. Product designer at InstaDeep)');
-    if (!heading) return;
+    const sectionKey = selection.key;
+    setAsk({
+      title: `New item in "${section?.label ?? sectionKey}"`,
+      detail: ['Everything else — year, subheading, description, media — is editable after.'],
+      input: { label: 'Heading', placeholder: 'Product designer at InstaDeep' },
+      confirmLabel: 'Create item',
+      onConfirm: (heading) =>
+        run(async () => {
+          const res: { itemId?: string } = await mutate('item.create', {
+            sectionKey,
+            data: { heading },
+          });
+          if (res.itemId) setItemId(res.itemId);
+        }, 'Item created'),
+    });
+  };
+
+  /**
+   * Add a gallery entry pointing at a pooled asset. This used to be a
+   * `window.prompt` that asked for the filename as free text, with the whole
+   * pool pasted into the message — unusable once the pool grew past a dozen
+   * files (browsers truncate a long prompt), and one typo or a stale name came
+   * back as "not in content/media.json". It is a picker now, so an unavailable
+   * name cannot be asked for in the first place.
+   */
+  const addGalleryEntry = (file: string) => {
     run(async () => {
-      const res: { itemId?: string } = await mutate('item.create', {
-        sectionKey: selection.key,
-        data: { heading },
-      });
+      const res: { itemId?: string } = await mutate('gallery.create', { file });
       if (res.itemId) setItemId(res.itemId);
-    }, 'Item created');
+    }, `${file} added to the gallery`);
   };
 
   const rowLabel = (row: Row) =>
@@ -425,28 +539,36 @@ export default function Studio({
         : (row as CvItem).heading || row.id;
 
   const removeRow = (target: Row) => {
+    // Removing a gallery entry drops the reference and nothing else — the file stays in the
+    // pool either way, which is the same rule detaching a CV thumbnail follows. The note only
+    // says whether anything else still points at it, since an entry that was the last
+    // reference leaves the file behind as an orphan.
     const detail = isGallery(target)
-      ? cvUses.has(target.file)
-        ? `\n\nThe CV also uses ${target.file}, so the file stays in public/media/.`
-        : `\n\nNothing else references ${target.file}, so the file will be deleted.`
-      : '';
-    if (
-      !window.confirm(
-        `Delete "${rowLabel(target)}"?${detail}\n\nUndo with: git checkout -- content public/media`
-      )
-    )
-      return;
+      ? [
+          cvUses.has(target.file)
+            ? `The CV also uses ${target.file}, so the file keeps its place in public/media/.`
+            : `${target.file} stays in public/media/ and in media.json, so it can be attached again from "+ From pool". Nothing else references it, so it will show up as an orphan until it is.`,
+        ]
+      : [];
 
-    if (selection.kind === 'contact') {
-      run(() => mutate('contact.delete', { itemId: target.id }), 'Contact row deleted');
-    } else if (selection.kind === 'gallery') {
-      run(() => mutate('gallery.delete', { itemId: target.id }), 'Gallery entry deleted');
-    } else if (selection.kind === 'section') {
-      run(
-        () => mutate('item.delete', { sectionKey: selection.key, itemId: target.id }),
-        'Item deleted'
-      );
-    }
+    setAsk({
+      title: `Delete "${rowLabel(target)}"?`,
+      detail: [...detail, 'Undo with: git checkout -- content public/media'],
+      confirmLabel: 'Delete',
+      danger: true,
+      onConfirm: () => {
+        if (selection.kind === 'contact') {
+          run(() => mutate('contact.delete', { itemId: target.id }), 'Contact row deleted');
+        } else if (selection.kind === 'gallery') {
+          run(() => mutate('gallery.delete', { itemId: target.id }), 'Gallery entry deleted');
+        } else if (selection.kind === 'section') {
+          run(
+            () => mutate('item.delete', { sectionKey: selection.key, itemId: target.id }),
+            'Item deleted'
+          );
+        }
+      },
+    });
   };
 
   // ---- media --------------------------------------------------------------
@@ -474,16 +596,25 @@ export default function Studio({
     }, 'Media uploaded');
   };
 
-  const removeMedia = (file: string) => {
+  /**
+   * Detach, not delete: the file stays in public/media/ and in media.json so it
+   * can be attached elsewhere. Nothing is destroyed, so there is no confirm —
+   * `+ From pool` puts it back.
+   */
+  const detachMedia = (file: string) => {
     if (selection.kind !== 'section' || !activeItem) return;
-    const shared = galleryUses.has(file);
-    const message = shared
-      ? `Remove ${file} from this item?\n\nThe gallery also uses it, so the file stays in public/media/.`
-      : `Remove ${file} from this item?\n\nNothing else references it, so the file will be deleted from public/media/.`;
-    if (!window.confirm(message)) return;
     run(
       () => mutate('media.remove', { sectionKey: selection.key, itemId: activeItem.id, file }),
-      shared ? 'Reference removed (file kept — shared)' : 'Media deleted'
+      `${file} removed from this item — still in the pool`
+    );
+  };
+
+  /** Reuse an asset already in the pool, which is the point of a shared pool. */
+  const attachMedia = (file: string) => {
+    if (selection.kind !== 'section' || !activeItem) return;
+    run(
+      () => mutate('media.attach', { sectionKey: selection.key, itemId: activeItem.id, files: [file] }),
+      `${file} added to this item`
     );
   };
 
@@ -519,6 +650,7 @@ export default function Studio({
 
   return (
     <div className={styles.studio}>
+      {ask && <AskDialog ask={ask} onClose={() => setAsk(null)} />}
       <header className={styles.topbar}>
         <div className={styles.brand}>
           Content Studio
@@ -689,24 +821,45 @@ export default function Studio({
                       Rename
                     </button>
                   )}
-                  {selection.kind === 'gallery' && (
-                    <label className={styles.ghostButton}>
-                      + Upload
-                      <input
-                        type="file"
-                        multiple
-                        accept="image/*,video/*"
-                        hidden
-                        onChange={(e) => {
-                          uploadFiles(e.target.files);
-                          e.target.value = '';
-                        }}
-                      />
-                    </label>
+                  {selection.kind === 'gallery' ? (
+                    <>
+                      {ungalleriedPoolFiles.length > 0 && (
+                        <select
+                          className={styles.ghostSelect}
+                          aria-label="Add a gallery entry for an asset already in the pool"
+                          value=""
+                          onChange={(e) => {
+                            if (e.target.value) addGalleryEntry(e.target.value);
+                            e.target.value = '';
+                          }}
+                        >
+                          <option value="">+ From pool</option>
+                          {ungalleriedPoolFiles.map((file) => (
+                            <option key={file} value={file}>
+                              {file}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      <label className={styles.ghostButton}>
+                        + Upload
+                        <input
+                          type="file"
+                          multiple
+                          accept="image/*,video/*"
+                          hidden
+                          onChange={(e) => {
+                            uploadFiles(e.target.files);
+                            e.target.value = '';
+                          }}
+                        />
+                      </label>
+                    </>
+                  ) : (
+                    <button className={styles.ghostButton} onClick={addRow}>
+                      + Add
+                    </button>
                   )}
-                  <button className={styles.ghostButton} onClick={addRow}>
-                    + Add
-                  </button>
                 </span>
               )}
             </div>
@@ -913,23 +1066,46 @@ export default function Studio({
                       used.
                     </p>
                     <div className={styles.form}>
-                      {ASSET_FIELDS.map((field) => (
-                        <label key={field.key} className={styles.field}>
-                          <span className={styles.fieldLabel}>{field.label}</span>
-                          <input
-                            className={styles.input}
-                            type="text"
-                            placeholder={field.placeholder}
-                            value={String(
-                              (assets[panelAsset] as unknown as Record<string, unknown>)[
-                                field.key
-                              ] ?? ''
-                            )}
-                            onChange={(e) => saveAssetField(panelAsset, field.key, e.target.value)}
-                          />
-                          {field.hint && <span className={styles.hint}>{field.hint}</span>}
-                        </label>
-                      ))}
+                      {ASSET_FIELDS.map((field) => {
+                        const stored = (assets[panelAsset] as unknown as Record<string, unknown>)[
+                          field.key
+                        ];
+                        if (field.type === 'checkbox') {
+                          return (
+                            <label key={field.key} className={styles.checkboxField}>
+                              <input
+                                type="checkbox"
+                                // An absent value is not "off" here — the field declares what
+                                // omitting it means, so the box shows the treatment the asset
+                                // actually gets.
+                                checked={
+                                  stored === undefined ? field.defaultChecked === true : stored === true
+                                }
+                                onChange={(e) =>
+                                  saveAssetField(panelAsset, field.key, e.target.checked)
+                                }
+                              />
+                              <span>
+                                <span className={styles.fieldLabel}>{field.label}</span>
+                                {field.hint && <span className={styles.hint}>{field.hint}</span>}
+                              </span>
+                            </label>
+                          );
+                        }
+                        return (
+                          <label key={field.key} className={styles.field}>
+                            <span className={styles.fieldLabel}>{field.label}</span>
+                            <input
+                              className={styles.input}
+                              type="text"
+                              placeholder={field.placeholder}
+                              value={String(stored ?? '')}
+                              onChange={(e) => saveAssetField(panelAsset, field.key, e.target.value)}
+                            />
+                            {field.hint && <span className={styles.hint}>{field.hint}</span>}
+                          </label>
+                        );
+                      })}
                     </div>
                   </section>
                 )}
@@ -938,19 +1114,39 @@ export default function Studio({
                   <section className={styles.mediaSection}>
                     <div className={styles.paneHeader}>
                       <h2>Media</h2>
-                      <label className={styles.ghostButton}>
-                        + Upload
-                        <input
-                          type="file"
-                          multiple
-                          accept="image/*,video/*"
-                          hidden
+                      <div className={styles.paneHeaderActions}>
+                        {unusedPoolFiles.length > 0 && (
+                        <select
+                          className={styles.ghostSelect}
+                          aria-label="Add an asset already in the pool"
+                          value=""
                           onChange={(e) => {
-                            uploadFiles(e.target.files);
+                            if (e.target.value) attachMedia(e.target.value);
                             e.target.value = '';
                           }}
-                        />
-                      </label>
+                        >
+                          <option value="">+ From pool</option>
+                          {unusedPoolFiles.map((file) => (
+                            <option key={file} value={file}>
+                              {file}
+                            </option>
+                          ))}
+                        </select>
+                        )}
+                        <label className={styles.ghostButton}>
+                          + Upload
+                          <input
+                            type="file"
+                            multiple
+                            accept="image/*,video/*"
+                            hidden
+                            onChange={(e) => {
+                              uploadFiles(e.target.files);
+                              e.target.value = '';
+                            }}
+                          />
+                        </label>
+                      </div>
                     </div>
 
                     {orphans.unregistered.length || orphans.unreferenced.length ? (
@@ -1014,12 +1210,15 @@ export default function Studio({
                                 </div>
                                 <button
                                   className={styles.mediaDelete}
-                                  title={
-                                    galleryUses.has(file)
-                                      ? 'Remove reference (file kept — gallery uses it)'
-                                      : 'Remove and delete file'
-                                  }
-                                  onClick={() => removeMedia(file)}
+                                  title="Remove from this item (the file stays in the pool)"
+                                  onClick={(e) => {
+                                    // Without this the card's own onClick also fires,
+                                    // opening the asset panel for the file just
+                                    // detached and pushing the grid out of view — which
+                                    // read as "the × did nothing".
+                                    e.stopPropagation();
+                                    detachMedia(file);
+                                  }}
                                 >
                                   ×
                                 </button>
@@ -1039,3 +1238,91 @@ export default function Studio({
     </div>
   );
 }
+
+/**
+ * The Studio's only dialog, standing in for both `window.confirm` and `window.prompt` — see
+ * the `Ask` type for why neither is used any more.
+ *
+ * Enter confirms and Escape cancels, so it costs the same keystrokes the native dialogs did.
+ * An empty input cancels rather than submitting, which is what `prompt()` returning `""` used
+ * to mean at every call site.
+ */
+const AskDialog: React.FC<{ ask: Ask; onClose: () => void }> = ({ ask, onClose }) => {
+  const [value, setValue] = useState(ask.input?.initial ?? '');
+  const inputRef = useRef<HTMLInputElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    // The field when there is one to fill in; otherwise the *safe* button, since on these
+    // dialogs the other one deletes and Enter would take it.
+    if (ask.input) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    } else {
+      cancelRef.current?.focus();
+    }
+    return () => previouslyFocused?.focus?.();
+  }, [ask]);
+
+  const submit = () => {
+    const trimmed = value.trim();
+    if (ask.input && !trimmed) {
+      onClose();
+      return;
+    }
+    ask.onConfirm(trimmed);
+    onClose();
+  };
+
+  return (
+    <div className={styles.dialogBackdrop} onClick={onClose}>
+      <div
+        className={styles.dialog}
+        role="dialog"
+        aria-modal="true"
+        aria-label={ask.title}
+        // Clicking the sheet must not reach the backdrop's dismiss handler.
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') onClose();
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            submit();
+          }
+        }}
+      >
+        <h2 className={styles.dialogTitle}>{ask.title}</h2>
+        {ask.detail?.map((line) => (
+          <p key={line} className={styles.dialogDetail}>
+            {line}
+          </p>
+        ))}
+        {ask.input && (
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>{ask.input.label}</span>
+            <input
+              ref={inputRef}
+              className={styles.input}
+              type="text"
+              placeholder={ask.input.placeholder}
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+            />
+          </label>
+        )}
+        <div className={styles.dialogActions}>
+          <button ref={cancelRef} className={styles.ghostButton} onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            className={ask.danger ? styles.dangerButton : styles.primaryButton}
+            onClick={submit}
+          >
+            {ask.confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};

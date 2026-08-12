@@ -1,164 +1,235 @@
 {
   "version": 1,
   "assets": {
-    "award-ceremony-poster.jpg": {
+    "award-ceremony-poster.webp": {
       "width": 1254,
       "height": 704
     },
-    "award-ceremony.mp4": {
+    "award-ceremony.webm": {
       "width": 1254,
       "height": 704,
-      "poster": "award-ceremony-poster.jpg"
+      "poster": "award-ceremony-poster.webp",
+      "framed": false
     },
-    "brand-system.png": {
-      "width": 1080,
-      "height": 810
+    "base-models-filter.webp": {
+      "width": 2560,
+      "height": 1440
     },
-    "code-camping.jpg": {
+    "board-setup-net-classes-dragging.webp": {
+      "width": 2560,
+      "height": 1440
+    },
+    "board-setup-net-classes.webp": {
+      "width": 2560,
+      "height": 1440
+    },
+    "board-view-running.webp": {
+      "width": 2560,
+      "height": 1440
+    },
+    "board-viewer-evolution-2023-2026.webm": {
+      "width": 2560,
+      "height": 1440
+    },
+    "check-with-cooper.webm": {
+      "width": 1920,
+      "height": 952
+    },
+    "claude-for-ghostty-icon.webp": {
+      "width": 2560,
+      "height": 1440
+    },
+    "code-camping.webp": {
       "width": 1080,
       "height": 677
     },
-    "conference-talk.mp4": {
+    "conference-talk.webm": {
       "width": 852,
-      "height": 480
+      "height": 480,
+      "framed": false
     },
-    "dashboard-explorations.png": {
-      "width": 1080,
-      "height": 810
+    "cooper-mascot.webp": {
+      "width": 1980,
+      "height": 1620
     },
-    "ecole-polytechnique-sousse.jpg": {
-      "width": 984,
-      "height": 984
+    "deeppcb-loading-animation.webm": {
+      "width": 720,
+      "height": 720
     },
-    "files-shelf-1.png": {
-      "width": 2000,
-      "height": 1250
-    },
-    "files-shelf-2.png": {
-      "width": 2000,
-      "height": 1250
-    },
-    "files-shelf-3.png": {
-      "width": 2000,
-      "height": 1250
-    },
-    "gomycode-hackathon-1.jpg": {
-      "width": 661,
-      "height": 512
-    },
-    "gomycode-hackathon-2.jpg": {
-      "width": 768,
-      "height": 512
-    },
-    "i-rise-1.png": {
-      "width": 2400,
-      "height": 1800
-    },
-    "i-rise-2.png": {
-      "width": 2400,
-      "height": 1800
-    },
-    "i-rise-3.png": {
-      "width": 2400,
-      "height": 1800
-    },
-    "i-rise-4.png": {
-      "width": 2400,
-      "height": 1800
-    },
-    "injaz-tunisia.jpg": {
-      "width": 1802,
-      "height": 1075
-    },
-    "instadeep-1.png": {
-      "width": 2000,
-      "height": 1500
-    },
-    "instadeep-2.png": {
-      "width": 2000,
-      "height": 1500
-    },
-    "instadeep-3.png": {
-      "width": 2000,
-      "height": 1500
-    },
-    "instadeep-4.png": {
-      "width": 2000,
-      "height": 1500
-    },
-    "kairouan-street.png": {
-      "width": 1080,
-      "height": 810
-    },
-    "mentor-nations.jpg": {
-      "width": 1802,
-      "height": 1130
-    },
-    "mobile-app-flow.png": {
-      "width": 1080,
-      "height": 810
-    },
-    "mouch-shih.png": {
-      "width": 2400,
-      "height": 1800
-    },
-    "poster-series.png": {
-      "width": 1080,
+    "document-suggestions.webp": {
+      "width": 2560,
       "height": 1440
     },
-    "profile.jpg": {
+    "dot-digital-hub-tunisia.webp": {
+      "width": 2560,
+      "height": 1440
+    },
+    "ecole-polytechnique-sousse.webp": {
+      "width": 984,
+      "height": 984,
+      "framed": false
+    },
+    "edit-net-class.webp": {
+      "width": 1800,
+      "height": 1200
+    },
+    "files-shelf-1.webp": {
+      "width": 2000,
+      "height": 1250,
+      "framed": false
+    },
+    "files-shelf-2.webp": {
+      "width": 2000,
+      "height": 1250,
+      "framed": false
+    },
+    "files-shelf-3.webp": {
+      "width": 2000,
+      "height": 1250,
+      "framed": false
+    },
+    "galeries-live-app-landing.webp": {
+      "width": 2560,
+      "height": 1440
+    },
+    "gomycode-hackathon-1.webp": {
+      "width": 661,
+      "height": 512,
+      "framed": false
+    },
+    "gomycode-hackathon-2.webp": {
+      "width": 768,
+      "height": 512,
+      "framed": false
+    },
+    "greenoffice-concept-page.webp": {
+      "width": 2560,
+      "height": 1440
+    },
+    "greenoffice-hero-evidence.webp": {
+      "width": 2560,
+      "height": 1440
+    },
+    "groupado-pro-learning-hero.webp": {
+      "width": 2560,
+      "height": 1440
+    },
+    "home-grid-view.webp": {
+      "width": 2560,
+      "height": 1440
+    },
+    "injaz-tunisia.webp": {
+      "width": 1802,
+      "height": 1075,
+      "framed": false
+    },
+    "instanovo-404-page.webm": {
+      "width": 3840,
+      "height": 2094
+    },
+    "irise-archery-camp-photos.webp": {
+      "width": 1195,
+      "height": 927,
+      "floating": true
+    },
+    "irise-bachelier-forum-mockups.webp": {
+      "width": 1296,
+      "height": 932,
+      "floating": true
+    },
+    "irise-guide-forum-orientation-70.webp": {
+      "width": 1400,
+      "height": 883,
+      "floating": true
+    },
+    "irise-rebrand-teaser.webp": {
+      "width": 1323,
+      "height": 883,
+      "floating": true
+    },
+    "kairouan-mosque-photos.webp": {
+      "width": 1358,
+      "height": 924,
+      "floating": true
+    },
+    "kairouan-mosque-portrait.webp": {
+      "width": 532,
+      "height": 1016,
+      "floating": true
+    },
+    "main-screen.webp": {
+      "width": 2560,
+      "height": 1440
+    },
+    "mentor-nations.webp": {
+      "width": 1802,
+      "height": 1130,
+      "framed": false
+    },
+    "mouch-shih-campaign-mockups.webp": {
+      "width": 1110,
+      "height": 948,
+      "floating": true
+    },
+    "pcb-layout-editing.webm": {
+      "width": 3000,
+      "height": 2160
+    },
+    "profile.webp": {
       "width": 400,
       "height": 400
     },
-    "tunisia-digital-awards-1.jpg": {
+    "rhfacile-dashboard.webp": {
+      "width": 2560,
+      "height": 1440
+    },
+    "rhfacile-homepage.webp": {
+      "width": 2560,
+      "height": 1440
+    },
+    "rizouya-job-matching-homepage.webp": {
+      "width": 2560,
+      "height": 1440
+    },
+    "thinking.webm": {
+      "width": 1200,
+      "height": 800
+    },
+    "timeline-view.webp": {
+      "width": 2560,
+      "height": 1440
+    },
+    "tunisia-digital-awards-1.webp": {
       "width": 984,
-      "height": 738
+      "height": 738,
+      "framed": false
     },
-    "tunisia-digital-awards-3.jpg": {
+    "tunisia-digital-awards-3.webp": {
       "width": 959,
-      "height": 959
+      "height": 959,
+      "framed": false
     },
-    "we-are-kairouan-a-tunivision-initiative-1.png": {
-      "width": 2400,
-      "height": 1800
+    "we-are-kairouan-hero.webp": {
+      "width": 1270,
+      "height": 643,
+      "floating": true
     },
-    "we-are-kairouan-a-tunivision-initiative-2.png": {
-      "width": 2400,
-      "height": 1800
+    "we-are-kairouan-ramadan-night.webp": {
+      "width": 660,
+      "height": 963,
+      "floating": true
     },
-    "we-are-kairouan-a-tunivision-initiative-3.png": {
-      "width": 2400,
-      "height": 1800
+    "we-are-kairouan-recruiting.webp": {
+      "width": 1200,
+      "height": 746,
+      "floating": true
     },
-    "we-are-kairouan-a-tunivision-initiative-4.png": {
-      "width": 2400,
-      "height": 1800
+    "we-are-kairouan-sidi-amor-abada.webp": {
+      "width": 1112,
+      "height": 843,
+      "floating": true
     },
-    "we-are-kairouan-a-tunivision-initiative-5.png": {
-      "width": 2400,
-      "height": 1800
-    },
-    "we-are-kairouan-a-tunivision-initiative-6.png": {
-      "width": 2400,
-      "height": 1800
-    },
-    "weare-moon-1.png": {
-      "width": 2000,
-      "height": 1500
-    },
-    "weare-moon-2.png": {
-      "width": 2000,
-      "height": 1500
-    },
-    "weare-moon-3.png": {
-      "width": 2000,
-      "height": 1500
-    },
-    "weare-moon-4.png": {
-      "width": 2000,
-      "height": 1500
-    },
-    "workshop-room.jpg": {
+    "workshop-room.webp": {
       "width": 661,
       "height": 512
     }

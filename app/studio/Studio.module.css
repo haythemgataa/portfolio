@@ -240,6 +240,29 @@
   font-weight: 600;
 }
 
+/* A boolean reads as a row, not as a stacked label over a control: box first, then the label
+   and its hint beside it. `align-items: start` keeps the box on the label's line rather than
+   centred against the hint below it. */
+.checkboxField {
+  display: flex;
+  align-items: start;
+  gap: 8px;
+  width: 100%;
+  cursor: pointer;
+}
+
+.checkboxField input {
+  margin-top: 1px;
+  accent-color: var(--blue);
+  cursor: pointer;
+}
+
+.checkboxField > span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
 .input,
 .textarea {
   width: 100%;
@@ -382,6 +405,22 @@
 
 .ghostButton:hover { background: var(--wash2); color: var(--grey1); }
 
+/* A picker that reads as one of the header's buttons. `display: inline-flex` is
+   not honoured on a select, so it borrows everything but the box model. */
+.ghostSelect {
+  max-width: 180px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--primaryBorderColor);
+  background: var(--backgroundColor);
+  color: var(--grey2);
+  font-family: inherit;
+  font-size: var(--secondary-type-size);
+  cursor: pointer;
+}
+
+.ghostSelect:hover { background: var(--wash2); color: var(--grey1); }
+
 .primaryButton {
   background: var(--blue);
   border-color: var(--blue);
@@ -389,6 +428,74 @@
 }
 
 .primaryButton:hover { filter: brightness(1.08); }
+
+/* Destructive confirm. Same box as `.primaryButton`, red rather than blue — the colour is the
+   only difference, so a delete never looks like the safe default. */
+.dangerButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--red);
+  background: var(--red);
+  color: #fff;
+  font-family: inherit;
+  font-size: var(--secondary-type-size);
+  cursor: pointer;
+}
+
+.dangerButton:hover { filter: brightness(1.08); }
+
+/* ---- dialog ---- */
+
+/* Replaces window.confirm and window.prompt — see the `Ask` type in Studio.tsx for why.
+   `.studio` is `fixed; inset: 0` with no z-index of its own, so this needs one high enough to
+   clear the panes and their sticky headers but it does not have to escape a stacking context. */
+.dialogBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--backdrop);
+}
+
+.dialog {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid var(--primaryBorderColor);
+  border-radius: 10px;
+  background: var(--backgroundColor);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.24);
+}
+
+.dialogTitle {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--grey1);
+}
+
+.dialogDetail {
+  font-size: var(--secondary-type-size);
+  line-height: var(--line-height);
+  color: var(--grey2);
+}
+
+/* Confirm last, so the reading order ends on the action and tab order reaches Cancel first. */
+.dialogActions {
+  display: flex;
+  gap: 8px;
+  align-self: flex-end;
+  margin-top: 4px;
+}
 
 .empty {
   padding: 24px 16px;

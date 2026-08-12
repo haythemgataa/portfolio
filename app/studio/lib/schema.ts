@@ -4,7 +4,7 @@
  * Keep this file free of Node built-ins — it is imported by the client UI.
  */
 
-export type FieldType = 'text' | 'url' | 'markdown';
+export type FieldType = 'text' | 'url' | 'markdown' | 'checkbox';
 
 export interface FieldDef {
   key: string;
@@ -12,6 +12,8 @@ export interface FieldDef {
   type: FieldType;
   placeholder?: string;
   hint?: string;
+  /** `checkbox` only: what an absent value means, so an unset flag shows its real state. */
+  defaultChecked?: boolean;
 }
 
 /** Pinned to the top of the page. */
@@ -92,8 +94,22 @@ export const ASSET_FIELDS: FieldDef[] = [
     key: 'poster',
     label: 'Poster frame',
     type: 'text',
-    placeholder: 'award-ceremony-poster.jpg',
+    placeholder: 'award-ceremony-poster.webp',
     hint: 'Video only. Must already be in the pool. Clear to remove.',
+  },
+  {
+    key: 'framed',
+    label: 'Mat this thumbnail',
+    type: 'checkbox',
+    defaultChecked: true,
+    hint: 'On: the CV thumbnail insets the image in a bordered mat with a shadow, in a frame locked to 14:9. Off: it fills the thumbnail edge to edge at its own ratio. Suits screenshots on, photographs off.',
+  },
+  {
+    key: 'floating',
+    label: 'No rectangle of its own',
+    type: 'checkbox',
+    defaultChecked: false,
+    hint: 'For collages and montages sitting on transparency. Opened, the image drops its border and rounded corners — which would trace an edge the artwork has not got — and keeps a shadow following its silhouette instead. Leave off for anything that fills its frame.',
   },
 ];
 

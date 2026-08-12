@@ -8,6 +8,7 @@ type RichTextProps = {
 const Link: React.FC<React.JSX.IntrinsicElements['a']> = memo(({ href, children }) => {
   return <a href={href} target='_blank'>{children}</a>;
 });
+Link.displayName = 'Link';
 
 const components: Partial<{ [TagName in keyof React.JSX.IntrinsicElements]: React.FunctionComponent<React.JSX.IntrinsicElements[TagName]> }> = {
   a: Link,

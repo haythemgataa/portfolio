@@ -1,0 +1,127 @@
+.page {
+  padding: 0 24px;
+}
+
+/* The single content column both tabs share. Centred, which is what makes the tab bar's
+   full-bleed `calc(50% - 50vw)` margins land symmetrically.
+
+   `position: relative` so `.topGradient` can be measured against this box. It deliberately
+   sets no z-index: that would make this a stacking context and trap the sticky chrome's
+   z-indexes inside it. */
+.column {
+  width: 100%;
+  max-width: 540px;
+  margin: 0 auto;
+  padding: clamp(24px, calc((100vw - 540px) / 2), 72px) 0;
+  position: relative;
+}
+
+/* Decorative wash across the top of the page, drawn rather than loaded — it replaced a
+   127 KB webp that this reproduces to within 10/255 on the worst pixel (median 0).
+
+   It works because the original's alpha field is *separable*: measured off its alpha channel,
+   alpha(x, y) = fx(x) * fy(y) to within 4/255. So the whole thing is one horizontal hue sweep
+   multiplied by two 1-D ramps — a symmetric bell across, a monotonic decay down. Both ramps
+   below are transcribed from that asset's own alpha, not eyeballed, which is why the falloff
+   does not read as a plain CSS gradient.
+
+   The multiplication is done by nesting: the inner element carries the horizontal ramp, the
+   outer the vertical one, and a mask applies to an element's descendants — so the two compose
+   without `mask-composite`. That is deliberate. Done on one element instead, two mask layers
+   fall back to *union* wherever `mask-composite` is unsupported, which paints a full-width
+   colour band across the top of the page. Union is a much worse failure than one extra node.
+
+   Geometry is inherited from the asset it replaces: the box keeps the original's 1920x400
+   proportions and its colour still spans the middle ~47%, so the stop positions below stay
+   meaningful and the glow lands on the content column exactly as before. The element is
+   therefore a little over twice the column's width, with the surplus hanging off both sides.
+
+   Anchoring to `.column` rather than the viewport is what keeps this stable at every browser
+   size, and `100%` of the column is exact — no `100vw` arithmetic that a visible scrollbar
+   would throw off. Below ~1140px the element is wider than the window and hangs off both
+   edges; `overflow-x: clip` on html/body absorbs that.
+
+   `z-index: -1` rather than a stacking context: the body background propagates to the canvas
+   and is painted below everything, so a negative layer still shows, and this way the sticky
+   chrome keeps its z-indexes at the root and the Lightbox portal is unaffected. */
+/* `--glow-fraction` and `--glow-sweep` live in globals.css: the selected tab's pill reflects
+   this glow and has to draw with the same two values. The fraction is the share of this box
+   the colour spans, so *lowering* it widens the glow — the box grows and the ramps below,
+   being percentages of it, scale with it. That is also why it gets proportionally taller;
+   widening it any other way would mean re-deriving both transcribed ramps. */
+.topGradient {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: calc(100% / var(--glow-fraction));
+  transform: translateX(-50%);
+  z-index: -1;
+  aspect-ratio: 1920 / 400;
+  pointer-events: none;
+
+  /* Vertical decay. The 0.616 ceiling is the original's own peak alpha (157/255), folded in
+     here so the two ramps multiply out to the right maximum. */
+  --down: linear-gradient(180deg,
+    rgba(0, 0, 0, 0.616)  0%, rgba(0, 0, 0, 0.537)  5%, rgba(0, 0, 0, 0.451) 10%,
+    rgba(0, 0, 0, 0.373) 15%, rgba(0, 0, 0, 0.298) 20%, rgba(0, 0, 0, 0.235) 25%,
+    rgba(0, 0, 0, 0.180) 30%, rgba(0, 0, 0, 0.129) 35%, rgba(0, 0, 0, 0.090) 40%,
+    rgba(0, 0, 0, 0.059) 45%, rgba(0, 0, 0, 0.031) 50%, rgba(0, 0, 0, 0.016) 55%,
+    rgba(0, 0, 0, 0.004) 60%, rgba(0, 0, 0, 0)     65%
+  );
+  -webkit-mask-image: var(--down);
+  mask-image: var(--down);
+}
+
+/* Dot texture behind the glow, fading out down the page.
+
+   Full-bleed rather than column-width: it is page grain, not part of the content column, and
+   the same `calc(50% - 50vw)` construction the tab bar and section headers use puts it out to
+   the viewport edges from inside the centred column. Any overhang from a visible scrollbar is
+   absorbed by `overflow-x: clip` on html/body.
+
+   `z-index: -2` puts it under `.topGradient` (-1) so the glow reads over the texture rather
+   than the other way round. Both are negative layers on `.column`, which deliberately sets no
+   z-index of its own — see the note there — and they still paint because the body background
+   propagates to the canvas.
+
+   The dot is drawn with a hard-ish radial stop (1px solid, out by 1.4px) rather than a soft
+   one, so it stays a dot instead of a smudge at this size. The mask is stopped more finely
+   than a two-stop ramp for the same reason the fade under the tab bar is: alpha falls fastest
+   exactly where the eye is looking, and a linear ramp reads as an edge partway down. */
+.dotTexture {
+  position: absolute;
+  top: 0;
+  left: calc(50% - 50vw);
+  width: 100vw;
+  height: 560px;
+  z-index: -2;
+  pointer-events: none;
+  background-image: radial-gradient(circle at center, var(--dot-color) 1px, transparent 1.4px);
+  background-size: 18px 18px;
+
+  --fade-down: linear-gradient(180deg,
+    rgba(0, 0, 0, 1)    0%, rgba(0, 0, 0, 0.94) 12%, rgba(0, 0, 0, 0.84) 25%,
+    rgba(0, 0, 0, 0.70) 37%, rgba(0, 0, 0, 0.54) 50%, rgba(0, 0, 0, 0.37) 62%,
+    rgba(0, 0, 0, 0.22) 75%, rgba(0, 0, 0, 0.09) 87%, rgba(0, 0, 0, 0)   100%
+  );
+  -webkit-mask-image: var(--fade-down);
+  mask-image: var(--fade-down);
+}
+
+/* The hue sweep, plus the horizontal half of the falloff. */
+.topGradientBand {
+  position: absolute;
+  inset: 0;
+  background-image: var(--glow-sweep);
+
+  --across: linear-gradient(90deg,
+    rgba(0, 0, 0, 0)     20%, rgba(0, 0, 0, 0.045) 24%, rgba(0, 0, 0, 0.146) 28%,
+    rgba(0, 0, 0, 0.350) 32%, rgba(0, 0, 0, 0.580) 36%, rgba(0, 0, 0, 0.790) 40%,
+    rgba(0, 0, 0, 0.924) 44%, rgba(0, 0, 0, 0.987) 48%, rgba(0, 0, 0, 0.994) 52%,
+    rgba(0, 0, 0, 0.924) 56%, rgba(0, 0, 0, 0.796) 60%, rgba(0, 0, 0, 0.586) 64%,
+    rgba(0, 0, 0, 0.350) 68%, rgba(0, 0, 0, 0.153) 72%, rgba(0, 0, 0, 0.045) 76%,
+    rgba(0, 0, 0, 0)     80%
+  );
+  -webkit-mask-image: var(--across);
+  mask-image: var(--across);
+}

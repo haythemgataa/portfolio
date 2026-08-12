@@ -22,6 +22,16 @@
   height: 100dvh;
 }
 
+/* A video needs room under the media for its progress bar, clear of the control cluster in the
+   bottom 48px. Growing *this* element's bottom padding is what makes the room rather than moving
+   anything: `containerRef` measures `.lightboxInner` inside this padding, so the media shrinks to
+   fit and the bar cannot be pushed down into the controls. Only height-constrained media needs it
+   — a 1:1 video reaches the bottom padding where a landscape one leaves slack — but reserving it
+   for both keeps the bar's distance from the media identical either way. */
+.lightboxImage[data-video="true"] {
+  padding-bottom: 80px;
+}
+
 .lightboxInner {
   width: 100%;
   height: 100%;
@@ -30,10 +40,14 @@
   align-items: center;
 }
 
+/* 12px rather than the 24px this started at. At full-screen size a 24px radius is a visible
+   shape in its own right — it rounds the media into a card — where the intent is only to take
+   the hard corner off. The number is close to the thumbnail's 10px, so an image keeps roughly
+   the same corner as it opens instead of growing one. */
 .imageWrap {
   width: 100%;
   height: auto;
-  border-radius: 24px;
+  border-radius: 12px;
   overflow: hidden;
   position: relative;
 }
@@ -43,9 +57,73 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  border: 1px solid var(--transparent-border);
+  border: 1px solid var(--transparentBorder);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+}
+
+/* A `floating` asset — see `MediaAsset.floating`. The border goes and a shadow takes its place:
+   a `drop-shadow`, which shadows the *alpha* of what was rendered rather than the element's box.
+   On a collage on transparency that means it follows the artwork's silhouette instead of drawing
+   a frame around something with no rectangle in it; on an opaque photo it follows the rounded
+   rect, exactly as a box shadow would.
+   `overflow: visible` is required for the shadow — it falls outside the wrapper, and the default
+   clip would swallow every pixel of it. */
+.imageWrap[data-floating="true"] {
+  overflow: visible;
+  filter:
+    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.08))
+    drop-shadow(0 12px 28px rgba(0, 0, 0, 0.16));
+}
+
+.imageWrap[data-floating="true"]::after {
+  content: none;
+}
+
+/* Losing the wrapper's clip above would leave an opaque image with square corners, so the
+   rounding moves onto the media itself. It is exact rather than approximate: the wrapper is
+   already sized to the media's own aspect ratio, so `object-fit: contain` fills it edge to edge
+   and the element's box *is* the visible picture. The `filter` applies to the rendered result,
+   so the shadow traces this rounding rather than the old box. */
+.imageWrap[data-floating="true"] img,
+.imageWrap[data-floating="true"] video {
+  border-radius: inherit;
+}
+
+/* A video's progress bar hangs below the wrap, so the wrap cannot clip. Same trade the floating
+   treatment makes: the rounding moves onto the media, which is exact here because the wrap is
+   already sized to the media's aspect ratio and `object-fit: contain` fills it edge to edge. */
+.imageWrap[data-video="true"] {
+  overflow: visible;
+}
+
+.imageWrap[data-video="true"] img,
+.imageWrap[data-video="true"] video {
+  border-radius: inherit;
+}
+
+/* Below the media, not over it: `top: 100%` on a box spanning the wrap makes it exactly the
+   video's width and keeps it out of the wrap's own sizing, which the aspect-ratio arithmetic in
+   the component depends on. It sits in the padding `.lightboxImage` already reserves. */
+.videoProgress {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 5px;
+  margin-top: 12px;
+  border-radius: 999px;
+  background-color: var(--wash1);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Width rather than a transform, for the reason the gallery's bar gives: `scaleX` squashes the
+   radius along with the box, so the rounded cap reads as a hard edge early in playback. */
+.videoProgressValue {
+  height: 100%;
+  border-radius: inherit;
+  background-color: var(--grey2);
 }
 
 .imageWrap img,
@@ -57,16 +135,27 @@
   display: block;
 }
 
+/* The bottom control cluster: prev, the pager dots, next.
+   `z-index: 11` puts it above `.carousel` (10). That matters for the steps specifically: on a wide
+   image the media reaches almost to the viewport edge, so the click-half over it would land on top
+   of a button and swallow the press — the step still happened, but the button never saw its own
+   hover or focus. */
+.controls {
+  position: absolute;
+  z-index: 11;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 48px;
+  display: flex;
+  align-items: center;
+  column-gap: 12px;
+}
+
 .dots {
   display: flex;
   align-items: center;
-  height: 48px;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: 0;
   column-gap: 6px;
-  z-index: 10;
 }
 
 .pagerDot {
@@ -109,6 +198,48 @@
   inset: 0;
   background-color: var(--backgroundColor);
   cursor: pointer;
+}
+
+/* Step controls, anchored to the viewport rather than to the media — see the note at the call
+   site for why the click-halves over the media were not enough on their own. Above the backdrop,
+   so pressing one steps rather than dismissing. Same shape as `.close`, one size up because these
+   are the primary way through a set. */
+/* A step control. Laid out in flow inside `.controls`, so its place next to the dots holds at any
+   item count — see the note at the call site. */
+.step {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  appearance: none;
+  border: none;
+  border-radius: 50%;
+  background-color: var(--wash2);
+  color: var(--grey2);
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.step:hover {
+  color: var(--grey1);
+}
+
+.step:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.stepPrev svg {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step {
+    transition: none;
+  }
 }
 
 .close {

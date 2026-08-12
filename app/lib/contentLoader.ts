@@ -1,314 +1,171 @@
 import { promises as fs } from 'fs';
 import { join } from 'path';
+import type {
+  CvFile,
+  CvItem,
+  HeadingSegment,
+  MediaAsset,
+  ResolvedCv,
+  ResolvedItem,
+  ResolvedMedia,
+  ResolvedSection,
+} from './contentTypes';
+import { darkVariant, splitHeading } from './contentTypes';
+import { assetUrl, loadMediaRegistry, resolveAsset } from './mediaRegistry';
 
-// Try to dynamically import sharp for image dimensions (optional dependency)
-async function getImageDimensions(path: string): Promise<{ width: number; height: number } | null> {
-  try {
-    // Dynamic import to avoid requiring sharp as a dependency
-    const sharp = await import('sharp');
-    const metadata = await sharp.default(path).metadata();
-    return metadata.width && metadata.height 
-      ? { width: metadata.width, height: metadata.height }
-      : null;
-  } catch {
-    // sharp not available or failed to read, return null to use defaults
-    return null;
-  }
-}
+/**
+ * Loads content/cv.json — build-time input, deliberately outside public/ so it
+ * is never served. See CONTENT-SCHEMA.md for the authoring contract.
+ *
+ * Items reference media by filename; the dimensions live once in
+ * content/media.json, so this module never needs sharp.
+ */
 
-// Section mapping: directory name (without prefix) -> { displayName, jsonKey }
-const SECTION_MAP: Record<string, { displayName: string; jsonKey: string }> = {
-  'general': { displayName: 'General', jsonKey: 'general' },
-  'workExperience': { displayName: 'Work Experience', jsonKey: 'workExperience' },
-  'education': { displayName: 'Education', jsonKey: 'education' },
-  'awards': { displayName: 'Awards', jsonKey: 'awards' },
-  'speaking': { displayName: 'Speaking', jsonKey: 'talks' },
-  'certifications': { displayName: 'Certifications', jsonKey: 'certifications' },
-  'features': { displayName: 'Features', jsonKey: 'features' },
-  'volunteering': { displayName: 'Volunteering', jsonKey: 'volunteering' },
-  'contact': { displayName: 'Contact', jsonKey: 'contact' },
-  'projects': { displayName: 'Projects', jsonKey: 'projects' },
-  'sideProjects': { displayName: 'Side Projects', jsonKey: 'sideProjects' },
-  'exhibitions': { displayName: 'Exhibitions', jsonKey: 'exhibitions' },
-  'writing': { displayName: 'Writing', jsonKey: 'writing' },
-};
+const CV_PATH = join(process.cwd(), 'content', 'cv.json');
 
-interface SectionDir {
-  prefix: number;
-  name: string;
-  fullName: string;
-}
+function resolveItem(
+  item: CvItem,
+  assets: Record<string, MediaAsset>,
+  sectionKey: string
+): ResolvedItem {
+  const { media, ...rest } = item;
+  const referrer = `cv.json ${sectionKey}/${item.id}`;
+  const attachments = (media ?? [])
+    .map((file) => resolveAsset(file, assets, referrer))
+    .filter((m): m is ResolvedMedia => m !== null);
 
-interface ItemDir {
-  prefix: number;
-  slug: string;
-  fullName: string;
+  const { segments, plain } = resolveHeading(item.heading, assets, referrer);
+  return { ...rest, heading: plain, attachments, headingSegments: segments };
 }
 
 /**
- * Extract numeric prefix and name from directory name
- * e.g., "001-general" -> { prefix: 1, name: "general" }
+ * Turn a heading's `[filename]` tokens into inline icons, and produce the plain string
+ * alongside — the latter is what accessible names and the attachment row's label use, since
+ * neither wants markup or a literal filename in it.
+ *
+ * A token that does not resolve stays visible as its literal text rather than vanishing. The
+ * warning below goes to the build log, but an author editing in the Studio never sees that, and
+ * silently rendering nothing makes a typo look like a feature that does not work.
  */
-function parseDirectoryName(dirName: string): { prefix: number; name: string } | null {
-  const match = dirName.match(/^(\d{3})-(.+)$/);
-  if (!match) return null;
-  return {
-    prefix: parseInt(match[1], 10),
-    name: match[2],
+function resolveHeading(
+  heading: string | undefined,
+  assets: Record<string, MediaAsset>,
+  referrer: string
+): { segments: HeadingSegment[]; plain: string } {
+  if (!heading) return { segments: [], plain: '' };
+
+  const segments: HeadingSegment[] = [];
+  let plain = '';
+
+  const pushText = (text: string) => {
+    const previous = segments[segments.length - 1];
+    // Merge with the run before it, so an unresolved token in the middle of a heading does not
+    // leave the text split across adjacent nodes.
+    if (previous?.kind === 'text') previous.text += text;
+    else segments.push({ kind: 'text', text });
+    plain += text;
   };
-}
 
-/**
- * Update media paths in attachments to be relative to item directory
- */
-function updateMediaPaths(attachments: any[], sectionDir: string, itemDir: string): any[] {
-  if (!attachments || !Array.isArray(attachments)) return [];
-  
-  return attachments.map(attachment => {
-    if (attachment.url) {
-      // Extract filename - could be just a filename or a full path
-      // If it's already just a filename (no slashes), use it directly
-      // Otherwise, extract the filename from the path
-      const filename = attachment.url.includes('/') 
-        ? attachment.url.split('/').pop() || attachment.url
-        : attachment.url;
-      // Construct new path relative to item directory
-      const newPath = `/content/${sectionDir}/${itemDir}/media/${filename}`;
-      return {
-        ...attachment,
-        url: newPath,
-      };
-    }
-    return attachment;
-  });
-}
-
-/**
- * Generate a unique ID from directory path
- * e.g., "002-workExperience/001-product-designer-at-instadeep" -> "workExperience-001-product-designer-at-instadeep"
- */
-function generateItemId(sectionDir: string, itemDir: string): string {
-  // Extract section name (remove prefix)
-  const sectionName = sectionDir.replace(/^\d{3}-/, '');
-  // Extract item slug (remove prefix)
-  const itemSlug = itemDir.replace(/^\d{3}-/, '');
-  return `${sectionName}-${itemSlug}`;
-}
-
-/**
- * Detect media type from file extension
- */
-function getMediaType(filename: string): 'image' | 'video' | null {
-  const ext = filename.toLowerCase().split('.').pop();
-  const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'];
-  const videoExts = ['mp4', 'webm', 'ogg', 'mov', 'avi'];
-  
-  if (imageExts.includes(ext || '')) return 'image';
-  if (videoExts.includes(ext || '')) return 'video';
-  return null;
-}
-
-/**
- * Auto-detect attachments from media directory
- */
-async function detectAttachments(
-  contentPath: string,
-  sectionDir: string,
-  itemDir: string
-): Promise<any[]> {
-  const mediaDir = join(contentPath, sectionDir, itemDir, 'media');
-  
-  try {
-    const files = await fs.readdir(mediaDir);
-    const attachments: any[] = [];
-    
-    // Sort files for consistent ordering
-    const sortedFiles = files.sort();
-    
-    for (const filename of sortedFiles) {
-      const mediaType = getMediaType(filename);
-      if (!mediaType) continue;
-      
-      const filePath = join(mediaDir, filename);
-      const fullUrl = `/content/${sectionDir}/${itemDir}/media/${filename}`;
-      
-      let width = 1920; // Default dimensions
-      let height = 1080;
-      
-      // Try to get actual dimensions for images
-      if (mediaType === 'image') {
-        const dimensions = await getImageDimensions(filePath);
-        if (dimensions) {
-          width = dimensions.width;
-          height = dimensions.height;
-        }
-      }
-      
-      attachments.push({
-        type: mediaType,
-        width,
-        height,
-        url: fullUrl,
-      });
-    }
-    
-    return attachments;
-  } catch (error) {
-    // Media directory doesn't exist or can't be read
-    return [];
-  }
-}
-
-/**
- * Load and parse a single item from its directory
- */
-async function loadItem(
-  contentPath: string,
-  sectionDir: string,
-  itemDir: string
-): Promise<any> {
-  const itemPath = join(contentPath, sectionDir, itemDir, 'item.json');
-  let itemData;
-  try {
-    itemData = JSON.parse(await fs.readFile(itemPath, 'utf8'));
-  } catch (error) {
-    console.warn(`Failed to load item from ${itemPath}: ${error}`);
-    return null;
-  }
-  
-  // Auto-generate ID from directory structure if not present
-  if (!itemData.id) {
-    itemData.id = generateItemId(sectionDir, itemDir);
-  }
-  
-  // Auto-detect attachments from media directory if not specified
-  if (!itemData.attachments || itemData.attachments.length === 0) {
-    itemData.attachments = await detectAttachments(contentPath, sectionDir, itemDir);
-  } else {
-    // Update media paths in manually specified attachments
-    itemData.attachments = updateMediaPaths(itemData.attachments, sectionDir, itemDir);
-  }
-  
-  return itemData;
-}
-
-/**
- * Load all items from a section directory
- */
-async function loadSection(
-  contentPath: string,
-  sectionDir: SectionDir
-): Promise<any[]> {
-  const sectionPath = join(contentPath, sectionDir.fullName);
-  const entries = await fs.readdir(sectionPath, { withFileTypes: true });
-  
-  // Find all item directories (matching pattern ^\d{3}-.*)
-  const itemDirs: ItemDir[] = [];
-  for (const entry of entries) {
-    if (entry.isDirectory()) {
-      const parsed = parseDirectoryName(entry.name);
-      if (parsed) {
-        itemDirs.push({
-          prefix: parsed.prefix,
-          slug: parsed.name,
-          fullName: entry.name,
-        });
-      }
-    }
-  }
-  
-  // Sort by prefix
-  itemDirs.sort((a, b) => a.prefix - b.prefix);
-  
-  // Load all items
-  const items = await Promise.all(
-    itemDirs.map(itemDir =>
-      loadItem(contentPath, sectionDir.fullName, itemDir.fullName)
-    )
-  );
-  
-  // Filter out null items (failed to load)
-  return items.filter(item => item !== null);
-}
-
-/**
- * Load profile data from the new directory structure
- */
-export async function loadProfileData(): Promise<any> {
-  const contentPath = join(process.cwd(), 'public', 'content');
-  
-  // Read all entries in content directory
-  const entries = await fs.readdir(contentPath, { withFileTypes: true });
-  
-  // Find section directories (matching pattern ^\d{3}-.*)
-  const sectionDirs: SectionDir[] = [];
-  for (const entry of entries) {
-    if (entry.isDirectory()) {
-      const parsed = parseDirectoryName(entry.name);
-      if (parsed && parsed.name !== 'case-studies') {
-        sectionDirs.push({
-          prefix: parsed.prefix,
-          name: parsed.name,
-          fullName: entry.name,
-        });
-      }
-    }
-  }
-  
-  // Sort by prefix
-  sectionDirs.sort((a, b) => a.prefix - b.prefix);
-  
-  // Load general data
-  const generalDir = sectionDirs.find(s => s.name === 'general');
-  if (!generalDir) {
-    throw new Error('General directory (001-general) not found');
-  }
-  
-  const generalPath = join(contentPath, generalDir.fullName, 'general.json');
-  let generalData;
-  try {
-    generalData = JSON.parse(await fs.readFile(generalPath, 'utf8'));
-  } catch (error) {
-    throw new Error(`Failed to read general.json: ${error}`);
-  }
-  
-  // Update profilePhoto path
-  if (generalData.profilePhoto) {
-    const filename = generalData.profilePhoto.includes('/')
-      ? generalData.profilePhoto.split('/').pop() || 'profilePhoto.jpg'
-      : generalData.profilePhoto;
-    generalData.profilePhoto = `/content/${generalDir.fullName}/media/${filename}`;
-  }
-  
-  // Load all sections
-  const sections: Record<string, any[]> = {};
-  const allCollections: any[] = [];
-  
-  for (const sectionDir of sectionDirs) {
-    if (sectionDir.name === 'general') continue;
-    
-    const sectionInfo = SECTION_MAP[sectionDir.name];
-    if (!sectionInfo) {
-      console.warn(`Unknown section: ${sectionDir.name}`);
+  for (const part of splitHeading(heading)) {
+    if (part.kind === 'text') {
+      pushText(part.text);
       continue;
     }
-    
-    const items = await loadSection(contentPath, sectionDir);
-    sections[sectionInfo.jsonKey] = items;
-    
-    // Add to allCollections with display name
-    if (items.length > 0) {
-      allCollections.push({
-        name: sectionInfo.displayName,
-        items: items,
-      });
+
+    const resolved = resolveAsset(part.file, assets, `${referrer} heading icon`);
+    if (!resolved) {
+      pushText(`[${part.file}]`);
+      continue;
     }
+    if (resolved.type !== 'image') {
+      console.warn(`${referrer}: heading icon "${part.file}" is not an image, skipping`);
+      pushText(`[${part.file}]`);
+      continue;
+    }
+
+    // The dark sibling is looked up in the registry rather than probed on disk, so an unregistered
+    // file is correctly treated as absent: it could not be served anyway.
+    const dark = darkVariant(part.file);
+
+    segments.push({
+      kind: 'icon',
+      icon: {
+        url: resolved.url,
+        width: resolved.width,
+        height: resolved.height,
+        darkUrl: dark && assets[dark] ? assetUrl(dark) : null,
+      },
+    });
   }
-  
-  // Construct the same structure as the original JSON
+
+  // Collapse the whitespace the removed tokens leave behind, so a label does not carry a
+  // double space where a logo used to be.
+  return { segments, plain: plain.replace(/\s{2,}/g, ' ').trim() };
+}
+
+/**
+ * Ids name nothing on disk any more, but they are still React keys and the
+ * Studio's addressing scheme, so a collision would make two items
+ * indistinguishable. Fail the build rather than ship that.
+ */
+function assertUniqueIds(cv: CvFile): void {
+  const seen = new Set<string>();
+  const duplicates: string[] = [];
+
+  const check = (id: string) => {
+    if (seen.has(id)) duplicates.push(id);
+    seen.add(id);
+  };
+
+  for (const section of cv.sections ?? []) {
+    for (const item of section.items ?? []) check(item.id);
+  }
+  for (const item of cv.contact?.items ?? []) check(item.id);
+
+  if (duplicates.length) {
+    throw new Error(
+      `cv.json: duplicate item id(s) — ${[...new Set(duplicates)].join(', ')}. ` +
+        `Ids must be unique across the whole document.`
+    );
+  }
+}
+
+export async function loadProfileData(): Promise<ResolvedCv> {
+  let cv: CvFile;
+  try {
+    cv = JSON.parse(await fs.readFile(CV_PATH, 'utf8')) as CvFile;
+  } catch (error) {
+    throw new Error(`Failed to read content/cv.json: ${error}`);
+  }
+
+  if (!cv.profile?.displayName) {
+    throw new Error('cv.json: profile.displayName is required');
+  }
+  assertUniqueIds(cv);
+
+  const assets = await loadMediaRegistry();
+
+  // Empty sections were omitted by the original loader; keep that so an
+  // in-progress section does not render a bare heading.
+  const sections: ResolvedSection[] = (cv.sections ?? [])
+    .filter((section) => (section.items ?? []).length > 0)
+    .map((section) => ({
+      key: section.key,
+      label: section.label,
+      items: section.items.map((item) => resolveItem(item, assets, section.key)),
+    }));
+
   return {
-    general: generalData,
-    ...sections,
-    allCollections: allCollections,
+    profile: {
+      displayName: cv.profile.displayName,
+      byline: cv.profile.byline,
+      about: cv.profile.about,
+      profilePhoto: assetUrl(cv.profile.photo),
+    },
+    sections,
+    contact: {
+      label: cv.contact?.label ?? 'Contact',
+      items: cv.contact?.items ?? [],
+    },
   };
 }

@@ -7,44 +7,80 @@ type ScrollbarProps = {
   innerChild?: React.RefObject<HTMLDivElement | null>,
   inlineStyle?: React.CSSProperties,
 }
+
+type Metrics = {
+  isScrollable: boolean,
+  barWidth: number,
+  trackWidth: number,
+  barPos: number,
+}
+
+const EMPTY_METRICS: Metrics = {
+  isScrollable: false,
+  barWidth: 0,
+  trackWidth: 0,
+  barPos: 0,
+};
+
 const Scrollbar: React.FC<ScrollbarProps> = ({
   scrollview,
   innerChild,
   inlineStyle,
 }) => {
-  const [isScrollable, setIsScrollable] = useState(false);
-  const [renderCount, setRenderCount] = useState(0);
+  const [metrics, setMetrics] = useState<Metrics>(EMPTY_METRICS);
   const trackRef = useRef<HTMLDivElement>(null);
 
+  // Measure the scroll container and the track, and store the result in state. Reading
+  // the refs here rather than during render keeps the rendered output a pure function of
+  // state — the previous version bumped a counter to force a re-render and then read
+  // ref.current inline, which is not safe under concurrent rendering.
+  const measure = () => {
+    const view = scrollview.current;
+    if (!view) { return }
+
+    const maxScroll = view.scrollWidth - view.offsetWidth;
+    const next: Metrics = {
+      isScrollable: maxScroll > 0,
+      barWidth: view.scrollWidth > 0 ? view.offsetWidth / view.scrollWidth : 0,
+      trackWidth: trackRef.current ? trackRef.current.offsetWidth : 0,
+      barPos: maxScroll > 0 ? view.scrollLeft / maxScroll : 0,
+    };
+
+    setMetrics(prev =>
+      prev.isScrollable === next.isScrollable &&
+      prev.barWidth === next.barWidth &&
+      prev.trackWidth === next.trackWidth &&
+      prev.barPos === next.barPos
+        ? prev
+        : next
+    );
+  };
+
   useEffect(() => {
-    if (!scrollview.current) { return }
-    let view = scrollview.current;
-    const onScroll = (e: Event) => {
-      if (!scrollview.current) { return }
-      setRenderCount(count => count + 1)
-    }
-    onResize();
-    view.addEventListener('scroll', onScroll);
-    return () => view.removeEventListener('scroll', onScroll);
-  }, []);
+    const view = scrollview.current;
+    if (!view) { return }
 
-  const onResize = () => {
-    let container = scrollview.current;
-    if (container && container.scrollWidth > container.offsetWidth) {
-      setIsScrollable(true);
-    } else {
-      setIsScrollable(false);
-    }
-    setRenderCount(count => count + 1)
-  }
+    const frame = requestAnimationFrame(measure);
+    view.addEventListener('scroll', measure, { passive: true });
 
-  useResizeObserver({ ref: scrollview as any, onResize });
-  useResizeObserver({ ref: innerChild as any, onResize });
-  const barWidth = scrollview.current ? scrollview.current.offsetWidth / scrollview.current.scrollWidth : 0;
-  const trackWidth = trackRef.current ? trackRef.current.offsetWidth : 0;
-  const barPos = scrollview.current ? (scrollview.current.scrollLeft) / (scrollview.current.scrollWidth - scrollview.current.offsetWidth) : 0;
+    return () => {
+      cancelAnimationFrame(frame);
+      view.removeEventListener('scroll', measure);
+    };
+  }, [scrollview, measure]);
 
-  if (!isScrollable) {
+  // The track only exists once we know the area is scrollable, so re-measure after it
+  // mounts to pick up its width.
+  useEffect(() => {
+    if (!metrics.isScrollable) { return }
+    const frame = requestAnimationFrame(measure);
+    return () => cancelAnimationFrame(frame);
+  }, [metrics.isScrollable, measure]);
+
+  useResizeObserver({ ref: scrollview as React.RefObject<HTMLDivElement>, onResize: measure });
+  useResizeObserver({ ref: innerChild as React.RefObject<HTMLDivElement>, onResize: measure });
+
+  if (!metrics.isScrollable) {
     return null
   }
 
@@ -54,8 +90,8 @@ const Scrollbar: React.FC<ScrollbarProps> = ({
         ref={trackRef}
         className={styles.track}>
         <div className={styles.bar} style={{
-          width: barWidth * 100 + "%",
-          transform: 'translateX(' + ((1 - barWidth) * trackWidth) * barPos + 'px)'
+          width: metrics.barWidth * 100 + "%",
+          transform: 'translateX(' + ((1 - metrics.barWidth) * metrics.trackWidth) * metrics.barPos + 'px)'
         }}/>
       </div>
     </div>

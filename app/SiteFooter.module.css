@@ -1,0 +1,54 @@
+/* Closes the page on both routes.
+   The gap above it is mostly contributed by whatever ends the page — the CV's final section
+   carries 60px of padding below it (load-bearing for the sticky titles, so it cannot be traded
+   away) and the gallery's list is given a matching 60px for exactly this reason. So this margin
+   is only the remainder, tuned so the total reads the same either way. */
+.footer {
+  /* Padding, not margin, and that is the whole reason the two routes agree. The gallery's list
+     ends in a *margin*, which collapses with an adjacent margin here — so a 16px top margin
+     vanished into the list's 60px and the gallery came out 16px tighter than the CV, whose
+     section padding cannot collapse. Padding never collapses, so both add up to the same 76px. */
+  padding-top: 16px;
+  padding-bottom: 8px;
+}
+
+/* The colophon and the date sit on one line at opposite ends, and stack once the column gets
+   narrow enough that they would otherwise collide. `column-gap` covers the row, `row-gap` the
+   stacked case. */
+.row {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: space-between;
+  column-gap: 24px;
+  row-gap: 4px;
+  flex-wrap: wrap;
+}
+
+.colophon,
+.updated {
+  color: var(--grey3);
+}
+
+/* Not bold — the emphasis is a step up in contrast, matching how the `.year` gutter and the
+   headings beside it already separate label from value across this page. */
+.strong {
+  color: var(--grey1);
+}
+
+/* `display: flex` so the box is the glyph's height rather than a text line's, which would leave
+   an unexplained few pixels under it. `--grey1` is what makes it near-black on the light ground
+   and near-white on the dark one, through `currentColor` inside the SVG. */
+.signature {
+  display: flex;
+  margin-top: 12px;
+  color: var(--grey1);
+}
+
+/* The CV indents its bodies past the section title below 480px; the footer follows so its left
+   edge stays on the same line as the content above it. */
+@media (max-width: 480px) {
+  .footer {
+    margin-left: 16px;
+  }
+}

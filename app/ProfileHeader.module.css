@@ -49,13 +49,14 @@
   object-fit: cover;
 }
 
-/* Tighter above than it was (40px) now that there is no "About" title to separate from the
-   byline: without a heading of its own the text belongs to the block above it, and the old
-   gap left it stranded between the name and the tab bar. The gap below is unchanged — it
-   still adds to the bar's own top padding, and that is most of the air above the tabs. */
+/* Both gaps stepped up (from 20px / 40px) to give the intro more air on either side. The
+   asymmetry is the part to keep: without a heading of its own the text belongs to the byline
+   above it, so it stays nearer that than the bar below — set them equal and it reads as
+   stranded between the name and the tabs, which is what the original 40px above did. The gap
+   below adds to the bar's own `--tab-bar-gap-top`, so it is not the whole air above the tabs. */
 .about {
-  margin-top: 20px;
-  margin-bottom: 40px;
+  margin-top: 32px;
+  margin-bottom: 52px;
 }
 
 .description {

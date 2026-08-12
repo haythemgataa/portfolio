@@ -2,23 +2,23 @@
   "version": 1,
   "items": [
     {
-      "id": "dashboard-explorations",
-      "file": "board-view-running.webp",
-      "title": "DeepPCB Board Viewer",
-      "date": "2026"
-    },
-    {
-      "id": "brand-system",
-      "file": "irise-rebrand-teaser.webp",
-      "title": "Brand system",
-      "caption": "Type scale, color and logo lockups for a non-profit rebrand.",
-      "date": "2022"
+      "id": "board-setup-net-classes-dragging",
+      "file": "board-setup-net-classes-dragging.webp",
+      "date": "2026",
+      "title": "Dragging Nets",
+      "caption": "A screen showing how moving nets from one category to the other should work. This is one from multiple other screens that show different states. Since the interaction was a bit hard to understand from still screens, I shipped a fully functional clone using Claude artifacts to let team members test it and give feedback, and to assist devs."
     },
     {
       "id": "mobile-app-flow",
       "file": "groupado-pro-learning-hero.webp",
-      "title": "Mobile onboarding flow",
+      "title": "Landing Page Hero Section",
       "date": "2022"
+    },
+    {
+      "id": "dashboard-explorations",
+      "file": "board-view-running.webp",
+      "title": "DeepPCB Board Viewer",
+      "date": "2026"
     },
     {
       "id": "claude-for-ghostty-icon",
@@ -28,39 +28,18 @@
       "caption": "I use Ghossty exclusively for Claude Code, so I made two custom icons, a hybrid between the Ghostty icon and the Claude Code mascot. This made it easier for me to find the app in the dock."
     },
     {
-      "id": "edit-net-class",
-      "file": "edit-net-class.webp",
-      "date": "2025"
+      "id": "board-setup-net-classes",
+      "file": "board-setup-net-classes.webp",
+      "date": "2026",
+      "title": "Net Classes",
+      "caption": "This screen shows how AI suggestions would land and be previewed next to existing content. "
     },
     {
-      "id": "board-viewer-evolution-2023-2026",
-      "file": "board-viewer-evolution-2023-2026.webm",
-      "date": "2023 — 2026"
-    },
-    {
-      "id": "deeppcb-loading-animation",
-      "file": "deeppcb-loading-animation.webm",
-      "date": "2023"
-    },
-    {
-      "id": "check-with-cooper",
-      "file": "check-with-cooper.webm",
-      "date": "2026"
-    },
-    {
-      "id": "cooper-mascot",
-      "file": "cooper-mascot.webp",
-      "date": "2026"
-    },
-    {
-      "id": "thinking",
-      "file": "thinking.webm",
-      "date": "2023"
-    },
-    {
-      "id": "instanovo-404-page",
-      "file": "instanovo-404-page.webm",
-      "date": "2024"
+      "id": "document-suggestions",
+      "file": "document-suggestions.webp",
+      "date": "2023",
+      "title": "AI suggestions for Text",
+      "caption": "A tool to help finding and linking sources, and suggesting text edits to research papers"
     },
     {
       "id": "pcb-layout-editing",
@@ -70,34 +49,67 @@
       "date": "2026"
     },
     {
+      "id": "edit-net-class",
+      "file": "edit-net-class.webp",
+      "date": "2025",
+      "title": "Popup to edit a net class"
+    },
+    {
+      "id": "board-viewer-evolution-2023-2026",
+      "file": "board-viewer-evolution-2023-2026.webm",
+      "date": "2023 — 2026",
+      "title": "4 Iterations Over 3 Years",
+      "caption": "Showing how DeepPCB evolved over time. Constant feedback, new features, and mixed testing (internal and based on VWO data, provided by the UX team)"
+    },
+    {
+      "id": "check-with-cooper",
+      "file": "check-with-cooper.webm",
+      "date": "2026",
+      "title": "A Nudge Animation",
+      "caption": "We wanted to push users to try Cooper, so we added this nudge animation that shows up when the cursor gets near the Start Routing button"
+    },
+    {
+      "id": "cooper-mascot",
+      "file": "cooper-mascot.webp",
+      "date": "2026",
+      "title": "Cooper Mascot",
+      "caption": "Showing possible variations for Cooper, like how it would look like when there's an error, or when idle, or loading a response..."
+    },
+    {
+      "id": "thinking",
+      "file": "thinking.webm",
+      "date": "2023",
+      "title": "LLM Loading Animation"
+    },
+    {
       "id": "timeline-view",
       "file": "timeline-view.webp",
-      "date": "2024"
+      "date": "2024",
+      "title": "Timeline View"
+    },
+    {
+      "id": "instanovo-404-page",
+      "file": "instanovo-404-page.webm",
+      "date": "2024",
+      "title": "Custom 404 Page"
     },
     {
       "id": "home-grid-view",
       "file": "home-grid-view.webp",
-      "date": "2023"
-    },
-    {
-      "id": "board-setup-net-classes-dragging",
-      "file": "board-setup-net-classes-dragging.webp",
-      "date": "2026"
-    },
-    {
-      "id": "board-setup-net-classes",
-      "file": "board-setup-net-classes.webp",
-      "date": "2026"
-    },
-    {
-      "id": "document-suggestions",
-      "file": "document-suggestions.webp",
-      "date": "2023"
+      "date": "2023",
+      "title": "Grid of Articles"
     },
     {
       "id": "rhfacile-dashboard",
       "file": "rhfacile-dashboard.webp",
-      "date": "2021"
+      "date": "2021",
+      "title": "HR Tool for Small to Medium Companies - Admin Dashboard"
+    },
+    {
+      "id": "deeppcb-loading-animation",
+      "file": "deeppcb-loading-animation.webm",
+      "date": "2023",
+      "title": "Lottie Loading Animation"
     }
   ]
 }

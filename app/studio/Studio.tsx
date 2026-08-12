@@ -11,7 +11,7 @@ import {
   SECTION_SUGGESTIONS,
 } from './lib/schema';
 import type { FieldDef } from './lib/schema';
-import { inferMediaType } from '../lib/contentTypes';
+import { darkVariant, headingIconFiles, inferMediaType } from '../lib/contentTypes';
 import type { ContactItem, CvFile, CvItem, CvSection, MediaAsset } from '../lib/contentTypes';
 import type { GalleryEntry, GalleryFile } from '../lib/galleryTypes';
 
@@ -252,6 +252,26 @@ export default function Studio({
   /** Every pooled filename, for the "use an existing asset" pickers. */
   const poolFiles = useMemo(() => Object.keys(assets).sort(), [assets]);
 
+  /** Images only — an inline heading icon is drawn at 18px, where a video is meaningless. */
+  const imagePoolFiles = useMemo(
+    () => poolFiles.filter((file) => inferMediaType(file) === 'image'),
+    [poolFiles]
+  );
+
+  /** The field an icon token gets inserted into, and whether a caret has been put in it. */
+  const iconFieldRef = useRef<HTMLInputElement>(null);
+  const caretRef = useRef<number | null>(null);
+
+  const rememberCaret = useCallback((event: React.SyntheticEvent<HTMLInputElement>) => {
+    caretRef.current = event.currentTarget.selectionStart;
+  }, []);
+
+  // A caret belongs to the field that was clicked into, so it cannot survive a change of item —
+  // otherwise an insert would land at a position measured against a different heading.
+  useEffect(() => {
+    caretRef.current = null;
+  }, [itemId, selection]);
+
   const activeItem = useMemo(() => rows.find((r) => r.id === itemId) ?? null, [rows, itemId]);
 
   // ---- field editing (debounced autosave) --------------------------------
@@ -317,6 +337,39 @@ export default function Studio({
         if (item) (item as Record<string, unknown>)[key] = value;
       });
     }
+  };
+
+  /**
+   * Drop an `[filename]` icon token into a text field at the caret.
+   *
+   * Positional by nature, which is the whole point of the token — so this inserts rather than
+   * replaces, and falls back to appending when the field has not been clicked into yet. The
+   * caret is then put after the token so a second insert lands where the author expects.
+   */
+  const insertIconToken = (key: string, file: string) => {
+    const current = String(editorTarget?.[key] ?? '');
+    const input = iconFieldRef.current;
+
+    // An input keeps its selection after losing focus, so by the time the picker has been used
+    // the live `selectionStart` is still the author's caret — and it is fresher than anything
+    // an event handler recorded. `caretRef` is only consulted to answer a different question:
+    // whether the field has been clicked into at all. Untouched, appending beats inserting at 0.
+    const remembered = caretRef.current;
+    const live = remembered !== null && input ? input.selectionStart : null;
+    const at = Math.min(live ?? remembered ?? current.length, current.length);
+    const token = `[${file}]`;
+    const next = current.slice(0, at) + token + current.slice(at);
+
+    saveField(key, next);
+    caretRef.current = at + token.length;
+
+    // After the value round-trips through state, put the caret back where the text now continues.
+    requestAnimationFrame(() => {
+      const input = iconFieldRef.current;
+      if (!input) return;
+      input.focus();
+      input.setSelectionRange(at + token.length, at + token.length);
+    });
   };
 
   /** Correct an asset's intrinsic facts — the only way to fix video dimensions. */
@@ -391,15 +444,29 @@ export default function Studio({
     [poolFiles, galleryUses]
   );
 
-  /** The mirror image: filenames the CV references, for the gallery pane. */
+  /**
+   * The mirror image: filenames the CV references, for the gallery pane. Must count every kind
+   * of reference the server's `collectReferences` does — an icon missed here would have the
+   * gallery offer to delete a file the CV is still showing.
+   */
   const cvUses = useMemo(() => {
     const used = new Set<string>();
     if (cv?.profile?.photo) used.add(cv.profile.photo);
     for (const s of cv?.sections ?? []) {
-      for (const i of s.items ?? []) for (const f of i.media ?? []) used.add(f);
+      for (const i of s.items ?? []) {
+        for (const f of i.media ?? []) used.add(f);
+        for (const f of headingIconFiles(i.heading)) {
+          used.add(f);
+          // Counted for the same reason the server counts it — see `collectReferences`.
+          const dark = darkVariant(f);
+          if (dark && assets[dark]) used.add(dark);
+        }
+      }
     }
     return used;
-  }, [cv]);
+    // `assets` matters as well as `cv`: whether a `-dark` sibling counts depends on it being in
+    // the registry, so uploading one has to recompute this set.
+  }, [cv, assets]);
 
   const reorderMedia = useCallback(
     (from: number, to: number) => {
@@ -980,13 +1047,40 @@ export default function Studio({
                         />
                       ) : (
                         <input
+                          ref={field.iconInsert ? iconFieldRef : undefined}
                           className={styles.input}
                           type="text"
                           inputMode={field.type === 'url' ? 'url' : 'text'}
                           placeholder={field.placeholder}
                           value={String(editorTarget[field.key] ?? '')}
                           onChange={(e) => saveField(field.key, e.target.value)}
+                          // Records that the author has put a caret in this field, so the picker
+                          // inserts there rather than appending. Three handlers because no single
+                          // one covers every way a caret moves — `onSelect` misses a plain
+                          // arrow-key move in some engines, and a click that lands without
+                          // changing the selection fires no select event at all.
+                          onSelect={field.iconInsert ? rememberCaret : undefined}
+                          onClick={field.iconInsert ? rememberCaret : undefined}
+                          onKeyUp={field.iconInsert ? rememberCaret : undefined}
                         />
+                      )}
+                      {field.iconInsert && imagePoolFiles.length > 0 && (
+                        <select
+                          className={styles.ghostSelect}
+                          aria-label="Insert an inline icon at the cursor"
+                          value=""
+                          onChange={(e) => {
+                            if (e.target.value) insertIconToken(field.key, e.target.value);
+                            e.target.value = '';
+                          }}
+                        >
+                          <option value="">+ Insert icon</option>
+                          {imagePoolFiles.map((file) => (
+                            <option key={file} value={file}>
+                              {file}
+                            </option>
+                          ))}
+                        </select>
                       )}
                       {field.hint && <span className={styles.hint}>{field.hint}</span>}
                     </label>

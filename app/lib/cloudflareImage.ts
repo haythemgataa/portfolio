@@ -60,6 +60,15 @@ export function cloudflareImageUrl(url: string, options: Options = {}): string {
     return url;
   }
 
+  // SVG never goes through the transform. It is vector, so the browser scales it perfectly and
+  // there are no pixels to save — a logo here is 1-26 KB, smaller than any raster variant would
+  // be, and `format=auto` would rasterise it, which is strictly worse. Cloudflare also does not
+  // treat SVG as a resizable input, so wrapping one would risk a 404 in production that
+  // `npm run check:cdn` would not catch: that script counts variant URLs, it does not fetch them.
+  if (/\.svg(\?|#|$)/i.test(url)) {
+    return url;
+  }
+
   const { width, height, quality = DEFAULT_QUALITY, fit, dpr = DPR } = options;
 
   const params: string[] = [];

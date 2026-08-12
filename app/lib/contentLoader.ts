@@ -3,12 +3,14 @@ import { join } from 'path';
 import type {
   CvFile,
   CvItem,
+  HeadingSegment,
   MediaAsset,
   ResolvedCv,
   ResolvedItem,
   ResolvedMedia,
   ResolvedSection,
 } from './contentTypes';
+import { darkVariant, splitHeading } from './contentTypes';
 import { assetUrl, loadMediaRegistry, resolveAsset } from './mediaRegistry';
 
 /**
@@ -27,10 +29,78 @@ function resolveItem(
   sectionKey: string
 ): ResolvedItem {
   const { media, ...rest } = item;
+  const referrer = `cv.json ${sectionKey}/${item.id}`;
   const attachments = (media ?? [])
-    .map((file) => resolveAsset(file, assets, `cv.json ${sectionKey}/${item.id}`))
+    .map((file) => resolveAsset(file, assets, referrer))
     .filter((m): m is ResolvedMedia => m !== null);
-  return { ...rest, attachments };
+
+  const { segments, plain } = resolveHeading(item.heading, assets, referrer);
+  return { ...rest, heading: plain, attachments, headingSegments: segments };
+}
+
+/**
+ * Turn a heading's `[filename]` tokens into inline icons, and produce the plain string
+ * alongside — the latter is what accessible names and the attachment row's label use, since
+ * neither wants markup or a literal filename in it.
+ *
+ * A token that does not resolve stays visible as its literal text rather than vanishing. The
+ * warning below goes to the build log, but an author editing in the Studio never sees that, and
+ * silently rendering nothing makes a typo look like a feature that does not work.
+ */
+function resolveHeading(
+  heading: string | undefined,
+  assets: Record<string, MediaAsset>,
+  referrer: string
+): { segments: HeadingSegment[]; plain: string } {
+  if (!heading) return { segments: [], plain: '' };
+
+  const segments: HeadingSegment[] = [];
+  let plain = '';
+
+  const pushText = (text: string) => {
+    const previous = segments[segments.length - 1];
+    // Merge with the run before it, so an unresolved token in the middle of a heading does not
+    // leave the text split across adjacent nodes.
+    if (previous?.kind === 'text') previous.text += text;
+    else segments.push({ kind: 'text', text });
+    plain += text;
+  };
+
+  for (const part of splitHeading(heading)) {
+    if (part.kind === 'text') {
+      pushText(part.text);
+      continue;
+    }
+
+    const resolved = resolveAsset(part.file, assets, `${referrer} heading icon`);
+    if (!resolved) {
+      pushText(`[${part.file}]`);
+      continue;
+    }
+    if (resolved.type !== 'image') {
+      console.warn(`${referrer}: heading icon "${part.file}" is not an image, skipping`);
+      pushText(`[${part.file}]`);
+      continue;
+    }
+
+    // The dark sibling is looked up in the registry rather than probed on disk, so an unregistered
+    // file is correctly treated as absent: it could not be served anyway.
+    const dark = darkVariant(part.file);
+
+    segments.push({
+      kind: 'icon',
+      icon: {
+        url: resolved.url,
+        width: resolved.width,
+        height: resolved.height,
+        darkUrl: dark && assets[dark] ? assetUrl(dark) : null,
+      },
+    });
+  }
+
+  // Collapse the whitespace the removed tokens leave behind, so a label does not carry a
+  // double space where a logo used to be.
+  return { segments, plain: plain.replace(/\s{2,}/g, ' ').trim() };
 }
 
 /**

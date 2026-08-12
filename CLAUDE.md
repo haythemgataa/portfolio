@@ -144,10 +144,43 @@ The schema and its rationale are documented in **`CONTENT-SCHEMA.md`**; the type
   item from `+ From pool`. It surfaces as an unreferenced orphan until it is, which is the
   reminder that it is still there. Only the operations that say *delete* — item, section, and
   gallery-entry deletion — collect garbage.
-- **That collection is reference-counted.** A file goes only when nothing references it — CV items,
-  the profile photo, gallery entries and poster frames all count, so an item deleted out from under
-  a thumbnail leaves it alone if the gallery still shows it (and vice versa). `planGarbage()` is
-  pure and the route writes JSON *before* deleting files, so a rejected write cannot destroy media.
+- **That collection is reference-counted.** A file goes only when nothing references it — CV item
+  media, item icons, the profile photo, gallery entries and poster frames all count, so an item
+  deleted out from under a thumbnail leaves it alone if the gallery still shows it (and vice versa).
+  `planGarbage()` is pure and the route writes JSON *before* deleting files, so a rejected write
+  cannot destroy media. `collectReferences()` is the **only** counter — `planGarbage` and
+  `findOrphans` both read it — so a whole *kind* of reference missing from it is not a small bug:
+  the assets it protects get reported as unreferenced and can be swept while still in use. Anything
+  new that can name a pool file has to be counted there, and mirrored in the Studio's `cvUses`.
+- **`[filename]` in a heading renders that pool image inline, where the token sits** — a tool's app
+  icon, a company's logo mid-title (see CONTENT-SCHEMA.md). The loader splits the heading into
+  `headingSegments` server-side and also hands back `heading` as the token-stripped plain string,
+  which is what accessible names and the attachment row's label use — neither wants a filename in
+  it. Three consequences to keep in mind:
+  - **The pool reference lives inside free text**, so `collectReferences()` parses headings via
+    `headingIconFiles()`. That parser is in `app/lib/contentTypes.ts` precisely because both the
+    loader and the Studio's counter need it, and it builds its regex per call — a shared `g` regex
+    carries `lastIndex` and would skip tokens depending on who ran it last.
+  - **The icon is `inline-block` inside `.title`, which stays a plain block.** Making it a flex row
+    would pull every token onto one line; as an inline box the icon behaves like a word, wraps with
+    the text, and leaves the link-arrow's `&#xfeff;` + `nowrap` trick beside it alone. It carries no
+    horizontal margin on purpose — the authored spaces around the token are the gaps, so adding any
+    would silently widen what was typed.
+  - **`ICON_SIZE` lives in `Profile.tsx`** because the Cloudflare request and the CSS box both derive
+    from it. `.titleIcon`'s `vertical-align` is tuned to it (half the box less half the cap height),
+    so changing the size means revisiting that offset.
+  - **A `-dark` sibling is swapped by `<picture>`, not by JavaScript.** Dark mode here is
+    `prefers-color-scheme` on a static export — there is no theme state to read, so a scripted swap
+    would paint the light file and correct itself after hydration, and do nothing with JS off. A
+    `<source media="(prefers-color-scheme: dark)">` is resolved before the request, so one file is
+    downloaded and the right one paints on the first frame. `next/image` cannot emit a `<picture>`,
+    which is why the icon is a plain `<img>` (and why `no-img-element` stays quiet — the rule
+    accepts an `<img>` inside a `<picture>`).
+  - **The dark variant is found by convention, so the counter has to derive it.** A heading only ever
+    names the light file; `darkVariant()` produces the sibling and `collectReferences` counts it as
+    referenced exactly when the light one is — the same rule as a video's poster. Without that it
+    reads as unreferenced and the sweep deletes it. It is also added to `itemFiles`, where a
+    non-existent name is harmless because `planGarbage` skips anything absent from the registry.
 - **Dimensions are always authored**, so the build never runs `sharp`; `type` is inferred from the
   extension rather than stored, so there is one source of truth for it.
 - Optional fields are **omitted, not written as `""`**.
@@ -553,6 +586,10 @@ break, since `npm run build` succeeds either way.
 
 Two things there are easy to get wrong:
 
+- **SVG skips the transform entirely.** It is vector, so there are no pixels to save and
+  `format=auto` would rasterise a logo — strictly worse. Cloudflare also does not treat SVG as a
+  resizable input, so wrapping one risks a 404 that `npm run check:cdn` cannot catch: that script
+  counts variant URLs, it never fetches them.
 - **Request the real displayed box, not a square.** Cloudflare's default `fit=scale-down` fits
   *inside* the requested box, so asking for `width=180,height=180` on a 4:3 thumbnail returns
   180x135 — fewer pixels than the 240x180 the layout needs, and the browser upscales it. The

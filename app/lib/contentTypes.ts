@@ -137,8 +137,38 @@ export type ResolvedMedia = {
   floating: boolean;
 };
 
+/**
+ * A resolved inline icon. Deliberately narrower than `ResolvedMedia`: an icon has no poster,
+ * no mat and no lightbox, so carrying those fields would only invite the question of what
+ * `framed` means on one.
+ */
+export type ResolvedIcon = {
+  url: string;
+  width: number;
+  height: number;
+  /**
+   * The `-dark` sibling, when one is in the pool — a mark that disappears against a dark ground
+   * needs a different file, not a filter. Null when there is none, in which case the one image
+   * serves both themes. See `darkVariant`.
+   */
+  darkUrl: string | null;
+};
+
+/**
+ * A heading, split into what renders as text and what renders as an inline icon. Produced by
+ * the loader so the parsing happens once on the server and the component just maps over it.
+ */
+export type HeadingSegment =
+  | { kind: 'text'; text: string }
+  | { kind: 'icon'; icon: ResolvedIcon };
+
 export type ResolvedItem = Omit<CvItem, 'media'> & {
   attachments: ResolvedMedia[];
+  /**
+   * `heading` with the icon tokens removed — the plain string, for accessible names and the
+   * attachment row's label. `headingSegments` is what actually renders.
+   */
+  headingSegments: HeadingSegment[];
 };
 
 export type ResolvedSection = {
@@ -179,4 +209,78 @@ export function inferMediaType(filename: string): MediaType | null {
   if (IMAGE_EXTS.includes(ext)) return 'image';
   if (VIDEO_EXTS.includes(ext)) return 'video';
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Inline icons in headings
+// ---------------------------------------------------------------------------
+
+/**
+ * `[filename]` inside a heading renders that pool image inline, exactly where it sits — so a
+ * logo can go mid-title ("Product Designer at [instadeep.webp] InstaDeep") rather than only
+ * before it.
+ *
+ * Square brackets are safe here because a heading is rendered as plain text, not markdown. If
+ * headings ever become markdown this collides with link syntax and the delimiter has to change.
+ *
+ * Built fresh on each call rather than held at module scope: a `g` regex carries `lastIndex`
+ * between uses, which would make a shared instance skip tokens depending on who ran it last.
+ */
+function tokenPattern(): RegExp {
+  return /\[([^[\]\n]+)\]/g;
+}
+
+export type HeadingPart =
+  | { kind: 'text'; text: string }
+  | { kind: 'token'; file: string };
+
+/**
+ * Split a heading into literal text and icon tokens. Pure and dependency-free so both the
+ * loader and the Studio's reference counter can share it — the filenames referenced from
+ * inside a heading have to be counted, or the pool would report them unreferenced and sweep
+ * them while they are on screen.
+ */
+export function splitHeading(heading: string): HeadingPart[] {
+  const parts: HeadingPart[] = [];
+  const pattern = tokenPattern();
+  let last = 0;
+
+  for (let m = pattern.exec(heading); m !== null; m = pattern.exec(heading)) {
+    if (m.index > last) parts.push({ kind: 'text', text: heading.slice(last, m.index) });
+    parts.push({ kind: 'token', file: m[1].trim() });
+    last = m.index + m[0].length;
+  }
+  if (last < heading.length) parts.push({ kind: 'text', text: heading.slice(last) });
+
+  return parts;
+}
+
+/** Every pool filename a heading names. Used by the reference counter. */
+export function headingIconFiles(heading?: string): string[] {
+  if (!heading) return [];
+  return splitHeading(heading)
+    .filter((p): p is { kind: 'token'; file: string } => p.kind === 'token')
+    .map((p) => p.file);
+}
+
+/**
+ * The dark-theme sibling of an icon filename: `-dark` before the extension, so
+ * `rive-logo.svg` pairs with `rive-logo-dark.svg`.
+ *
+ * A convention rather than a second field, because the pairing is a fact about the files and
+ * authoring it twice invites the two halves to disagree. Nothing is required to exist — the
+ * caller checks the registry and simply gets no variant when there is none.
+ *
+ * Note that this is also how the dark file becomes *referenced*: a token only ever names the
+ * light one, so the counter has to derive the sibling or the sweep would delete it.
+ */
+export function darkVariant(file: string): string | null {
+  const dot = file.lastIndexOf('.');
+  if (dot <= 0) return null;
+
+  const stem = file.slice(0, dot);
+  // Already a dark file — deriving again would look for `-dark-dark`.
+  if (stem.endsWith('-dark')) return null;
+
+  return `${stem}-dark${file.slice(dot)}`;
 }

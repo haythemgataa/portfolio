@@ -100,6 +100,68 @@ Rules:
 One naming seam: media is authored under `media` but the loader resolves it to
 `attachments`, because that is the prop `Attachments.tsx` already takes.
 
+### Inline icons in headings
+
+`[filename]` anywhere inside a `heading` renders that pool image inline at 18px,
+**exactly where the token sits** — so a logo can go mid-title rather than only at
+one end:
+
+```json
+{ "heading": "Product Designer at [instadeep-logo.svg] InstaDeep" }
+{ "heading": "[figma-logo.svg] Figma" }
+```
+
+The spaces you leave around the token are the gaps you get; nothing adds margin
+for you. Any item in any section can use it, as many times as it likes.
+
+Three things worth knowing:
+
+- **The filename is a pool reference living inside free text.** It is counted by
+  `collectReferences()` via `headingIconFiles()`, so the sweep will not delete a
+  logo that is rendering. Anything else that ever embeds a filename in prose has
+  to be added there too.
+- **A token that does not resolve stays visible** as its literal `[filename]`
+  text, with a build warning. Rendering nothing would make a typo look like a
+  feature that silently does not work.
+- **Square brackets are safe because a heading is plain text, not markdown.** If
+  headings ever become markdown this collides with link syntax and the delimiter
+  has to change.
+
+Drawn at 20px with `fit: contain`, so a wordmark or non-square logo is never
+cropped. A video token is refused with a warning. SVG is served as-is — see the
+note in `cloudflareImage.ts` on why it skips the transform.
+
+#### Dark-theme variants
+
+A mark that vanishes against a dark ground needs a different file, not a filter.
+Add a sibling whose name ends `-dark` before the extension and it is picked up
+automatically in dark mode:
+
+```
+rive-logo.svg        →  used in light mode
+rive-logo-dark.svg   →  used in dark mode
+```
+
+Only the light file is ever named in a heading. The variant is found by
+convention, which has one consequence worth remembering: **that is also how it
+becomes referenced.** `collectReferences()` derives the sibling and counts it as
+referenced exactly when the light one is — the same rule a video's poster follows
+— because nothing else would ever count it and the sweep would delete it.
+
+It is optional per logo. A file with no `-dark` sibling serves both themes, so
+only the marks that actually need one get one. It still has to be registered in
+`media.json` like any pool file.
+
+The swap is `<picture>` with a `media="(prefers-color-scheme: dark)"` source, not
+JavaScript: this is a static export with no theme state to read, so a scripted
+swap would paint the light file first and correct itself after hydration, and do
+nothing at all with JS disabled.
+
+In the Studio, the Heading field has a **+ Insert icon** picker that drops a token
+at the cursor, so the filename never has to be typed. A file dropped into
+`public/media/` by hand is *unregistered* until it has a `media.json` entry, and
+unregistered files are unusable and absent from the picker.
+
 ### Fixed vs. orderable sections
 
 The sections do not all render the same way, and the ones that differ are the

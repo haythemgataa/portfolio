@@ -5,7 +5,23 @@ import RichText from "./RichText";
 import Arrow12 from "./Arrow12";
 import styles from "./Profile.module.css";
 import Attachments from "./Attachments";
-import type { ContactItem, ResolvedCv, ResolvedItem, ResolvedSection } from "./lib/contentTypes";
+import { cloudflareImageUrl } from "./lib/cloudflareImage";
+import type {
+  ContactItem,
+  HeadingSegment,
+  ResolvedCv,
+  ResolvedIcon,
+  ResolvedItem,
+  ResolvedSection,
+} from "./lib/contentTypes";
+
+/**
+ * Displayed size of an inline heading icon, in CSS px. Declared here rather than only in the
+ * stylesheet because the Cloudflare request is derived from it too, and a second copy of the
+ * number would drift from the box it is meant to fill. It reaches the CSS as a custom
+ * property for the same reason.
+ */
+const ICON_SIZE = 20;
 
 type ProfileProps = {
   cv: ResolvedCv,
@@ -136,13 +152,18 @@ const ProfileItem: React.FC<ProfileItemProps> = ({
   showDetails,
 }) => {
 
+  // Icons sit wherever the author put their token, so they are part of the heading's own flow —
+  // inside the anchor when there is one, which is what keeps a mid-title logo travelling with
+  // the words around it instead of being pinned to one end.
+  const heading = <Heading segments={item.headingSegments} />;
+
   let title;
   if (item.url) {
     title = <>
-      <a href={item.url} target="_blank">{item.heading}</a><span className={styles.linkArrow}>&#xfeff;<Arrow12 fill="var(--grey1)"/></span>
+      <a href={item.url} target="_blank">{heading}</a><span className={styles.linkArrow}>&#xfeff;<Arrow12 fill="var(--grey1)"/></span>
     </>
   } else {
-    title = item.heading
+    title = heading
   }
   return (
     <div className={styles.experience}>
@@ -176,6 +197,60 @@ const ProfileItem: React.FC<ProfileItemProps> = ({
     </div>
   )
 }
+
+/** A heading, with its `[filename]` tokens rendered as inline icons in place. */
+const Heading: React.FC<{ segments: HeadingSegment[] }> = ({ segments }) => (
+  <>
+    {segments.map((segment, index) =>
+      segment.kind === 'text' ? (
+        segment.text
+      ) : (
+        // Index keys: segments are positional by nature and the array is rebuilt whenever the
+        // heading changes, so there is no identity to preserve across renders.
+        <TitleIcon key={index} icon={segment.icon} />
+      )
+    )}
+  </>
+);
+
+/**
+ * An inline icon inside a heading. `alt=""` because the words around it already name the thing —
+ * "Figma" beside Figma's mark read twice is noise, not information.
+ *
+ * `fit: 'contain'` rather than the `cover` the thumbnails use: these are a mixed set. A square
+ * app icon fills the box either way, but a wordmark or a non-square logo would be cropped by
+ * `cover`, and losing the edge of a logo is worse than a little space around it.
+ *
+ * The dark variant is swapped by `<picture>` and a `media` query, not by JavaScript. This is a
+ * static export whose dark mode is `prefers-color-scheme` — there is no theme state to read, so a
+ * scripted swap would render the light file first and change it after hydration, and would do
+ * nothing at all with JS off. `<picture>` is resolved before the request is made, so exactly one
+ * file is downloaded and the correct one paints on the first frame. `next/image` cannot emit it,
+ * hence the plain elements here.
+ */
+const TitleIcon: React.FC<{ icon: ResolvedIcon }> = ({ icon }) => {
+  const variant = (url: string) =>
+    cloudflareImageUrl(url, { width: ICON_SIZE, height: ICON_SIZE, fit: 'contain' });
+
+  return (
+    <picture>
+      {icon.darkUrl && (
+        <source srcSet={variant(icon.darkUrl)} media="(prefers-color-scheme: dark)" />
+      )}
+      {/* A plain <img> rather than next/image, which renders a bare element and so cannot
+          participate in the <picture> the theme swap depends on. `no-img-element` does not fire
+          here — the rule accepts an <img> inside a <picture>. */}
+      <img
+        className={styles.titleIcon}
+        src={variant(icon.url)}
+        alt=""
+        width={ICON_SIZE}
+        height={ICON_SIZE}
+        style={{ '--icon-size': `${ICON_SIZE}px` } as React.CSSProperties}
+      />
+    </picture>
+  );
+};
 
 type ContactRowProps = {
   item: ContactItem,

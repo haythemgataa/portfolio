@@ -14,6 +14,13 @@ export interface FieldDef {
   hint?: string;
   /** `checkbox` only: what an absent value means, so an unset flag shows its real state. */
   defaultChecked?: boolean;
+  /**
+   * Adds a pool picker that inserts an `[filename]` icon token at the caret. The field stays
+   * free text — the token is positional, so it has to be typed *somewhere in particular* — but
+   * the filename itself comes from a list, for the same reason the gallery's `+ From pool` is a
+   * picker: a name that cannot be typed cannot be mistyped.
+   */
+  iconInsert?: boolean;
 }
 
 /** Pinned to the top of the page. */
@@ -44,6 +51,8 @@ export const ITEM_FIELDS: FieldDef[] = [
     label: 'Heading',
     type: 'text',
     placeholder: 'Product designer at InstaDeep',
+    iconInsert: true,
+    hint: 'Put [filename.webp] anywhere in the text to render that pool image inline at 18px — "Product Designer at [instadeep.webp] InstaDeep". Use the picker to insert one at the cursor. The spaces you leave around the token are the gaps you get.',
   },
   { key: 'url', label: 'Link', type: 'url', placeholder: 'https://example.com' },
   {

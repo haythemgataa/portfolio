@@ -179,6 +179,37 @@
   border-bottom: 1px solid;
 }
 
+/* An inline icon inside a heading, from a `[filename]` token — a tool's app icon, a company's
+   logo, sitting wherever the author put it.
+
+   `inline-block` is what makes it behave like a word: it flows with the text, wraps with it, and
+   leaves `.title` a plain block so the link-arrow's `&#xfeff;` + `nowrap` trick beside it is
+   undisturbed. Making `.title` a flex row instead would pull every token onto one line.
+
+   No horizontal margin on purpose. The spaces around the token in the authored string are what
+   set the gaps — "at [logo] InstaDeep" already has one on each side — so adding margin here
+   would silently widen what the author typed and take the positioning away from them.
+
+   The negative `vertical-align` sits it on the text's optical centre rather than its baseline:
+   baseline-aligned, a 20px box would hang below 14px text. Half the box (10px) less roughly half
+   the cap height (5px) puts its middle on the text's middle — so this tracks `--icon-size` and has
+   to be revisited if that changes.
+
+   `--icon-size` arrives from Profile.tsx, which derives the resize request from the same number —
+   see the constant there. */
+.titleIcon {
+  display: inline-block;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  vertical-align: -5px;
+  border-radius: 4px;
+  /* Matches the `fit: contain` of the request, so a non-square logo is never stretched. */
+  object-fit: contain;
+  /* App icons are their own artwork and mostly opaque; at 18px a 1px hairline would be a
+     visible fraction of the box, and around a transparent wordmark it reads as a stray frame.
+     So no border here, unlike the media thumbnails. */
+}
+
 .linkArrow {
   white-space: nowrap;
 }

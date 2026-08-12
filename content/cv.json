@@ -14,7 +14,7 @@
         {
           "id": "product-designer-at-instadeep",
           "year": "2023 — Now",
-          "heading": "Product Designer at InstaDeep",
+          "heading": "Product Designer at [instadeep-logo.svg] InstaDeep",
           "url": "https://instadeep.com",
           "subheading": "Tunis, Tunisia",
           "description": "* Collaborating on a design system to accelerate new project creation and ensure consistency across non-branded projects.\n\n* Creating fun animations and micro-interactions to make our products feel dynamic (for the wow effect).\n\n* Introduced tools like Rive, Lottie, and Framer to our team, which helped us reduce developer frustration and cut development time by up to one week on average.\n\n* Redesigned several products, improving the UX and modernizing the UI — paired with major enhancements from the AI team, this tripled usage of some products in under a year.\n\n* Brought to life many innovative AI-related projects.",
@@ -32,7 +32,7 @@
         {
           "id": "ui-designer-at-weare-moon",
           "year": "2020 — 2023",
-          "heading": "UI Designer at Weare Moon",
+          "heading": "UI Designer at [wearemoon-logo.svg] Weare Moon",
           "subheading": "Sousse, Tunisia",
           "description": "* Designed an award-winning platform (Sehaty Online).\n\n* Designed a high-fidelity wireframe, and assisted during user testing sessions for [WFP’s Last Mile Ecosystem](https://innovation.wfp.org/project/last-mile-ecosystem), a Nobel-awarded project.\n\n* Designed and ensured smooth delivery of our work, from UX to UI and on to the dev team.\n\n* Helped lead and onboard new designers joining the team.",
           "media": [
@@ -50,7 +50,7 @@
         {
           "id": "ux-ui-teacher-part-time-at-ecole-polytechnique-sousse",
           "year": "2022",
-          "heading": "UX/UI Teacher (Part-time) at Ecole Polytechnique Sousse",
+          "heading": "UX/UI Teacher (Part-time) at [polytechnique-logo.svg] Ecole Polytechnique Sousse",
           "url": "https://polytechsousse.tn/",
           "subheading": "Sousse, Tunisia",
           "description": "* Created the course plan, exercises, and exams.\n\n* Kept lessons moving and students entertained.\n\n* Organized workshops to help students practice what they had just learned.",
@@ -61,10 +61,36 @@
         {
           "id": "ux-instructor-part-time-at-gomycode",
           "year": "2021 — 2022",
-          "heading": "UX Instructor (Part-time) at GoMyCode",
+          "heading": "UX Instructor (Part-time) at [gomycode-logo.svg] GoMyCode",
           "url": "https://gomycode.com/",
           "subheading": "Sousse, Tunisia",
           "description": "* Assisted students in learning UX design.\n\n* Organized workshops to help students understand UX basics.\n\n* Helped students accomplish a full UX project by the end of the program."
+        }
+      ]
+    },
+    {
+      "key": "toolbox",
+      "label": "Toolbox",
+      "items": [
+        {
+          "id": "figma",
+          "heading": "[figma-logo.svg] Figma",
+          "description": "I mean of course, the GOAT! This is still my main tool for design, and probably will remain like so for a while, even with all the huge AI advancements and tools."
+        },
+        {
+          "id": "claude",
+          "heading": "[claude-logo.svg] Claude",
+          "description": "Where would I be with it. From small brainstorming sessions, to quick artifacts I share with dev team, to full apps and tools, Claude (and similar tools, but I prefer Claude) is a must have. I use it almost daily."
+        },
+        {
+          "id": "rive",
+          "heading": "[rive-logo.svg] Rive",
+          "description": "Rive has the edge Lottie and other animation tools thanks to it's state machine (I know that Lotties started supporting it recently, but Rive still does it better), great performance, and tiny file size. I love it, devs love it, and users probably do too."
+        },
+        {
+          "id": "framer",
+          "heading": "[framer-logo.svg] Framer",
+          "description": "I honestly considered replacing Figma with Framer at some point. It's super powerful when you want to create very specific interactions, and a great tool for someone with no coding background. I now use it from time to time to design landing pages before sending them to the dev team. The community is really good too, many components and scripts are available for free."
         }
       ]
     },

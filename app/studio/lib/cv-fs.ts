@@ -8,7 +8,7 @@ import type {
   CvSection,
   MediaAsset,
 } from '../../lib/contentTypes';
-import { inferMediaType } from '../../lib/contentTypes';
+import { darkVariant, headingIconFiles, inferMediaType } from '../../lib/contentTypes';
 import type { GalleryEntry, GalleryFile } from '../../lib/galleryTypes';
 import {
   CV_PATH,
@@ -208,8 +208,13 @@ function mergePatch<T extends Record<string, unknown>>(
 // ---------------------------------------------------------------------------
 
 /**
- * Every filename referenced anywhere: CV item media, the profile photo, gallery
- * entries, and poster frames declared in the registry.
+ * Every filename referenced anywhere: CV item media, item icons, the profile
+ * photo, gallery entries, and poster frames declared in the registry.
+ *
+ * This is the only reference counter — `planGarbage` and `findOrphans` both read
+ * it — so a *kind* of reference missing from here is not a small bug: the assets
+ * it protects are reported as unreferenced and can be swept while still in use.
+ * Anything that can name a pool file has to be counted here.
  */
 export function collectReferences(
   cv: CvFile,
@@ -224,7 +229,20 @@ export function collectReferences(
 
   if (cv.profile?.photo) bump(cv.profile.photo);
   for (const section of cv.sections ?? []) {
-    for (const item of section.items ?? []) for (const file of item.media ?? []) bump(file);
+    for (const item of section.items ?? []) {
+      for (const file of item.media ?? []) bump(file);
+      // Inline heading icons are named inside the heading *string*, so they have to be parsed
+      // out rather than read off a field. Missing this is what would let the sweep delete a
+      // logo that is currently rendering.
+      for (const file of headingIconFiles(item.heading)) {
+        bump(file);
+        // A `-dark` sibling is never named by anything — it is found by convention from the
+        // light file, exactly like a poster is found through its video. So it counts as
+        // referenced when the light one is, and nothing else would ever count it.
+        const dark = darkVariant(file);
+        if (dark && assets[dark]) bump(dark);
+      }
+    }
   }
   for (const entry of gallery.items ?? []) bump(entry.file);
   // A poster is only reachable through its video, so it counts as referenced
@@ -343,8 +361,22 @@ export function renameSection(cv: CvFile, key: string, label: string): CvFile {
 /** Returns the files the section referenced, as garbage-collection candidates. */
 export function deleteSection(cv: CvFile, key: string): { cv: CvFile; freed: string[] } {
   const section = findSection(cv, key);
-  const freed = (section.items ?? []).flatMap((i) => i.media ?? []);
+  // Icons as well as attachments — both are pool references, so both stop being
+  // referenced when the items holding them go.
+  const freed = (section.items ?? []).flatMap((i) => itemFiles(i));
   return { cv: { ...cv, sections: cv.sections.filter((s) => s.key !== key) }, freed };
+}
+
+/**
+ * Every pool file an item names — attachments, inline heading icons, and each icon's `-dark`
+ * sibling. These are `freed` *candidates*, and `planGarbage` skips any name that is not in the
+ * registry, so listing a variant that does not exist costs nothing and forgetting one would
+ * strand it.
+ */
+function itemFiles(item: CvItem): string[] {
+  const icons = headingIconFiles(item.heading);
+  const dark = icons.map(darkVariant).filter((f): f is string => f !== null);
+  return [...(item.media ?? []), ...icons, ...dark];
 }
 
 // ---------------------------------------------------------------------------
@@ -421,7 +453,7 @@ export function deleteItem(
         s.key !== sectionKey ? s : { ...s, items: s.items.filter((i) => i.id !== itemId) }
       ),
     },
-    freed: item.media ?? [],
+    freed: itemFiles(item),
   };
 }
 

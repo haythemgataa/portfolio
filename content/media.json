@@ -39,6 +39,10 @@
       "width": 2560,
       "height": 1440
     },
+    "claude-logo.svg": {
+      "width": 80,
+      "height": 80
+    },
     "code-camping.webp": {
       "width": 1080,
       "height": 677
@@ -73,6 +77,10 @@
       "width": 1800,
       "height": 1200
     },
+    "figma-logo.svg": {
+      "width": 80,
+      "height": 80
+    },
     "files-shelf-1.webp": {
       "width": 2000,
       "height": 1250,
@@ -88,6 +96,10 @@
       "height": 1250,
       "framed": false
     },
+    "framer-logo.svg": {
+      "width": 80,
+      "height": 80
+    },
     "galeries-live-app-landing.webp": {
       "width": 2560,
       "height": 1440
@@ -101,6 +113,10 @@
       "width": 768,
       "height": 512,
       "framed": false
+    },
+    "gomycode-logo.svg": {
+      "width": 80,
+      "height": 80
     },
     "greenoffice-concept-page.webp": {
       "width": 2560,
@@ -122,6 +138,10 @@
       "width": 1802,
       "height": 1075,
       "framed": false
+    },
+    "instadeep-logo.svg": {
+      "width": 80,
+      "height": 80
     },
     "instanovo-404-page.webm": {
       "width": 3840,
@@ -175,6 +195,14 @@
       "width": 3000,
       "height": 2160
     },
+    "polytechnique-logo-dark.svg": {
+      "width": 80,
+      "height": 80
+    },
+    "polytechnique-logo.svg": {
+      "width": 80,
+      "height": 80
+    },
     "profile.webp": {
       "width": 400,
       "height": 400
@@ -186,6 +214,14 @@
     "rhfacile-homepage.webp": {
       "width": 2560,
       "height": 1440
+    },
+    "rive-logo-dark.svg": {
+      "width": 80,
+      "height": 80
+    },
+    "rive-logo.svg": {
+      "width": 80,
+      "height": 80
     },
     "rizouya-job-matching-homepage.webp": {
       "width": 2560,
@@ -228,6 +264,10 @@
       "width": 1112,
       "height": 843,
       "floating": true
+    },
+    "wearemoon-logo.svg": {
+      "width": 80,
+      "height": 80
     },
     "workshop-room.webp": {
       "width": 661,

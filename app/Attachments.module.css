@@ -1,42 +1,161 @@
 .attachments {
+  /* Room for the hover state to paint outside a thumbnail's own box: the tilt lifts two
+     corners past it, and the shadow falls further still. `.scrollableArea` is a scroll
+     container and so clips both axes — `overflow-y: scroll` forces the x axis to `auto` even
+     though it is declared `visible` — which means that room has to exist *inside* it or the
+     shadow is cut off flat at the row's edge. So the container is grown by this much on every
+     side and the same amount is given back as padding on `.images`, which keeps the thumbnails
+     where they were.
+
+     The padding belongs to `.images` and NOT to `.scrollableArea`, and that is load-bearing.
+     Scrollbooster bounds a drag at `content.offsetWidth - viewport.clientWidth`, where content
+     is `.images` and viewport is the scroll container. `clientWidth` includes the container's
+     padding but `offsetWidth` does not include padding that lives on the container, so with the
+     room on the container the drag stopped 2 x --hover-room short of the native maximum and the
+     row sprang back at the end. Owned by `.images`, the 20px is inside its own `offsetWidth`
+     (border-box), so scrollbooster's maximum and `scrollWidth - clientWidth` agree exactly. */
+  --hover-room: 10px;
+
   margin-top: 12px;
   width: 100%;
   position: relative;
 }
 
+/* The row's edges dissolve rather than being cut flat, the same treatment the tab bar's fade
+   gives content passing under it — and gated the same way, on whether there is anything to hide.
+   `--fade-start` / `--fade-end` are 0 until Attachments.tsx says that side has content scrolled
+   past it, and a zero-width fade collapses every stop below onto position 0, which renders as
+   fully opaque from the edge. So an unscrollable row, and the leading edge of one at rest, are
+   untouched.
+
+   Stops rather than a two-colour ramp for the reason the tab bar's fade gives: alpha falls
+   fastest exactly where the eye is looking, so a linear ramp still reads as an edge partway
+   along. They are written as fractions of the fade's own width so the shape holds at any width.
+
+   The mask covers the border box, which is `--hover-room` larger than the row on every side —
+   so when a side is faded the hover shadow there softens with it, which is right: that thumbnail
+   is on its way out of view. */
 .scrollableArea {
+  --edge-fade: 44px;
+  --fade-start: 0px;
+  --fade-end: 0px;
+
   position: absolute;
-  inset: 0;
+  inset: calc(var(--hover-room) * -1);
   overflow-y: scroll;
   scrollbar-width: none;
+
+  --edge-mask: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0) 0,
+    rgba(0, 0, 0, 0.12) calc(var(--fade-start) * 0.25),
+    rgba(0, 0, 0, 0.5) calc(var(--fade-start) * 0.5),
+    rgba(0, 0, 0, 0.86) calc(var(--fade-start) * 0.75),
+    rgba(0, 0, 0, 1) var(--fade-start),
+    rgba(0, 0, 0, 1) calc(100% - var(--fade-end)),
+    rgba(0, 0, 0, 0.86) calc(100% - var(--fade-end) * 0.75),
+    rgba(0, 0, 0, 0.5) calc(100% - var(--fade-end) * 0.5),
+    rgba(0, 0, 0, 0.12) calc(100% - var(--fade-end) * 0.25),
+    rgba(0, 0, 0, 0) 100%
+  );
+  -webkit-mask-image: var(--edge-mask);
+  mask-image: var(--edge-mask);
+}
+
+.scrollableArea[data-fade-start="true"] {
+  --fade-start: var(--edge-fade);
+}
+
+.scrollableArea[data-fade-end="true"] {
+  --fade-end: var(--edge-fade);
 }
 
 .scrollableArea::-webkit-scrollbar {
   display: none;
 }
 
+/* Carries the hover room as padding — see the note on `--hover-room`. `box-sizing: border-box`
+   (globals) means `min-width: 100%` still resolves to the container's full width with the padding
+   inside it, so the row's content area is unchanged. */
 .images {
   display: flex;
   column-gap: 8px;
   position: relative;
   width: fit-content;
   min-width: 100%;
+  padding: var(--hover-room);
 }
 
+/* Two treatments, chosen per asset by `media.json`'s `framed` flag (omitted means matted):
+   `[data-framed="true"]` is a print in a mat — wash, inset, shadow, and a frame locked to one
+   ratio — and `[data-framed="false"]` is the image edge to edge at its own ratio.
+
+   The base rule is what both share, including the light rim. That border started as the mat's
+   outer edge and is on both now: it reads just as well on an unmatted thumbnail, and it is what
+   gives the hover shadow an edge to lift. `box-sizing: border-box` (globals) means it eats into
+   the width the component sets, which is what *both* branches of that width calculation assume.
+   It also has to be a real border rather than a ring drawn outside the box: `.scrollableArea` is
+   a scroll container, so anything painted beyond the thumbnail is clipped — the same reason the
+   focus ring is inset.
+
+   `--thumb-border` and `--thumb-padding` arrive as inline custom properties from
+   Attachments.tsx, which also derives the frame's width and the resize request from them. */
 .media {
-  background-color: var(--wash2);
-  border-radius: 8px;
+  border-radius: 10px;
+  border: var(--thumb-border) solid var(--thumbnailFrame);
   overflow: hidden;
   position: relative;
   cursor: pointer;
-  /* Reset the UA button styling — this is a <button> for keyboard access, not a chrome button. */
+  /* Reset the UA button styling — this is a <button> for keyboard access, not a chrome button.
+     `background-color` is part of that reset and has to stay here: the matted rule below sets
+     the wash, and without an explicit transparent default the unmatted ones fall through to
+     ButtonFace, which shows as a grey card wherever the image has alpha. */
   appearance: none;
-  border: 0;
+  background-color: transparent;
   padding: 0;
   margin: 0;
   display: block;
   font: inherit;
   color: inherit;
+}
+
+/* The wash is the mat itself, so it stays matted-only: on an unmatted thumbnail the image
+   covers the whole box and any fill would only show through its alpha. */
+.media[data-framed="true"] {
+  background-color: var(--wash2);
+}
+
+/* The image's box. Matted, the component sets its width and height to the image's own
+   proportions and `margin: auto` inside a padded `inset` centres it — so the gap is exactly
+   the padding on the constraining axis and wider on the other, like a print in a mat. Its
+   shape being the image's is what lets the shadow trace the photo rather than the mat. */
+.media[data-framed="true"] .frame {
+  position: absolute;
+  inset: var(--thumb-padding);
+  margin: auto;
+  border-radius: 3px;
+  overflow: hidden;
+  /* Below the image, not around it: a tight contact shadow plus a softer one carrying most of
+     the offset, so the photo reads as resting on the mat rather than glowing.
+
+     `drop-shadow` rather than `box-shadow`, and that is not interchangeable here. `box-shadow`
+     traces the element's *box*; a good part of this pool is `yuva420p` — mockup collages
+     floating on transparency — so a box shadow drew a rectangle around artwork that has no
+     rectangle in it. A filter shadows the alpha of what the element actually rendered, so it
+     follows the collage's silhouette, and for an opaque image it follows the rounded rect
+     exactly as before.
+
+     It applies to the *rendered* result, so `overflow: hidden` above still rounds the corners
+     and the shadow is drawn outside that clip — in the mat, which has room for it. */
+  filter:
+    drop-shadow(0 1px 1px rgba(0, 0, 0, 0.07))
+    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.11));
+}
+
+/* Unmatted: no mat to sit in, so the image is the thumbnail. */
+.media[data-framed="false"] .frame {
+  position: absolute;
+  inset: 0;
 }
 
 /* Inset ring: the gallery scroll container clips anything drawn outside the thumbnail,
@@ -50,24 +169,47 @@
   border-color: var(--blue);
 }
 
-/* inset: 0 is required, not decorative. With auto offsets an absolutely positioned box
-   falls back to its static position, and a <button> centres its content box — so the
-   media would sit at 50%/50% and get clipped instead of filling the thumbnail. */
+/* Matted: `contain`, so nothing is cropped — that is the point of the inset, and it is also what
+   handles the two clamped ratios (beyond 21:9 or under ~0.42), where the wrapper's shape is the
+   clamp's rather than the media's and the image letterboxes inside it.
+
+   `-webkit-user-drag` stops Safari starting a native drag of the picture, which pre-empts the
+   pointer-move scroll; `draggable={false}` in the component covers the other engines. Between
+   them, pressing anywhere on a thumbnail and moving scrolls the row instead of sometimes picking
+   the image up. `user-select` is the same story for a press that lands on a video's edge. */
 .media img,
 .media video {
-  position: absolute;
-  inset: 0;
+  display: block;
   width: 100%;
   height: 100%;
+  object-fit: contain;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+/* Unmatted: `cover`, because here the image *is* the thumbnail and is meant to reach the edges.
+   `thumbnailWidth` shapes the inner box to the media's ratio, so this crops nothing beyond the
+   half-pixel that rounding leaves — and that half-pixel is the difference between filling the box
+   and showing a hairline of page down one side. It also makes development match production, where
+   the Cloudflare request for these already asks with `fit=cover` and so delivers a bitmap cropped
+   to exactly this box. At a clamped ratio it crops rather than letterboxing, which is the right
+   answer for a treatment whose whole idea is edge to edge. */
+.media[data-framed="false"] img,
+.media[data-framed="false"] video {
   object-fit: cover;
 }
 
+/* Hairline just inside the light rim — the same one the gallery media carries. Matted, it
+   separates the rim from the wash; unmatted, it separates the rim from the image. Its radius has
+   to be the frame's minus the border, or the two curves are concentric on paper but not on
+   screen and the corners read as doubled. `inset: 0` is the padding box, i.e. inside the border,
+   which is why the same subtraction is right for both treatments now that both have a rim. */
 .media::after {
   position: absolute;
   inset: 0;
   content: '';
   border: 1px solid var(--transparentBorder);
-  border-radius: inherit;
+  border-radius: calc(10px - var(--thumb-border));
   z-index: 10;
   pointer-events: none;
 }
@@ -76,11 +218,172 @@
   cursor: -webkit-grabbing;
 }
 
+/* Hover: the thumbnail lifts and tilts, and casts a shadow onto the page.
+   `hover: hover` gates it to pointers — on touch, `:hover` sticks after a tap, so a tapped
+   thumbnail would stay tilted behind the lightbox it just opened.
+   `z-index` is what keeps the shadow whole: `.media` is `position: relative`, so without it
+   the next thumbnail in the row (later in DOM order, same stacking level) paints over the
+   side of the shadow nearest it. The transform makes this a stacking context either way,
+   which is why raising it is enough and nothing else in the row needs a z-index.
+   The shadow is a `box-shadow` and not the `drop-shadow` the matted print inside uses: here
+   it is the thumbnail's own rounded rectangle casting it — the mat is opaque whatever the
+   image's alpha does — so there is no silhouette to follow and the cheaper property is the
+   right one. */
+@media (hover: hover) {
+  .media {
+    /* One shorthand for all three, because a second `transition` declaration anywhere else on
+       `.media` would replace the whole thing and silently drop the others. `border-color` is here
+       for the dark theme's hover-revealed rim below. */
+    transition:
+      transform 200ms cubic-bezier(0.2, 0.7, 0.3, 1),
+      box-shadow 200ms ease,
+      border-color 200ms ease;
+  }
+
+  /* Tighter blur than this first had (16px): at that radius the shadow read as a halo around a
+     90px thumbnail rather than as the thing lifting off the page. Kept as a contact shadow plus
+     a short spread, which is the same two-part shape the matted print inside uses. */
+  .media:hover {
+    transform: rotate(-1.2deg) translateY(-2px);
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.06),
+      0 3px 8px rgba(0, 0, 0, 0.12);
+    z-index: 1;
+  }
+
+  /* The lift and the shadow are the whole point, so they stay; the rotation is the part that
+     is motion for its own sake, and it is what goes. */
+  @media (prefers-reduced-motion: reduce) {
+    .media {
+      transition: none;
+    }
+
+    .media:hover {
+      transform: none;
+    }
+  }
+}
+
+/* Edge arrows, sitting in the fade at whichever end has more to show.
+   Positioned against `.attachments` rather than the scroll container, so they hold still while
+   the row moves under them; `z-index` because `.scrollableArea` carries a `mask-image`, which
+   makes it a stacking context whose contents cannot escape it — a hovered thumbnail's `z-index`
+   therefore stays inside and these paint cleanly over it.
+   Quiet until the pointer is over the row, which is the point: the row reads as a plain strip of
+   images until you go looking for a way to move it. Revealed on `:focus-visible` too, so they are
+   never invisible-but-focusable for anyone arriving by keyboard. */
+.edgeArrow {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  transform: translateY(-50%);
+  appearance: none;
+  border: 1px solid var(--transparentBorder);
+  border-radius: 50%;
+  background-color: var(--backgroundColor);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
+  color: var(--grey2);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 160ms ease,
+    color 160ms ease;
+}
+
+.edgeArrow:hover {
+  color: var(--grey1);
+}
+
+.edgeArrow:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.attachments:hover .edgeArrow,
+.edgeArrow:focus-visible {
+  opacity: 1;
+}
+
+/* Just inside the row's own edge, so each arrow overlays the far end of the fade it belongs to
+   rather than floating outside the strip. */
+.edgeArrowStart {
+  left: 2px;
+}
+
+.edgeArrowEnd {
+  right: 2px;
+}
+
+/* The chevron points outwards, away from the content it is revealing. */
+.edgeArrowStart svg {
+  transform: rotate(180deg);
+}
+
+/* Nothing to hover with, so nothing to reveal — and `display: none` keeps them out of the tab
+   order there rather than leaving two permanently invisible buttons in it. Touch scrolls the row
+   natively anyway. */
+@media (hover: none) {
+  .edgeArrow {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .edgeArrow {
+    transition: none;
+  }
+}
+
+/* On the dark ground the rim is hover-only: a light edge on every thumbnail at once is the
+   loudest thing on a dark page — the reason `--thumbnailFrame` is already dimmed there — and
+   holding it back until the pointer arrives lets it do its real job, which is giving the hover
+   shadow an edge to lift. The *width* never changes, only the colour, because both branches of
+   the width calculation and the hairline's radius are measured against it.
+   Scoped to pointers as well, so a touch device in dark mode keeps the rim it has no way to
+   reveal. The light theme is unchanged — white on white needs no restraint. */
+@media (prefers-color-scheme: dark) and (hover: hover) {
+  .media {
+    border-color: transparent;
+  }
+
+  .media:hover {
+    border-color: var(--thumbnailFrame);
+  }
+
+  /* The hairline goes with it. Hiding the rim alone still left a visible ring at rest — this is
+     the second, inner edge, and on a dark ground `--transparentBorder` is a light line too. Both
+     belong to the same treatment, so both wait for the pointer. */
+  .media::after {
+    border-color: transparent;
+    transition: border-color 200ms ease;
+  }
+
+  .media:hover::after {
+    border-color: var(--transparentBorder);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .media::after {
+      transition: none;
+    }
+  }
+}
+
 @media only screen and (max-width: 480px) {
+  /* The negative offsets are the deliberate bleed past the content column; `--hover-room` is
+     added on top of them so that, with `.images`' padding, the first child's compensating
+     `margin-left: 40px` lands it on the column edge exactly as before. */
   .scrollableArea {
     position: absolute;
-    left: -40px;
-    right: -24px;
+    left: calc(-40px - var(--hover-room));
+    right: calc(-24px - var(--hover-room));
   }
 
   .scrollableArea .images > *:first-child {

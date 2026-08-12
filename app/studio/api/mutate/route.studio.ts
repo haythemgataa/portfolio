@@ -127,18 +127,14 @@ export async function POST(req: Request) {
       case 'gallery.update':
         gallery = updateGalleryEntry(gallery, body.itemId, body.data ?? {});
         break;
-      case 'gallery.setFile': {
-        const changed = setGalleryFile(gallery, assets, body.itemId, body.file);
-        gallery = changed.gallery;
-        freed = changed.freed;
+      case 'gallery.setFile':
+        // The previously shown asset stays in the pool. Nothing is freed.
+        gallery = setGalleryFile(gallery, assets, body.itemId, body.file);
         break;
-      }
-      case 'gallery.delete': {
-        const removed = deleteGalleryEntry(gallery, body.itemId);
-        gallery = removed.gallery;
-        freed = removed.freed;
+      case 'gallery.delete':
+        // The entry goes, the asset stays in the pool. Nothing is freed.
+        gallery = deleteGalleryEntry(gallery, body.itemId);
         break;
-      }
 
       case 'asset.update':
         assets = updateAsset(assets, body.file, body.data ?? {});
@@ -147,12 +143,11 @@ export async function POST(req: Request) {
       case 'media.reorder':
         cv = reorderMedia(cv, body.sectionKey, body.itemId, body.order);
         break;
-      case 'media.remove': {
-        const removed = removeMediaRef(cv, body.sectionKey, body.itemId, body.file);
-        cv = removed.cv;
-        freed = removed.freed;
+      case 'media.remove':
+        // Detach only — the file stays in the pool so it can be reused. Nothing
+        // is freed, so no garbage is collected.
+        cv = removeMediaRef(cv, body.sectionKey, body.itemId, body.file);
         break;
-      }
       case 'media.attach':
         // Reuse an asset already in the pool — the point of a shared pool.
         cv = appendMedia(cv, body.sectionKey, body.itemId, body.files ?? []);

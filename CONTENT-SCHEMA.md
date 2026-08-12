@@ -42,7 +42,7 @@ Two things that follow from that, worth stating because they are easy to assume:
     "displayName": "Haythem Gataa",
     "byline": "Software Designer & Engineer in Tunisia",
     "about": "I'm a detail-oriented Software Designer…",
-    "photo": "profile.jpg"
+    "photo": "profile.webp"
   },
   "sections": [
     {
@@ -56,7 +56,7 @@ Two things that follow from that, worth stating because they are easy to assume:
           "url": "https://instadeep.com",
           "subheading": "Tunis, Tunisia",
           "description": "* Collaborating on a design system…",
-          "media": ["instadeep-1.png", "instadeep-2.png"]
+          "media": ["board-view-running.webp", "pcb-layout-editing.webm"]
         }
       ]
     }
@@ -109,7 +109,7 @@ drag them anywhere and hope, the document makes position structural:
 | Region | Position | Orderable? | Source |
 |---|---|---|---|
 | Header — photo, name, byline | always first | no | `profile` |
-| About | always second | no | `profile.about` |
+| About | always second, above the tab bar; renders untitled | no | `profile.about` |
 | Work Experience, Education, Awards, Speaking, … | between | **yes** | `sections[]` |
 | Contact | always last | no | `contact` |
 
@@ -143,19 +143,67 @@ They are gone: nothing ever read them, and authoring them by hand next to
 {
   "version": 1,
   "assets": {
-    "instadeep-1.png": { "width": 2000, "height": 1500 },
-    "award-ceremony.mp4": { "width": 1254, "height": 704, "poster": "award-ceremony-poster.jpg" }
+    "board-view-running.webp": { "width": 2560, "height": 1440 },
+    "mentor-nations.webp": { "width": 1802, "height": 1130, "framed": false },
+    "kairouan-mosque-photos.webp": { "width": 1546, "height": 1112, "floating": true },
+    "award-ceremony.webm": { "width": 1254, "height": 704, "poster": "award-ceremony-poster.webp" }
   }
 }
 ```
 
 Keyed by filename, so an asset structurally cannot carry two records. Holds only
-*intrinsic* facts — dimensions and the poster frame. Presentation (captions,
-dates, ordering) stays with the referring entry.
+*intrinsic* facts — dimensions, the poster frame, and the two treatment flags
+below. Presentation (captions, dates, ordering) stays with the referring entry.
+
+Both flags sit here rather than on the reference because both follow from what the
+file *is*, not from where it appears — and a per-reference copy could disagree with
+itself, which is the drift the pool exists to prevent.
+
+`framed` has a non-obvious default: **omitted means matted**, which is what every
+thumbnail did before the flag existed, so `false` is the only value ever written.
+A screenshot wants the mat; a photograph wants to bleed. Note that it no longer
+controls the white rim — every thumbnail carries that now — only the wash, the
+inset and the locked 14:9 frame.
+
+`floating` is the mirror image — **omitted means no**, so `true` is the only value
+ever written — and it describes an asset with no rectangle in it: a mockup collage
+or photo montage sitting on transparency. It affects only the opened (lightbox)
+view, where such an asset drops the hairline border and the rounded corner that
+would otherwise trace an edge the artwork has not got, and gains instead the
+silhouette-following `drop-shadow` its thumbnail already has. The test is the alpha
+channel: if the corners are transparent, the flag applies. All six of the pool's
+current collages carry it.
+
+Note that the two are independent. `framed` is about the *thumbnail* and `floating`
+about the *opened view*, so a collage is normally both matted and floating — the mat
+gives the small version a consistent frame in the row, and the flag stops the large
+version being boxed.
 
 **Dimensions are always authored**, so the build never runs `sharp`. The Studio
 measures images on upload; video it cannot measure, so a new video lands on a
 1600x900 placeholder until corrected.
+
+That is a real tradeoff, and the failure mode has happened: **replacing a file in
+`public/media/` without updating its record leaves the dimensions stale, and nothing
+warns.** Eleven of the collages were once re-exported with their transparent padding
+trimmed — every one exactly 180px smaller in both axes — and the ratios derived from
+the old numbers letterboxed the thumbnails inside their own mats and mis-sized the
+gallery's aspect-ratio boxes. `resolveAsset` only rejects a record that is *missing*
+width or height, not one that disagrees with the file. So: replace media through the
+Studio, or correct the record by hand afterwards. To find drift, compare each
+record against the file:
+
+```
+python3 -c "
+import json
+from PIL import Image
+for f, a in json.load(open('content/media.json'))['assets'].items():
+    if f.lower().endswith(('.webm', '.mp4', '.mov')): continue
+    im = Image.open('public/media/' + f)
+    if (im.width, im.height) != (a['width'], a['height']):
+        print(f, a['width'], a['height'], '->', im.width, im.height)
+"
+```
 
 Editable from the Studio: selecting a gallery entry, or clicking a CV thumbnail,
 opens that asset's entry. That is the supported way to fix a video's dimensions.
@@ -185,9 +233,11 @@ The costs, which are real:
 - **Deletion needs reference counting.** With per-item folders, deleting an item
   deleted its folder and orphans were impossible. In a pool, a file may only be
   deleted once nothing references it — CV items, the profile photo, gallery
-  entries, and poster frames all count, so a thumbnail removed from the CV
+  entries, and poster frames all count, so a thumbnail whose item is deleted
   survives if the gallery still shows it. `planGarbage()` is pure and the route
   writes JSON *before* deleting files, so a rejected write cannot destroy media.
+  Detaching a thumbnail from an item is not one of these paths: it drops the
+  reference and leaves the file in the pool, to be attached elsewhere.
 - **Filename collisions are global**, so uploads check the whole registry.
 - **Per-item locality is gone.** The registry is the index now, not the folder
   tree.
@@ -203,7 +253,7 @@ writing a second copy, which is what stops the duplication recurring.
   "items": [
     {
       "id": "poster-series",
-      "file": "poster-series.png",
+      "file": "kairouan-mosque-portrait.webp",
       "title": "Poster series",
       "caption": "Print work for We Are Kairouan.",
       "date": "2025"

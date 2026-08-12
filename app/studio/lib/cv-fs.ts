@@ -102,7 +102,9 @@ export async function writeDoc(
   const current = await readDoc();
   if (expectedHash && current.hash !== expectedHash) {
     throw new StudioError(
-      'Content changed since this page loaded. Reload the Studio and redo this edit.',
+      // No instruction to reload: the client resyncs and replays the operation
+      // when it can, and this text is only ever surfaced once that has failed.
+      'Content on disk changed since this page loaded, so nothing was written.',
       409
     );
   }
@@ -300,10 +302,18 @@ export function reorderSections(cv: CvFile, order: string[]): CvFile {
 }
 
 /** A bare identifier keeps its casing, so "sideProjects" stays camelCase. */
+/**
+ * Labels become camelCase keys, matching the ones already in cv.json. A
+ * single-word label used to be returned verbatim, so "Writing" produced the key
+ * `Writing` while "Case Studies" produced `caseStudies` — the same generator
+ * disagreeing with itself about case.
+ */
 function toSectionKey(label: string): string {
   const trimmed = String(label || '').trim();
-  if (/^[A-Za-z][A-Za-z0-9]*$/.test(trimmed)) return trimmed;
-  return slugify(trimmed, '').replace(/-([a-z0-9])/g, (_, c) => c.toUpperCase());
+  const camel = /^[A-Za-z][A-Za-z0-9]*$/.test(trimmed)
+    ? trimmed
+    : slugify(trimmed, '').replace(/-([a-z0-9])/g, (_, c) => c.toUpperCase());
+  return camel.charAt(0).toLowerCase() + camel.slice(1);
 }
 
 export function createSection(cv: CvFile, label: string): { cv: CvFile; key: string } {
@@ -558,33 +568,34 @@ export function updateGalleryEntry(
 }
 
 /** Point an entry at a different pooled asset. Frees the previous one. */
+/**
+ * Point an entry at a different asset. The one it pointed at before stays in the
+ * pool — repointing an entry is not a licence to delete what it used to show.
+ */
 export function setGalleryFile(
   gallery: GalleryFile,
   assets: Record<string, MediaAsset>,
   id: string,
   file: string
-): { gallery: GalleryFile; freed: string[] } {
+): GalleryFile {
   assertSafeSegment(file, 'filename');
   if (!assets[file]) throw new StudioError(`"${file}" is not in content/media.json`);
-  const entry = findEntry(gallery, id);
+  findEntry(gallery, id);
   return {
-    gallery: {
-      ...gallery,
-      items: galleryItems(gallery).map((e) => (e.id === id ? { ...e, file } : e)),
-    },
-    freed: entry.file === file ? [] : [entry.file],
+    ...gallery,
+    items: galleryItems(gallery).map((e) => (e.id === id ? { ...e, file } : e)),
   };
 }
 
-export function deleteGalleryEntry(
-  gallery: GalleryFile,
-  id: string
-): { gallery: GalleryFile; freed: string[] } {
-  const entry = findEntry(gallery, id);
-  return {
-    gallery: { ...gallery, items: galleryItems(gallery).filter((e) => e.id !== id) },
-    freed: [entry.file],
-  };
+/**
+ * Drop a gallery entry. The asset stays in the pool: an entry is a *reference*
+ * plus a caption, so removing one is the same act as detaching a thumbnail from
+ * a CV item — see `removeMediaRef`. Collecting the file here destroyed two
+ * gallery-only assets before this was fixed.
+ */
+export function deleteGalleryEntry(gallery: GalleryFile, id: string): GalleryFile {
+  findEntry(gallery, id);
+  return { ...gallery, items: galleryItems(gallery).filter((e) => e.id !== id) };
 }
 
 // ---------------------------------------------------------------------------
@@ -599,7 +610,13 @@ export function deleteGalleryEntry(
 export function updateAsset(
   assets: Record<string, MediaAsset>,
   file: string,
-  patch: { width?: unknown; height?: unknown; poster?: unknown }
+  patch: {
+    width?: unknown;
+    height?: unknown;
+    poster?: unknown;
+    framed?: unknown;
+    floating?: unknown;
+  }
 ): Record<string, MediaAsset> {
   assertSafeSegment(file, 'filename');
   const asset = assets[file];
@@ -625,6 +642,25 @@ export function updateAsset(
     }
   }
 
+  if (patch.framed !== undefined) {
+    if (typeof patch.framed !== 'boolean') throw new StudioError('framed must be true or false');
+    // Omitted means matted, so the default state is written as nothing at all rather than as
+    // `true` — the flag only appears in the file when it is turning the treatment off.
+    if (patch.framed) delete next.framed;
+    else next.framed = false;
+  }
+
+  if (patch.floating !== undefined) {
+    if (typeof patch.floating !== 'boolean') {
+      throw new StudioError('floating must be true or false');
+    }
+    // The mirror of `framed`: this one defaults to *off*, so it is the `true` case that gets
+    // written and the default that is written as nothing at all. Same rule either way — the
+    // file only records the flag when it departs from the default.
+    if (patch.floating) next.floating = true;
+    else delete next.floating;
+  }
+
   return { ...assets, [file]: next };
 }
 
@@ -645,23 +681,22 @@ export function reorderMedia(
 }
 
 /**
- * Remove one reference. The file itself survives if anything else still uses it,
- * which is the whole point of a shared pool.
+ * Detach one reference. The file stays in the pool and in media.json even when
+ * nothing else uses it, so it can be attached to another item later — detaching
+ * is not deleting. Garbage collection is left to the operations that say
+ * "delete" on the tin (item, section and gallery-entry deletion).
  */
 export function removeMediaRef(
   cv: CvFile,
   sectionKey: string,
   itemId: string,
   file: string
-): { cv: CvFile; freed: string[] } {
+): CvFile {
   assertSafeSegment(file, 'filename');
   const section = findSection(cv, sectionKey);
   const item = findItem(section, itemId);
   const media = (item.media ?? []).filter((f) => f !== file);
-  return {
-    cv: updateItem(cv, sectionKey, itemId, { media: media.length ? media : undefined }),
-    freed: [file],
-  };
+  return updateItem(cv, sectionKey, itemId, { media: media.length ? media : undefined });
 }
 
 export function appendMedia(

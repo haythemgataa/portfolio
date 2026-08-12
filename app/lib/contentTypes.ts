@@ -28,6 +28,31 @@ export type MediaAsset = {
   poster?: string;
   /** Overrides the extension-based type guess. Rarely needed. */
   type?: MediaType;
+  /**
+   * Whether the CV thumbnail mats this asset: an inset, a shadow and a border, in a frame
+   * locked to a fixed ratio. **Omitted means yes** — that is the treatment every thumbnail
+   * had before the flag existed, so leaving it out preserves it and only `false` opts out,
+   * into an image that fills its thumbnail edge to edge at its own ratio.
+   *
+   * It belongs to the asset rather than to the reference because it follows from what the
+   * file *is*: a UI screenshot wants the mat, a photograph wants to bleed. Recording it per
+   * reference would let the same file disagree with itself, which is the problem the pool
+   * exists to prevent.
+   */
+  framed?: boolean;
+  /**
+   * Whether the asset has no rectangle of its own — a mockup collage or a photo montage
+   * sitting on transparency rather than filling its frame. **Omitted means no**, so nothing
+   * authored before the flag changes.
+   *
+   * It only affects the opened view. There, a `floating` asset drops the hairline border and
+   * the frame it traces — a rectangle drawn around artwork that has none reads as a mistake —
+   * and gains the silhouette shadow its thumbnail already has, so it still sits on the page
+   * rather than being pasted onto it. Like `framed` it belongs to the asset and not to the
+   * reference, because it follows from what the file *is*: the alpha channel either has a
+   * rectangle in it or it does not.
+   */
+  floating?: boolean;
 };
 
 /** content/media.json */
@@ -106,6 +131,10 @@ export type ResolvedMedia = {
   width: number;
   height: number;
   posterUrl: string | null;
+  /** Resolved from `MediaAsset.framed`, where omitted means true. */
+  framed: boolean;
+  /** Resolved from `MediaAsset.floating`, where omitted means false. */
+  floating: boolean;
 };
 
 export type ResolvedItem = Omit<CvItem, 'media'> & {

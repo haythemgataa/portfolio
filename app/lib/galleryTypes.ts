@@ -38,4 +38,6 @@ export type GalleryItem = {
   caption: string | null;
   date: string | null;
   posterUrl: string | null;
+  /** From media.json, for the opened view. See `MediaAsset.floating`. */
+  floating: boolean;
 };

@@ -3,59 +3,101 @@
   "items": [
     {
       "id": "dashboard-explorations",
-      "file": "dashboard-explorations.png",
-      "title": "Dashboard explorations",
-      "caption": "Layout studies for a data-heavy internal tool, narrowing five directions down to two.",
+      "file": "board-view-running.webp",
+      "title": "DeepPCB Board Viewer",
       "date": "2026"
     },
     {
-      "id": "award-ceremony",
-      "file": "award-ceremony.mp4",
-      "title": "Tunisia Digital Awards",
-      "caption": "Silver award for best website design.",
-      "date": "March 2026"
-    },
-    {
-      "id": "poster-series",
-      "file": "poster-series.png",
-      "title": "Poster series",
-      "caption": "Print work for We Are Kairouan.",
-      "date": "2025"
-    },
-    {
       "id": "brand-system",
-      "file": "brand-system.png",
+      "file": "irise-rebrand-teaser.webp",
       "title": "Brand system",
-      "caption": "Type scale, color and logo lockups for a non-profit rebrand."
-    },
-    {
-      "id": "workshop-room",
-      "file": "workshop-room.jpg",
-      "caption": "Design workshop, mid-session."
-    },
-    {
-      "id": "conference-talk",
-      "file": "conference-talk.mp4",
-      "title": "Design for non-designers",
-      "caption": "Opening minutes of a talk on giving engineers a working design vocabulary.",
-      "date": "November 2025"
-    },
-    {
-      "id": "kairouan-street",
-      "file": "kairouan-street.png"
+      "caption": "Type scale, color and logo lockups for a non-profit rebrand.",
+      "date": "2022"
     },
     {
       "id": "mobile-app-flow",
-      "file": "mobile-app-flow.png",
+      "file": "groupado-pro-learning-hero.webp",
       "title": "Mobile onboarding flow",
-      "caption": "Four screens from a sign-up rework that cut drop-off on the verification step.",
+      "date": "2022"
+    },
+    {
+      "id": "claude-for-ghostty-icon",
+      "file": "claude-for-ghostty-icon.webp",
+      "date": "2026",
+      "title": "Custom macOS Icon for Ghostty Terminal",
+      "caption": "I use Ghossty exclusively for Claude Code, so I made two custom icons, a hybrid between the Ghostty icon and the Claude Code mascot. This made it easier for me to find the app in the dock."
+    },
+    {
+      "id": "edit-net-class",
+      "file": "edit-net-class.webp",
       "date": "2025"
     },
     {
-      "id": "code-camping",
-      "file": "code-camping.jpg",
-      "title": "Code Camping",
+      "id": "board-viewer-evolution-2023-2026",
+      "file": "board-viewer-evolution-2023-2026.webm",
+      "date": "2023 — 2026"
+    },
+    {
+      "id": "deeppcb-loading-animation",
+      "file": "deeppcb-loading-animation.webm",
+      "date": "2023"
+    },
+    {
+      "id": "check-with-cooper",
+      "file": "check-with-cooper.webm",
+      "date": "2026"
+    },
+    {
+      "id": "cooper-mascot",
+      "file": "cooper-mascot.webp",
+      "date": "2026"
+    },
+    {
+      "id": "thinking",
+      "file": "thinking.webm",
+      "date": "2023"
+    },
+    {
+      "id": "instanovo-404-page",
+      "file": "instanovo-404-page.webm",
       "date": "2024"
+    },
+    {
+      "id": "pcb-layout-editing",
+      "file": "pcb-layout-editing.webm",
+      "title": "Cooper Intro",
+      "caption": "I created this playful video to introduce Cooper internally to the whole team. I couldn't present it myself as my baby boy was born a day before the presentation meeting, so I missed their reaction, to witness something magical.",
+      "date": "2026"
+    },
+    {
+      "id": "timeline-view",
+      "file": "timeline-view.webp",
+      "date": "2024"
+    },
+    {
+      "id": "home-grid-view",
+      "file": "home-grid-view.webp",
+      "date": "2023"
+    },
+    {
+      "id": "board-setup-net-classes-dragging",
+      "file": "board-setup-net-classes-dragging.webp",
+      "date": "2026"
+    },
+    {
+      "id": "board-setup-net-classes",
+      "file": "board-setup-net-classes.webp",
+      "date": "2026"
+    },
+    {
+      "id": "document-suggestions",
+      "file": "document-suggestions.webp",
+      "date": "2023"
+    },
+    {
+      "id": "rhfacile-dashboard",
+      "file": "rhfacile-dashboard.webp",
+      "date": "2021"
     }
   ]
 }

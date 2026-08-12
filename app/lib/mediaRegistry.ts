@@ -66,5 +66,11 @@ export function resolveAsset(
     width: asset.width,
     height: asset.height,
     posterUrl: asset.poster ? assetUrl(asset.poster) : null,
+    // Omitted means matted — see MediaAsset.framed. Only an explicit false opts out, so
+    // every asset authored before the flag keeps the treatment it had.
+    framed: asset.framed !== false,
+    // The mirror of the above: omitted means *not* floating, so only an explicit true opts
+    // in. See MediaAsset.floating.
+    floating: asset.floating === true,
   };
 }

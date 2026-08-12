@@ -35,6 +35,7 @@ function resolveEntry(
     caption: entry.caption ?? null,
     date: entry.date ?? null,
     posterUrl: media.posterUrl,
+    floating: media.floating,
   };
 }
 

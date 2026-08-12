@@ -75,22 +75,22 @@
         {
           "id": "figma",
           "heading": "[figma-logo.svg] Figma",
-          "description": "I mean of course, the GOAT! This is still my main tool for design, and probably will remain like so for a while, even with all the huge AI advancements and tools."
+          "description": "I mean, of course, the GOAT! This is still my main tool for design, and probably will remain like so for a while, even with all the huge AI advancements and tools."
         },
         {
           "id": "claude",
           "heading": "[claude-logo.svg] Claude",
-          "description": "Where would I be with it. From small brainstorming sessions, to quick artifacts I share with dev team, to full apps and tools, Claude (and similar tools, but I prefer Claude) is a must have. I use it almost daily."
+          "description": "Where would I be without it. From small brainstorming sessions, to quick artifacts I share with the dev team, to full apps and tools, Claude (and similar tools, but I prefer Claude) is a must-have. I use it almost daily."
         },
         {
           "id": "rive",
           "heading": "[rive-logo.svg] Rive",
-          "description": "Rive has the edge Lottie and other animation tools thanks to it's state machine (I know that Lotties started supporting it recently, but Rive still does it better), great performance, and tiny file size. I love it, devs love it, and users probably do too."
+          "description": "Rive has the edge over Lottie and other animation tools thanks to its state machine (I know that Lottie started supporting it recently, but Rive still does it better), great performance, and tiny file size. I love it, devs love it, and users probably do too."
         },
         {
           "id": "framer",
           "heading": "[framer-logo.svg] Framer",
-          "description": "I honestly considered replacing Figma with Framer at some point. It's super powerful when you want to create very specific interactions, and a great tool for someone with no coding background. I now use it from time to time to design landing pages before sending them to the dev team. The community is really good too, many components and scripts are available for free."
+          "description": "I honestly considered replacing Figma with Framer at some point. It’s super powerful when you want to create very specific interactions, and a great tool for someone with no coding background. I now use it from time to time to design landing pages before sending them to the dev team. The community is really good too, many components and scripts are available for free."
         }
       ]
     },
@@ -103,14 +103,14 @@
           "year": "2020 — 2023",
           "heading": "Master in Software Engineering at Ecole Polytechnique Sousse",
           "subheading": "Sousse, Tunisia",
-          "description": "* Graduated with an excellent grade and jury honors"
+          "description": "* Graduated with an excellent grade and jury honors."
         },
         {
           "id": "bachelor-in-computer-science-at-higher-institute-of-computer-science-and-management-of-kairouan",
           "year": "2017 — 2020",
           "heading": "Bachelor in Computer Science at Higher Institute of Computer Science and Management of Kairouan",
           "subheading": "Kairouan, Tunisia",
-          "description": "* Graduated with an excellent grade and jury honors"
+          "description": "* Graduated with an excellent grade and jury honors."
         }
       ]
     },
@@ -124,7 +124,7 @@
           "subheading": "Swift (w/ Claude)",
           "url": "https://github.com/haythemgataa/design-ruler",
           "year": "2026",
-          "description": "Born out of a personal need, Design Ruler is a Mac app that gives you two fullscreen overlay tools for inspecting UI: one for measuring pixel distances with automatic edge detection, and one for placing alignment guides anywhere on screen. Zoom to 4x to work pixel by pixel. Works across all monitors.\nAvailable as a standalone menu bar app or a Raycast extension.\nA work in progress, pending Apple notarization, but totally usable."
+          "description": "Born out of a personal need, Design Ruler is a Mac app that gives you two fullscreen overlay tools for inspecting UI: one for measuring pixel distances with automatic edge detection, and one for placing alignment guides anywhere on screen. Zoom to 4x to work pixel by pixel. Works across all monitors.\n\nAvailable as a standalone menu bar app or a Raycast extension.\n\nA work in progress, pending Apple notarization, but totally usable."
         },
         {
           "id": "files-shelf",
@@ -152,7 +152,7 @@
           "heading": "Table Lamp Mod",
           "subheading": "ESP32 and HomeKit (w/ Claude)",
           "year": "2026",
-          "description": "I bought a table lamp advertised as USB-C rechargeable. It wasn’t. I liked the design, so I wanted to fix that.\nThe idea was simple: open it, replace the battery with a larger one and the charger module with an IP2312 chip. But since I was already in there, I thought, why not try to make it smart? So I “reverse engineered” the LED controller board and used an ESP32 to take the input and send commands to the controller, then added HomeKit support to control it from my phone. Worked great — I’m still using it daily."
+          "description": "I bought a table lamp advertised as USB-C rechargeable. It wasn’t. I liked the design, so I wanted to fix that.\n\nThe idea was simple: open it, replace the battery with a larger one and the charger module with an IP2312 chip. But since I was already in there, I thought, why not try to make it smart? So I “reverse engineered” the LED controller board and used an ESP32 to take the input and send commands to the controller, then added HomeKit support to control it from my phone. Worked great — I’m still using it daily."
         }
       ]
     },
@@ -232,7 +232,7 @@
         {
           "id": "logo-featured-on-logosystems-co",
           "year": "2024",
-          "heading": "Logo featured on LogoSystems.co",
+          "heading": "Logo featured on LogoSystem.co",
           "url": "https://logosystem.co/logo/lexit"
         },
         {
@@ -263,7 +263,7 @@
         },
         {
           "id": "graphic-designer-at-mouch-shih",
-          "year": "2020 — 2020",
+          "year": "2020",
           "heading": "Graphic Designer at Mouch Shih",
           "url": "https://www.facebook.com/mouchshihtn",
           "subheading": "Online",

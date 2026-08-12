@@ -1,0 +1,154 @@
+.list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 60px;
+  /* Matches the CV's first-section spacing below the tab bar. */
+  margin-top: 36px;
+  /* And its *last* section's trailing padding, so the footer below lands the same distance from
+     the content on both routes. Without it the gallery's footer sat tight against the final
+     caption while the CV's had 60px of section padding above it. */
+  margin-bottom: 60px;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Items open in the lightbox, so each one is a button. Everything here is the UA button
+   reset — the visible treatment all belongs to `.frame` inside it. Unlike the CV's
+   thumbnails this is not inside a scroll container, so the focus ring can sit outside the
+   box; the radius matches `.frame` so it follows the corner it is tracing. */
+.trigger {
+  display: block;
+  width: 100%;
+  appearance: none;
+  background-color: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: zoom-in;
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+/* Reserves the item's height from its intrinsic aspect ratio so the page does not shift
+   as media loads during a long scroll. */
+.frame {
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  background-color: var(--wash2);
+}
+
+.frame img,
+.frame video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.frame::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  border: 1px solid var(--transparentBorder);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* Playback position, shown while a video is hovered.
+   Much taller than the bar it holds, and carrying a scrim in its own background: these videos
+   are UI screencasts and often nearly white at the bottom edge, where a white bar on its own
+   would simply vanish. Putting the scrim on this element rather than in a pseudo-element keeps
+   it *behind* the bar without any positioning games — an absolutely positioned `::before` would
+   paint over an in-flow child whatever the source order says.
+
+   The padding insets the bar from the video's edges so it reads as sitting on the frame rather
+   than welded into the corner. It is padding on this element rather than a margin on the track
+   so the scrim still runs full-bleed behind it. */
+.progress {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 44px;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 12px 12px;
+  background-image: linear-gradient(to top, rgba(0, 0, 0, 0.34), rgba(0, 0, 0, 0));
+  opacity: 0;
+  transition: opacity 160ms ease;
+  pointer-events: none;
+}
+
+.frame:hover .progress {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress {
+    transition: none;
+  }
+}
+
+.progressTrack {
+  width: 100%;
+  height: 5px;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.3);
+  /* The fill's own corners are rounded, but it is inside a rounded track and its leading edge
+     has to be clipped by it at the far end rather than poking past the curve. */
+  overflow: hidden;
+}
+
+/* Width, not `scaleX`. A transform is the cheaper thing to rewrite every frame and was what
+   this used at first, but it squashes the radius along with the box: at 5% played a 999px
+   radius comes out about a twentieth as wide as it is tall, so the rounded cap the bar is
+   supposed to have reads as a hard edge. Laying out a 5px-tall element in a three-node subtree
+   60 times a second is not the expensive part of a page decoding video.
+   No transition on it either way: the value is already rewritten every frame, and easing on top
+   of that would trail the playhead. */
+.progressValue {
+  height: 100%;
+  border-radius: inherit;
+  background-color: #fff;
+}
+
+.meta {
+  margin-top: 12px;
+}
+
+.title {
+  font-size: var(--type-size);
+  line-height: var(--line-height);
+  color: var(--grey1);
+}
+
+.caption {
+  font-size: var(--type-size);
+  line-height: var(--line-height);
+  color: var(--grey2);
+}
+
+.date {
+  font-size: var(--secondary-type-size);
+  line-height: var(--line-height);
+  color: var(--grey3);
+  margin-top: 4px;
+}
+
+.empty {
+  margin-top: 36px;
+  font-size: var(--type-size);
+  line-height: var(--line-height);
+  color: var(--grey2);
+}
+

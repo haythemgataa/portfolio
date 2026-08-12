@@ -1,0 +1,78 @@
+/* The introduction above the tab bar: avatar and name, then About.
+
+   The three gaps here are what set the page's opening rhythm — space above the avatar, the
+   step down to About, and the step from About to the bar. They are declared as one block so
+   that rhythm is legible in one place; the bar contributes its own `--tab-bar-gap-top` below
+   this, so the gap before it is the sum of the two. */
+.profileHeader {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  column-gap: 16px;
+  margin-top: 24px;
+}
+
+.profileHeader h1 {
+  font-size: 20px;
+  font-weight: 350;
+}
+
+.byline {
+  color: var(--grey2);
+}
+
+.betaBadge {
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1;
+  padding: 3px 6px;
+  margin-left: 8px;
+  border-radius: 6px;
+  background-color: var(--wash2);
+  color: var(--grey3);
+  vertical-align: middle;
+  letter-spacing: 0.02em;
+}
+
+.profilePhoto {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background-color: var(--wash2);
+  overflow: hidden;
+}
+
+.profilePhoto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Tighter above than it was (40px) now that there is no "About" title to separate from the
+   byline: without a heading of its own the text belongs to the block above it, and the old
+   gap left it stranded between the name and the tab bar. The gap below is unchanged — it
+   still adds to the bar's own top padding, and that is most of the air above the tabs. */
+.about {
+  margin-top: 20px;
+  margin-bottom: 40px;
+}
+
+.description {
+  color: var(--grey2);
+  display: flex;
+  flex-direction: column;
+  row-gap: calc((var(--type-size) * var(--line-height)) / 2);
+}
+
+.description p a {
+  border-bottom: 1px solid var(--wash1);
+}
+
+/* Below 480px the CV indents its bodies past the section title; About keeps doing the same
+   now that it lives here rather than in Profile.module.css. */
+@media (max-width: 480px) {
+  .description {
+    margin-left: 16px;
+  }
+}

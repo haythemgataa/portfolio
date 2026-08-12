@@ -1,0 +1,368 @@
+/* Sticky wrapper. The page background is repeated here so content scrolling underneath
+   does not show through the track's rounded corners, and the symmetric vertical padding
+   doubles as the gap below the header when the bar is not yet stuck.
+
+   The wrapper is full-bleed: negative margins pull it out to the viewport edges and the
+   horizontal padding puts it back to the content column, so the bar stays aligned with the
+   column while its background covers the whole width. Without that, anything wider than the
+   column — the attachment carousel bleeds past both edges below 480px — stays visible
+   beside the bar as it scrolls under. `50%` and `50vw` are both resolved against boxes
+   centred in the viewport (`.profile` / `.gallery` are `margin: 0 auto`), so the two halves
+   cancel out. Any overhang from the scrollbar's width is clipped by `overflow-x: clip`. */
+/* Zero-height marker sitting exactly where the bar's top rests, watched by an
+   IntersectionObserver: the moment it leaves the viewport, the bar is stuck. It carries the
+   gap above the bar so that its bottom edge and the bar's top edge coincide, making the
+   transition fire precisely on stick rather than a few pixels early. */
+.sentinel {
+  height: 1px;
+  margin-top: 12px;
+  margin-bottom: -1px;
+}
+
+/* The opaque background is only wanted once the bar is pinned and content is passing beneath
+   it. At rest it has nothing to hide, and staying transparent lets the decorative gradient and
+   dot texture at the top of the page run behind the bar instead of being cut by a full-width
+   band. The track inside (`.tabs`) is transparent in both states now; what paints there are
+   the tab pills themselves. */
+.sticky {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background-color: transparent;
+  transition: background-color 160ms ease;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  padding: var(--tab-bar-gap-top) calc(50vw - 50%) var(--tab-bar-gap-bottom);
+}
+
+.sticky[data-stuck="true"] {
+  background-color: var(--backgroundColor);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sticky {
+    transition: none;
+  }
+}
+
+/* Content scrolling under the bar would otherwise be cut off dead flat at its bottom edge.
+   This extends the background downwards as a fade, so media and text dissolve into the
+   page instead. It has to stay click-through.
+
+   It is a sibling of the bar rather than the bar's own `::after`, and that is load-bearing:
+   the CV's sticky section headers park directly below the bar, inside this fade's band, and
+   have to paint *over* it or they would be washed out. A pseudo-element of the bar could
+   not be, because the bar's `z-index: 20` makes it a stacking context that traps everything
+   inside it above the headers. As a separate element the stack can be ordered properly:
+   fade (12) < section header (15) < bar (20). The header still slides under the bar on its
+   way out, which is what makes the handover read correctly.
+
+   Zero-height so it takes no space in flow; it pins at the bar's bottom edge because the bar
+   above it is exactly `--sticky-top` tall.
+
+   Only shown while the bar is stuck, which is what allows it to be far taller than the gap
+   beneath the bar — at rest it would otherwise wash out the top of the first section.
+
+   A plain two-stop ramp still reads as an edge, because alpha falls fastest exactly where
+   the eye is looking. The stops below approximate a smoothstep: slow at both ends, quickest
+   through the middle. The simple ramp is declared first as a fallback, since browsers
+   without `color-mix()` would otherwise drop the rule and lose the fade entirely. */
+.fade {
+  position: sticky;
+  top: var(--sticky-top);
+  z-index: 12;
+  height: 0;
+}
+
+.fade::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: calc(50% - 50vw);
+  right: calc(50% - 50vw);
+  height: 72px;
+  background: linear-gradient(to bottom, var(--backgroundColor), var(--backgroundColorFade));
+  background: linear-gradient(
+    to bottom,
+    var(--backgroundColor) 0%,
+    color-mix(in srgb, var(--backgroundColor) 97%, transparent) 12%,
+    color-mix(in srgb, var(--backgroundColor) 91%, transparent) 25%,
+    color-mix(in srgb, var(--backgroundColor) 81%, transparent) 37%,
+    color-mix(in srgb, var(--backgroundColor) 67%, transparent) 50%,
+    color-mix(in srgb, var(--backgroundColor) 50%, transparent) 62%,
+    color-mix(in srgb, var(--backgroundColor) 32%, transparent) 75%,
+    color-mix(in srgb, var(--backgroundColor) 15%, transparent) 87%,
+    var(--backgroundColorFade) 100%
+  );
+  opacity: 0;
+  transition: opacity 160ms ease;
+  pointer-events: none;
+}
+
+.fade[data-stuck="true"]::after {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade::after {
+    transition: none;
+  }
+}
+
+/* Started as shadcn/ui's Tabs and has since diverged: there is no track surface any more.
+   The control is a row of separate pills — each tab carries the wash and hairline the track
+   used to — and the selection is a black pill that travels between them.
+
+   The track itself is transparent, so at rest nothing here paints except the tabs. That also
+   means the decorative glow behind the bar is uninterrupted by a full-width band.
+
+   `--tab-inner-gap` is the horizontal gap between pills, distinct from `--tab-bar-gap-top` and
+   `--tab-bar-gap-bottom`, which are the vertical space around the whole bar. The pill's
+   geometry below is derived from it, so the two cannot drift. */
+.tabs {
+  --tab-inner-gap: 6px;
+
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--tab-inner-gap);
+  width: 100%;
+  height: var(--tab-bar-height);
+  background-color: transparent;
+  color: var(--grey2);
+}
+
+/* Each tab is its own fully rounded pill wearing what used to be the track's surface: the
+   `--tabInactiveBackground` fill and the same hairline the media thumbnails carry, so the bar
+   still reads as part of that set. That fill differs per route — see the token in globals.css —
+   so it cross-fades on the same `--ground-fade` as the page behind it, and the two read as one
+   surface changing rather than the pills snapping ahead of the page.
+   The label's own colour is *not* part of the selection: it does not fade between selected and
+   unselected states, it is overpainted by the pill passing over it. The `color` transition here
+   is only for the hover tint below. */
+.tab {
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 4px 8px;
+  border: 1px solid var(--transparentBorder);
+  border-radius: 999px;
+  background-color: var(--tabInactiveBackground);
+  transition:
+    background-color var(--ground-fade) ease,
+    color 150ms ease;
+  font-size: var(--type-size);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  color: inherit;
+  /* Suppress the UA's tap feedback on touch. The default is a ~40% opaque overlay across
+     the whole anchor, which flashes over the label on every tap; the pill sliding to the
+     tapped side is the feedback. Keyboard focus is unaffected — `:focus-visible` does not
+     match on tap or click, so the ring below still only appears for keyboard users. */
+  -webkit-tap-highlight-color: transparent;
+  /* Stops a long press selecting the label, and opts out of double-tap-to-zoom so the tap
+     registers immediately rather than after the browser waits to see a second one. */
+  user-select: none;
+  touch-action: manipulation;
+}
+
+/* The transition lives on `.tab` rather than here, because declaring one in this rule would
+   replace the whole shorthand while hovered and drop the background cross-fade with it. */
+.tab:hover:not([data-active="true"]) {
+  color: var(--grey1);
+}
+
+/* The focus ring survives the pill on top of it: `outline-offset` puts it entirely outside
+   the tab's box, and the pill layer is clipped to exactly that box, so it never covers the
+   ring — including on the selected tab. */
+.tab:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+/* The selection.
+
+   A copy of the row — opaque ground plus inverted labels — revealed only through a window in
+   the shape of the active tab. Because the window *is* the pill, one movement both carries the
+   shape and flips the label colours at the same instant: a label is inverted exactly where the
+   pill has reached it and normal everywhere else, which is what makes the pill read as
+   travelling between the tabs rather than as a background fading in on the far side.
+
+   Geometry is derived, not measured. The tabs are `flex: 1 1 0` with a known gap, so each is
+   `(100% - gap x (n - 1)) / n` wide and the nth starts at `n x (width + gap)` — exact at any
+   column width, with no ResizeObserver.
+
+   Not focusable and not hit-testable: it sits over the real links. */
+.pillLayer {
+  /* The travel, in one place because three elements animate on it and they must agree
+     exactly — see `.pillTravel` on why a mismatch would be visible.
+     Softer than the easing this had (`260ms cubic-bezier(0.32, 0.72, 0, 1)`), which put almost
+     all of the distance into the first third and then crawled: decisive, but it read as a
+     lurch followed by a settle rather than as one movement. This one accelerates and
+     decelerates gently and spends its time in the middle, where the eye is actually
+     tracking the pill. */
+  --tab-travel: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: stretch;
+  gap: var(--tab-inner-gap);
+  pointer-events: none;
+}
+
+/* One per tab, laid out on exactly the same grid as the tabs themselves (`flex: 1 1 0`, same
+   gap, stretched to the bar's height), and clipped to its own pill shape. This is the static
+   half of the mask — it is what stops the travelling ground from ever painting outside a pill,
+   including in the gap between them. */
+.pillCell {
+  flex: 1 1 0;
+  position: relative;
+  overflow: hidden;
+  border-radius: 999px;
+}
+
+/* The travelling window: one tab wide, clipped to a pill, slid to sit over the active tab.
+   This is the animated half of the mask, and the reason it is a `transform` and not the
+   `clip-path: inset(... round 999px)` this used to animate. A clip-path is repainted on the
+   main thread every frame, rounded corners and all; a transform is handed to the compositor.
+   The construction is otherwise identical — window ∩ cell is the same intersection the two
+   clips produced — but the movement no longer competes with everything else on the main
+   thread, which is what the old version's stutter actually was.
+
+   The two `100%` here have different referents, and both are load-bearing: in `left` a
+   percentage resolves against the containing block (`.pillCell`, one tab wide), while in
+   `transform` it resolves against the element's own width — which `width: 100%` has just made
+   the same value. So `left` cancels the cell's own offset and the transform re-adds the
+   active tab's, leaving every window in the bar at exactly the same place. */
+.pillWindow {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--cell-index) * -1 * (100% + var(--tab-inner-gap)));
+  width: 100%;
+  overflow: hidden;
+  border-radius: 999px;
+  transform: translateX(calc(var(--active-index) * (100% + var(--tab-inner-gap))));
+  transition: transform var(--tab-travel);
+  will-change: transform;
+}
+
+/* A full-width copy of the row inside each window, counter-translated by exactly what the
+   window moved so that it stays put in the bar's coordinates while the window slides across
+   it. That is what makes the ground and the labels stationary and the *pill* the thing that
+   moves — the fill and the glow reflection on it stay fixed in the bar, and the labels stay
+   registered with their real twins underneath.
+
+   The counter-translation has to be the window's negated, and it is: both are
+   `active-index x (tab + gap)` off the same variable with the same easing and duration, so
+   every frame's pair sums to zero. Anything that broke that symmetry — a different curve on
+   one of them, or expressing one in a unit the other does not share — would show up as the
+   labels sliding under their own pill.
+
+   Same percentage subtlety as above, in the other direction: `width`'s `100%` is the window
+   (one tab), while `--tab-width`'s is this element's own width (the whole bar), which is why
+   the tab-width arithmetic is written here and not on the window. */
+.pillTravel {
+  --tab-width: calc((100% - var(--tab-inner-gap) * (var(--tab-count) - 1)) / var(--tab-count));
+
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: calc(var(--tab-count) * 100% + (var(--tab-count) - 1) * var(--tab-inner-gap));
+  display: flex;
+  align-items: center;
+  gap: var(--tab-inner-gap);
+  transform: translateX(
+    calc(var(--active-index) * -1 * (var(--tab-width) + var(--tab-inner-gap)))
+  );
+  transition: transform var(--tab-travel);
+  will-change: transform;
+}
+
+/* The ground — black on the light theme, white on the dark one. Spans the whole row and is
+   revealed only by the clips, so its own corners never show; the rounding belongs to them. */
+.pillFill {
+  position: absolute;
+  inset: 0;
+  background-color: var(--tabActiveBackground);
+}
+
+/* The glow overhead, reflected on the pill.
+
+   Drawn with the same sweep at the same scale as `.topGradient`: that element is the column's
+   width over `--glow-fraction`, centred, so the column sees the middle slice of the sweep.
+   This box is the column's width too, so `100% / --glow-fraction` centred samples the hue
+   that is genuinely above it — the warm end under the left tab, the cool end under the right.
+
+   Fixed in the bar's coordinates, not the pill's, so it behaves like a reflection of
+   something stationary: the pill travels *through* it rather than carrying it along.
+
+   Strongest at the top edge and gone by the bottom, which is what makes it read as light
+   caught on a surface rather than as a tinted pill.
+
+   It fades out as the bar sticks, on the same 160ms as the bar's own background: once the bar
+   has left the top of the page there is no glow overhead for it to be reflecting, so a pill
+   that kept its highlight while parked over scrolling content would be reflecting nothing.
+
+   Strength comes from `--tabReflectionOpacity` rather than a literal, because the two themes
+   need different numbers for the same effect: the same sweep that reads as a highlight on
+   black reads as a colour cast on the dark theme's white pill, so that one is dialled back. */
+.pillFill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--glow-sweep);
+  background-size: calc(100% / var(--glow-fraction)) 100%;
+  background-position: center;
+  opacity: var(--tabReflectionOpacity);
+  transition: opacity 160ms ease;
+
+  --reflect-down: linear-gradient(180deg,
+    rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.55) 35%, rgba(0, 0, 0, 0.2) 65%, rgba(0, 0, 0, 0) 100%
+  );
+  -webkit-mask-image: var(--reflect-down);
+  mask-image: var(--reflect-down);
+}
+
+/* Must match `.tab`'s box exactly, or the light label sits a pixel off its dark twin and the
+   handover smears. The transparent border is what keeps the text metrics identical.
+
+   `position: relative` is not cosmetic: `.pillFill` is absolutely positioned, and positioned
+   descendants paint above in-flow content whatever the source order, so leaving these in flow
+   put the black ground over its own labels. Positioning them too lands both in the same paint
+   layer, where DOM order decides — and the labels come second. */
+.pillLabel {
+  position: relative;
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  font-size: var(--type-size);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--tabActiveForeground);
+}
+
+.sticky[data-stuck="true"] .pillFill::after {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab,
+  .pillWindow,
+  .pillTravel,
+  .pillFill::after {
+    transition: none;
+  }
+}

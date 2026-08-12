@@ -1,53 +1,34 @@
-# Content Migration Script
+# Scripts
 
-This script migrates the content structure from a single `profileData.json` file to a directory-based organization.
+## `clean-export.mjs`
 
-## Prerequisites
+Runs automatically as part of `npm run build`.
 
-Install dependencies:
+`output: 'export'` requires `generateStaticParams()` to return at least one route,
+so `app/[slug]/page.tsx` emits a synthetic `__placeholder__` slug that calls
+`notFound()`. The export still writes that page to disk, so this script deletes it
+afterwards — otherwise Cloudflare would serve `/__placeholder__` as a real 200 URL.
+
+Once real case studies exist in `content/case-studies/`, the placeholder path is
+unused and this becomes a no-op.
+
+## `check-cdn-gate.mjs`
+
 ```bash
-npm install
+npm run check:cdn
 ```
 
-## Usage
+Not part of the build — run it after touching `app/lib/cloudflareImage.ts`,
+`next.config.ts`, or anything that renders a thumbnail.
 
-Run the migration script:
-```bash
-npm run migrate
-```
+`/cdn-cgi/image/` only exists on Cloudflare's edge, so variant URLs must be
+emitted for production-branch Pages builds and for nothing else. Both failure
+directions are invisible locally, because `npm run build` passes either way:
 
-## What it does
+| Gate | Symptom |
+|---|---|
+| stuck on | every thumbnail 404s in dev and on `*.pages.dev` previews |
+| stuck off | production serves full-size originals, unresized |
 
-1. **Creates `001-general/` directory**
-   - Extracts general profile data to `general.json`
-   - Moves `profilePhoto.jpg` to `media/` subdirectory
-   - Removes `sectionOrder` (directory order will be used instead)
-
-2. **Creates section directories** (e.g., `002-workExperience/`, `003-education/`)
-   - For each section in `sectionOrder`, creates a directory with numeric prefix
-   - Processes all items in each section
-
-3. **Creates item directories** (e.g., `001-product-designer-at-instadeep/`)
-   - For each item, generates a slug from the heading
-   - Creates directory with numeric prefix for ordering
-   - Moves item data to `item.json`
-   - Moves associated media files to `media/` subdirectory
-   - Updates media paths in `item.json` to store just filenames
-
-4. **Moves markdown files**
-   - Moves all `.md` files from `content/` to `case-studies/` directory
-
-## After Migration
-
-- The original `profileData.json` and `media/` directory remain intact
-- Verify the new structure works correctly
-- Once verified, you can delete the old files:
-  - `public/content/profileData.json`
-  - `public/content/media/` (all files should be moved to item directories)
-
-## Notes
-
-- The script preserves all data and only reorganizes the structure
-- Media files are copied (not moved) to preserve originals until verification
-- Item ordering is preserved based on array order in the original JSON
-- Section ordering follows the `sectionOrder` array from the original JSON
+The script runs both builds (~1 min) and asserts each direction. It builds plain
+*last*, so a failure never leaves `out/` holding a production-flagged export.

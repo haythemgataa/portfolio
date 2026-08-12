@@ -114,6 +114,13 @@ Should site chrome ever need a real image file, note that it does **not** belong
 it that nothing references is reported as an orphan and can be swept; chrome has no content
 record to be referenced by, so it belongs at the `public/` root instead.
 
+The first case to come up — the footer's signature — took a third option and needed no file at
+all. It is a single monochrome path, so `Signature.tsx` inlines it the way `Arrow12.tsx` does,
+which also solves the theming: it has to be near-black on the light ground and near-white on the
+dark one, and `currentColor` only sees the page's colour when the SVG is part of the document. An
+`<img>` is an independent document, so a file would have meant either a second `-dark` copy or a
+filter, plus a request for one path. Inline chrome is the default worth reaching for first.
+
 `content/` sits outside `public/` deliberately: it is compiler input, not a static asset.
 Keeping it in `public/` shipped 27 never-requested JSON files to the CDN and made the whole
 CV fetchable at `/content/.../item.json`. Media has to stay under `public/`.
@@ -519,6 +526,18 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
 
 - **Server components** (async): `layout.tsx`, `page.tsx`, `[slug]/page.tsx` — handle data loading
 - **Client components** (`"use client"`): `Profile.tsx`, `Attachments.tsx`, `Lightbox.tsx`, `Scrollbar.tsx`, `RichText.tsx`, `Gallery.tsx`, `Tabs.tsx`
+- **`SiteFooter.tsx` is in the root layout**, below the bar, so it closes both routes — the gallery
+  would otherwise just stop after its last item. Two things there:
+  - Its "Last updated" is `new Date()` at module scope in a *server* component, so it is evaluated
+    once during the build and baked into the export. That is what the phrase means for a static
+    site, and it is deliberately not a content field: a date that has to be remembered goes stale,
+    while this one cannot, because publishing *is* rebuilding. `timeZone: 'UTC'` keeps a build near
+    midnight on the 1st from naming the wrong month.
+  - The gap above it is **padding, not margin**, and that is the only reason the two routes agree.
+    The gallery's list ends in a margin, which collapses with an adjacent margin — a 16px top
+    margin disappeared into the list's 60px and left the gallery 16px tighter than the CV, whose
+    section padding cannot collapse. `Gallery.module.css` gives its list a matching 60px bottom
+    margin for the same reason.
 - Lightbox uses React Portal to render to `document.body`
 - **The lightbox's controls are one cluster at the bottom** — prev, the pager dots, next — in
   `.controls`. Two things about it are deliberate. The steps are anchored to the *viewport* rather

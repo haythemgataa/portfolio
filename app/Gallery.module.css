@@ -5,6 +5,10 @@
   gap: 60px;
   /* Matches the CV's first-section spacing below the tab bar. */
   margin-top: 36px;
+  /* And its *last* section's trailing padding, so the footer below lands the same distance from
+     the content on both routes. Without it the gallery's footer sat tight against the final
+     caption while the CV's had 60px of section padding above it. */
+  margin-bottom: 60px;
 }
 
 .row {

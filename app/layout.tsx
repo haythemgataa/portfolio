@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import styles from "./layout.module.css";
 import ProfileHeader from "./ProfileHeader";
+import SiteFooter from "./SiteFooter";
 import Tabs from "./Tabs";
 import { loadProfileData } from "./lib/contentLoader";
 import { hasGalleryItems } from "./lib/galleryLoader";
@@ -65,6 +66,10 @@ export default async function RootLayout({
             <ProfileHeader profile={cv.profile} />
             <Tabs showGallery={showGallery} />
             {children}
+            {/* Below the bar, so unlike the header it does not have to be identical per route —
+                it is here rather than in `Profile.tsx` because it closes the *page*, and the
+                gallery would otherwise just stop after its last item. */}
+            <SiteFooter />
           </div>
         </div>
       </body>

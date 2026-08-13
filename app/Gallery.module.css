@@ -57,6 +57,36 @@
   object-fit: cover;
 }
 
+/* A video's poster, standing in until the file arrives.
+
+   It is an `<img>` rather than the video's `poster` attribute because that attribute has no
+   lazy option — the browser fetches it the moment the element is parsed, however far down the
+   list it sits. See the note in Gallery.tsx.
+
+   Absolutely positioned *after* the video in source order, so it covers it without needing a
+   z-index; `.frame::after` is a positioned pseudo-element declared later still, so the frame's
+   hairline goes on painting over both. `pointer-events: none` matters here rather than being a
+   formality: under reduced motion the video shows native controls, and this sits directly on
+   top of them until it fades. */
+.poster {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+
+/* Set once the video has a decoded frame of its own. Fading rather than cutting, because the
+   poster and the frame beneath it are rarely the same moment of the clip. */
+.poster[data-hidden] {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .poster {
+    transition: none;
+  }
+}
+
 .frame::after {
   position: absolute;
   inset: 0;

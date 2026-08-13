@@ -199,6 +199,86 @@
   object-fit: cover;
 }
 
+/* The hover preview, layered over the poster it is replacing rather than swapping with it.
+   A swap would blank the thumbnail for however long the file takes to arrive, which on the
+   first hover is exactly the wait this whole arrangement exists to move off the page load.
+
+   It is absolutely positioned, so it needs `.frame` to be its containing block — which it is
+   in both treatments, matted (`inset: var(--thumb-padding)`) and not (`inset: 0`). That also
+   means it inherits neither the sizing nor the `object-fit` above by accident: those rules
+   match every video in `.media`, this one only adds the stacking.
+
+   Gated on the attribute rather than applied to all videos because the no-poster fallback in
+   Attachments.tsx still renders a plain in-flow video, and hiding that one at `opacity: 0`
+   with nothing underneath would leave an empty frame. */
+.media video[data-preview] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+/* Set on `playing` rather than on mount, so a slow network keeps showing the poster instead
+   of cutting to a frozen first frame. */
+.media video[data-preview][data-ready] {
+  opacity: 1;
+}
+
+/* The fade is decoration on top of a still that is already correct, so it is the transition
+   that goes here, not the preview itself — a reader who asked for less motion still gets the
+   poster, and Attachments.tsx never mounts the video for them in the first place. */
+@media (prefers-reduced-motion: reduce) {
+  .media video[data-preview] {
+    transition: none;
+  }
+}
+
+/* Marks a thumbnail whose poster is standing in for a video. Once the row stopped animating,
+   a video became indistinguishable from an image at rest, and this is what puts the difference
+   back.
+
+   Its own colours rather than the theme's tokens, and that is the point: it sits on arbitrary
+   media — a near-white UI screenshot in one thumbnail, a dark editor in the next — so it cannot
+   borrow the page's foreground and stay legible. A dark scrim under a white glyph reads on both,
+   which is why every video player converges on it.
+
+   `pointer-events: none` because the row is dragged by grabbing the thumbnails: anything laid
+   over one is a patch the drag would die on. It does not need to be hoverable in its own right —
+   the button underneath carries the click. */
+.playBadge {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  /* Not fully opaque: a hint of the frame beneath keeps it sitting *on* the image rather than
+     punching a hole in it. The glyph is offset a half-pixel right of centre because an optical
+     centre for a triangle is not its bounding box's. */
+  background-color: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  padding-left: 1px;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+/* Gone once the preview is actually playing — the motion says "video" better than the badge
+   does, and leaving it up parks a dark dot on top of the thing it was advertising. Keyed to
+   `data-ready` rather than `data-preview` so the badge survives the load: hovering a cold
+   thumbnail leaves the poster up for as long as the fetch takes, and that is the moment the
+   badge is most reassuring. */
+.media video[data-preview][data-ready] ~ .playBadge {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .playBadge {
+    transition: none;
+  }
+}
+
 /* Hairline just inside the light rim — the same one the gallery media carries. Matted, it
    separates the rim from the wash; unmatted, it separates the rim from the image. Its radius has
    to be the frame's minus the border, or the two curves are concentric on paper but not on

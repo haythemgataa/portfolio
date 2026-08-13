@@ -391,6 +391,43 @@ Three things it depends on:
 
 Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by accident:
 
+- **A video thumbnail shows its poster, and fetches the video only on hover.** The row is 90px
+  tall and used to render an `autoPlay` video per attachment, which downloads the whole file:
+  `autoPlay` does that regardless of the `preload` hint, and there was no viewport gate here the
+  way there is in `Gallery.tsx`. The CV page therefore spent ~11 MB — one clip of it 5.9 MB —
+  animating thumbnails the size of a postage stamp, above and below the fold alike. A poster is
+  an ordinary image, so it goes through Cloudflare like every other thumbnail and costs ~12 KB.
+  Four things hold it together:
+  - **The preview is layered over the poster, not swapped with it.** A swap blanks the thumbnail
+    for as long as the file takes to arrive, which on the first hover is precisely the wait this
+    moves off the page load. `.media video[data-preview]` is what stacks it, gated on the
+    attribute because the no-poster fallback still renders a plain in-flow video — styling *all*
+    videos to `opacity: 0` would leave that one an empty frame.
+  - **It fades in on `playing`, not on mount or `loadeddata`.** Those land a paint too early and
+    the cross-fade cuts to a frozen frame.
+  - **`useHasHover` gates the mount, not the handler.** `pointerenter` fires on a touch tap too,
+    and there the tap is a request to open the lightbox — loading a preview about to be covered
+    by it is pure waste. Focus/blur mirror hover so the keyboard gets the same affordance.
+  - **A video with no poster falls back to the old autoplaying element.** `media.json` gives
+    every video one today; the branch exists so that adding one without a poster degrades to
+    heavy rather than to blank.
+  - **`.playBadge` is what tells a reader it is a video at all**, since a still thumbnail is
+    otherwise an image. It carries literal black-and-white rather than theme tokens on purpose:
+    it sits on arbitrary media — a near-white screenshot in one thumbnail, a dark editor in the
+    next — so it cannot borrow the page's foreground and stay legible, which is why every video
+    player converges on a dark scrim under a white glyph. It is `aria-hidden` because the
+    button's accessible name already says "video", and `pointer-events: none` because the row is
+    dragged by grabbing the thumbnails and anything laid over one is a patch the drag dies on.
+    It hides on `data-ready`, not `data-preview`: hovering a cold thumbnail leaves the poster up
+    for the length of the fetch, and that is the moment the badge is most reassuring.
+- **Eagerness is rationed to one row, and `Profile.tsx` is what decides which.** `loading="eager"`
+  opts an image out of the browser's own viewport logic, so the old `index < 5` test — evaluated
+  per row, and every item renders its own row — put dozens of requests for thumbnails far down the
+  page *in front of* the ones on screen. They do not queue behind the visible ones; they compete.
+  A row cannot tell from its own index where it sits in the document, which is why `priority`
+  is threaded from `Profile` (first item of the first section) rather than inferred in
+  `Attachments`. Past `DEPRIORITISE_AFTER` in an off-screen row a thumbnail is also hinted
+  `low`, so when a reader does scroll, the row's leading edge arrives first.
 - **Sticky section titles.** Each `.sectionHeader` pins at `--sticky-top`, directly below the
   tab bar. This is why section spacing in `Profile.module.css` is `padding-bottom`, not
   `margin`: a sticky element is confined to its own section box, so margins would leave a

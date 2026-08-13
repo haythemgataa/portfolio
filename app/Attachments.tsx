@@ -89,11 +89,19 @@ const Chevron = () => (
  *
  * Rounded joins rather than a bare triangle, to match the chevron — at 10px a sharp apex reads
  * as a stray pixel.
+ *
+ * The path is positioned against its *stroke-inclusive* box, which is what the eye sees and is
+ * 0.7 wider than the geometry on every side at this stroke width. Vertically that box is dead
+ * centre (2.2 to 7.8). Horizontally it is centred on 5.25 rather than 5: a right-pointing
+ * triangle carries its area toward the base, so its centroid sits left of its bounding box and
+ * it reads as left-shifted when centred geometrically. A quarter-unit is the whole correction —
+ * the badge's own `place-items: center` does the rest, and nothing outside this path should be
+ * nudging it.
  */
 const PlayGlyph = () => (
   <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
     <path
-      d="M3.6 2.6 7.7 5 3.6 7.4Z"
+      d="M3.35 2.9 7.15 5 3.35 7.1Z"
       fill="currentColor"
       stroke="currentColor"
       strokeWidth="1.4"

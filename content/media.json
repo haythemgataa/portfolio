@@ -27,13 +27,23 @@
       "width": 2560,
       "height": 1440
     },
+    "board-viewer-evolution-2023-2026-poster.webp": {
+      "width": 1600,
+      "height": 900
+    },
     "board-viewer-evolution-2023-2026.webm": {
-      "width": 2560,
-      "height": 1440
+      "width": 1080,
+      "height": 608,
+      "poster": "board-viewer-evolution-2023-2026-poster.webp"
+    },
+    "check-with-cooper-poster.webp": {
+      "width": 1600,
+      "height": 794
     },
     "check-with-cooper.webm": {
       "width": 1920,
-      "height": 952
+      "height": 952,
+      "poster": "check-with-cooper-poster.webp"
     },
     "claude-for-ghostty-icon.webp": {
       "width": 2560,
@@ -47,28 +57,48 @@
       "width": 1080,
       "height": 677
     },
+    "conference-talk-poster.webp": {
+      "width": 852,
+      "height": 480
+    },
     "conference-talk.webm": {
       "width": 852,
       "height": 480,
-      "framed": false
+      "framed": false,
+      "poster": "conference-talk-poster.webp"
     },
     "cooper-mascot.webp": {
       "width": 1980,
       "height": 1620
     },
-    "deeppcb-loading-animation.webm": {
+    "deeppcb-loading-animation-poster.webp": {
       "width": 720,
       "height": 720
     },
+    "deeppcb-loading-animation.webm": {
+      "width": 720,
+      "height": 720,
+      "poster": "deeppcb-loading-animation-poster.webp"
+    },
+    "design-ruler-alignment-guides-poster.webp": {
+      "width": 1600,
+      "height": 1036
+    },
     "design-ruler-alignment-guides.webm": {
-      "width": 1920,
-      "height": 1242,
-      "framed": false
+      "width": 1080,
+      "height": 698,
+      "framed": false,
+      "poster": "design-ruler-alignment-guides-poster.webp"
+    },
+    "design-ruler-measure-poster.webp": {
+      "width": 1600,
+      "height": 1036
     },
     "design-ruler-measure.webm": {
-      "width": 1920,
-      "height": 1242,
-      "framed": false
+      "width": 1080,
+      "height": 698,
+      "framed": false,
+      "poster": "design-ruler-measure-poster.webp"
     },
     "document-suggestions.webp": {
       "width": 2560,
@@ -153,9 +183,14 @@
       "width": 80,
       "height": 80
     },
+    "instanovo-404-page-poster.webp": {
+      "width": 1600,
+      "height": 872
+    },
     "instanovo-404-page.webm": {
-      "width": 3840,
-      "height": 2094
+      "width": 1080,
+      "height": 588,
+      "poster": "instanovo-404-page-poster.webp"
     },
     "irise-archery-camp-photos.webp": {
       "width": 1195,
@@ -201,14 +236,24 @@
       "height": 948,
       "floating": true
     },
+    "pcb-layout-editing-poster.webp": {
+      "width": 1600,
+      "height": 1152
+    },
     "pcb-layout-editing.webm": {
-      "width": 3000,
-      "height": 2160
+      "width": 1080,
+      "height": 778,
+      "poster": "pcb-layout-editing-poster.webp"
+    },
+    "personal-website-framer-poster.webp": {
+      "width": 1600,
+      "height": 1036
     },
     "personal-website-framer.webm": {
-      "width": 1920,
-      "height": 1242,
-      "framed": false
+      "width": 1080,
+      "height": 698,
+      "framed": false,
+      "poster": "personal-website-framer-poster.webp"
     },
     "polytechnique-logo-dark.svg": {
       "width": 80,
@@ -252,9 +297,14 @@
       "height": 1280,
       "framed": false
     },
-    "thinking.webm": {
+    "thinking-poster.webp": {
       "width": 1200,
       "height": 800
+    },
+    "thinking.webm": {
+      "width": 1200,
+      "height": 800,
+      "poster": "thinking-poster.webp"
     },
     "timeline-view.webp": {
       "width": 2560,

@@ -656,6 +656,19 @@ Static export (`out/`) deployed to Cloudflare Pages. Cache headers and baseline 
 configured in `public/_headers`. Images are unoptimized by Next.js (Cloudflare handles optimization
 via CDN).
 
+`_headers` matches the pool at `/media/*`. The rule it replaced matched `/content/*`, a path that
+stopped existing when `content/` moved out of `public/` to keep the JSON off the CDN — so the whole
+media pool had been served uncached, silently, since that migration. Extension rules are the
+backstop and `.webm` was missing from them, which is the pattern to watch: a new media type needs
+adding in both places or it inherits no cache policy at all.
+
+The Fontshare stylesheet in `layout.tsx` is render-blocking and on a third origin, so the first
+paint waits on DNS, TLS, the CSS, and only then the font file it names — serial, because the
+font's URL is not known until the CSS arrives. Two `preconnect`s overlap the handshakes with the
+rest of the document, and both hosts are needed: the CSS comes from `api.fontshare.com` and the
+woff2 from `cdn.fontshare.com`. The second carries `crossOrigin` because the font fetch is
+anonymous — without it the browser opens a second connection and the warmed one is wasted.
+
 `app/lib/cloudflareImage.ts` builds Cloudflare Image Resizing URLs (`/cdn-cgi/image/...`) for
 both `Attachments.tsx` and `Gallery.tsx`. That endpoint only exists on Cloudflare's edge, so it
 is applied in production builds only — in development the original URL is used, otherwise every

@@ -2,11 +2,11 @@
 /_next/static/*
   Cache-Control: public, max-age=31536000, immutable
 
-# Cache content media
-# Media lives at /content/<NNN-section>/<NNN-item>/media/<file>, so match the whole
-# content tree — the old /content/media/* rule matched nothing after the migration
-# to the directory-based content structure.
-/content/*
+# Cache the media pool.
+# Media lives at /media/<file> — one flat pool shared by the CV and the gallery. The rule
+# this replaces matched /content/*, which stopped existing when content/ moved out of
+# public/ to keep the JSON off the CDN, so the whole pool had been going uncached.
+/media/*
   Cache-Control: public, max-age=31536000, immutable
 
 # Cache other static files
@@ -16,7 +16,11 @@
   Cache-Control: public, max-age=31536000, immutable
 /*.mp4
   Cache-Control: public, max-age=31536000, immutable
+/*.webm
+  Cache-Control: public, max-age=31536000, immutable
 /*.webp
+  Cache-Control: public, max-age=31536000, immutable
+/*.svg
   Cache-Control: public, max-age=31536000, immutable
 
 # Cache HTML with shorter duration

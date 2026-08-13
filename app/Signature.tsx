@@ -14,11 +14,17 @@
  *
  * `aria-hidden` because the name it spells is already the page's `<h1>` — read out again here it
  * would just be the same word twice.
+ *
+ * `width`/`height` are the drawn size and the `viewBox` is the path's own coordinate space, so
+ * resizing is a matter of scaling the pair: 78x33 is the 52x22 artwork at 1.5x. Keep them in that
+ * ratio — `preserveAspectRatio` defaults to `meet`, so a mismatched pair does not distort the mark,
+ * it letterboxes it inside a box larger than the glyph, and `.signature`'s `display: flex` exists
+ * precisely to stop unexplained space appearing under it.
  */
 const Signature = () => (
   <svg
-    width="52"
-    height="22"
+    width="78"
+    height="33"
     viewBox="0 0 52 22"
     fill="none"
     aria-hidden="true"

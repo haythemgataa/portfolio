@@ -341,37 +341,33 @@
   }
 }
 
-/* On the dark ground the rim is hover-only: a light edge on every thumbnail at once is the
-   loudest thing on a dark page — the reason `--thumbnailFrame` is already dimmed there — and
-   holding it back until the pointer arrives lets it do its real job, which is giving the hover
-   shadow an edge to lift. The *width* never changes, only the colour, because both branches of
-   the width calculation and the hairline's radius are measured against it.
-   Scoped to pointers as well, so a touch device in dark mode keeps the rim it has no way to
-   reveal. The light theme is unchanged — white on white needs no restraint. */
-@media (prefers-color-scheme: dark) and (hover: hover) {
+/* On the dark ground both edges are present at rest, as in the light theme — what changes is what
+   the outer one is *made of*. At rest it takes the page's own colour, so it reads as a margin of
+   ground held around the image rather than as a light edge: `--thumbnailFrame` on every thumbnail
+   at once is the loudest thing on a dark page, which is the reason it is already dimmed here.
+   On hover it becomes that light rim, and that colour change is the hover state. It has to be:
+   the lift's shadow is dark on a dark page and barely registers, where in the light theme it does
+   the work on its own. The *width* never changes, only the colour, because both branches of the
+   width calculation and the hairline's radius are measured against it.
+   `--backgroundColor` rather than a literal, so it follows the ground it is imitating — including
+   the gallery route's, where that variable is swapped on `body`.
+   Only the *hover* half is scoped to pointers, and the split matters: the rest colour is the dark
+   theme's treatment of the rim, not a state waiting to be revealed, so a touch device gets it too.
+   It was briefly the whole block that was gated, back when rest meant no rim at all and a phone
+   would otherwise have had nothing — with a ground-coloured rim there is nothing to withhold, and
+   gating it just left touch showing the light theme's white edge. `:hover` stays behind the gate
+   because on touch it sticks after a tap, which would leave a thumbnail lit behind the lightbox
+   it just opened.
+   The inner hairline is left alone in both themes: it is the edge between the rim and the image,
+   and the rim needs an inside whichever colour it is wearing. */
+@media (prefers-color-scheme: dark) {
   .media {
-    border-color: transparent;
+    border-color: var(--backgroundColor);
   }
 
-  .media:hover {
-    border-color: var(--thumbnailFrame);
-  }
-
-  /* The hairline goes with it. Hiding the rim alone still left a visible ring at rest — this is
-     the second, inner edge, and on a dark ground `--transparentBorder` is a light line too. Both
-     belong to the same treatment, so both wait for the pointer. */
-  .media::after {
-    border-color: transparent;
-    transition: border-color 200ms ease;
-  }
-
-  .media:hover::after {
-    border-color: var(--transparentBorder);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .media::after {
-      transition: none;
+  @media (hover: hover) {
+    .media:hover {
+      border-color: var(--thumbnailFrame);
     }
   }
 }

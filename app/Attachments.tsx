@@ -8,6 +8,8 @@ import { AnimatePresence } from "framer-motion";
 import { useScrollBoost } from 'react-scrollbooster';
 import isMobile from "./isMobile";
 import useResizeObserver from "use-resize-observer";
+import { useHasHover } from "./useHasHover";
+import { usePrefersReducedMotion } from "./usePrefersReducedMotion";
 import styles from "./Attachments.module.css";
 
 import { cloudflareImageUrl } from "./lib/cloudflareImage";
@@ -48,6 +50,25 @@ const MIN_THUMBNAIL_RATIO = 19 / 5 / 9; // iPhone
  */
 const ARROW_STEP = 0.8;
 
+/**
+ * How many thumbnails of the one above-the-fold row are fetched eagerly.
+ *
+ * Eagerness has to be rationed, not spread: `loading="eager"` opts an image out of the
+ * browser's own viewport logic entirely, so marking the first few of *every* row — which is
+ * what an index-only test does, since each item renders its own row — put dozens of requests
+ * for thumbnails far down the page in front of the ones actually on screen. They do not queue
+ * politely behind the visible ones; they compete with them. Only the row `priority` names is
+ * on screen at load, and only its leading thumbnails are visible within it.
+ */
+const EAGER_THUMBNAILS = 3;
+
+/**
+ * Past this point in a row that is not on screen, a thumbnail is also hinted `low`. Lazy
+ * loading already defers these, but once a reader scrolls the fetches start together and the
+ * hint is what keeps the leading edge of the row — the part they are looking at — first.
+ */
+const DEPRIORITISE_AFTER = 3;
+
 /** Chevron for the edge arrows. Mirrored with a transform for the leading edge. */
 const Chevron = () => (
   <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
@@ -56,6 +77,34 @@ const Chevron = () => (
       stroke="currentColor"
       strokeWidth="1.5"
       strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+/**
+ * The play glyph on a video thumbnail's badge. Inline rather than a file for the same reason
+ * the chevron above is: it is one monochrome path taking its colour from the element around it,
+ * and an `<img>` would be a request and a second copy to keep in step with the theme.
+ *
+ * Rounded joins rather than a bare triangle, to match the chevron — at 10px a sharp apex reads
+ * as a stray pixel.
+ *
+ * The path is positioned against its *stroke-inclusive* box, which is what the eye sees and is
+ * 0.7 wider than the geometry on every side at this stroke width. Vertically that box is dead
+ * centre (2.2 to 7.8). Horizontally it is centred on 5.25 rather than 5: a right-pointing
+ * triangle carries its area toward the base, so its centroid sits left of its bounding box and
+ * it reads as left-shifted when centred geometrically. A quarter-unit is the whole correction —
+ * the badge's own `place-items: center` does the rest, and nothing outside this path should be
+ * nudging it.
+ */
+const PlayGlyph = () => (
+  <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+    <path
+      d="M3.35 2.9 7.15 5 3.35 7.1Z"
+      fill="currentColor"
+      stroke="currentColor"
+      strokeWidth="1.4"
       strokeLinejoin="round"
     />
   </svg>
@@ -111,10 +160,17 @@ function imageBox(media: Measured, frameWidth: number, frameHeight: number) {
 type AttachmentsProps = {
   attachments: Array<any>,
   label?: string,
+  /**
+   * True for the one row that is on screen when the page loads. Decided in `Profile.tsx`,
+   * which is the only place that knows where a row sits in the document — a row cannot tell
+   * from its own index, because every item renders its own.
+   */
+  priority?: boolean,
 };
 const Attachments: React.FC<AttachmentsProps> = ({
   attachments,
-  label
+  label,
+  priority = false,
 }) => {
   const [lightboxState, setLightboxState] = useState({
     open: false,
@@ -258,6 +314,7 @@ const Attachments: React.FC<AttachmentsProps> = ({
                   index={index}
                   total={attachments.length}
                   label={label}
+                  priority={priority}
                 />
               )
             })}
@@ -303,6 +360,8 @@ type AttachmentProps = {
   index: number,
   total: number,
   label?: string,
+  /** Whether this row is the one on screen at load. See `EAGER_THUMBNAILS`. */
+  priority?: boolean,
 }
 const Attachment: React.FC<AttachmentProps> = ({
   media,
@@ -311,9 +370,25 @@ const Attachment: React.FC<AttachmentProps> = ({
   index,
   total,
   label,
+  priority = false,
 }) => {
-  // Load first 5 thumbnails eagerly, lazy load the rest
-  const shouldLoadEagerly = index < 5;
+  const hasHover = useHasHover();
+  const reduceMotion = usePrefersReducedMotion();
+
+  /**
+   * Whether this thumbnail is currently showing its video rather than its poster. Set by
+   * hovering, and only ever true on a pointer that can hover — see `useHasHover`.
+   */
+  const [preview, setPreview] = useState(false);
+  /** Set once the preview has a frame to show, which is what it fades in on. */
+  const [previewReady, setPreviewReady] = useState(false);
+
+  // Only the on-screen row loads eagerly, and only its leading thumbnails within that.
+  // Everything else defers to the browser, which already knows what is near the viewport.
+  const eager = priority && index < EAGER_THUMBNAILS;
+  const fetchPriority = eager
+    ? "high"
+    : (!priority && index >= DEPRIORITISE_AFTER ? "low" : "auto");
 
   // The displayed box, which is what the resize request must ask for. Asking for a square
   // box (the previous behaviour) makes Cloudflare constrain by the wrong axis and return
@@ -332,21 +407,23 @@ const Attachment: React.FC<AttachmentProps> = ({
         height: height - THUMBNAIL_BORDER * 2,
       };
 
-  let item;
-  if (media.type === "image") {
-    const thumbnailUrl = cloudflareImageUrl(media.url, {
-      width: imageWidth,
-      height: imageHeight,
-      // The box asked for is the media's own ratio either way, so nothing is cropped or
-      // letterboxed: matted, it was derived from that ratio; unmatted, the frame carries it.
-      fit: media.framed ? 'contain' : 'cover',
-    });
-    item = <Image
+  // The box asked for is the media's own ratio either way, so nothing is cropped or
+  // letterboxed: matted, it was derived from that ratio; unmatted, the frame carries it.
+  const fit = media.framed ? 'contain' : 'cover';
+
+  /**
+   * A still for this thumbnail, whatever the media is: the image itself, or a video's poster
+   * frame. Both are ordinary images, so both go through Cloudflare and arrive at the ~12 KB a
+   * 90px-tall thumbnail is worth.
+   */
+  const still = (url: string) => (
+    <Image
       alt=""
-      src={thumbnailUrl}
+      src={cloudflareImageUrl(url, { width: imageWidth, height: imageHeight, fit })}
       height={imageHeight}
       width={imageWidth}
-      loading={shouldLoadEagerly ? "eager" : "lazy"}
+      loading={eager ? "eager" : "lazy"}
+      fetchPriority={fetchPriority}
       // Images are draggable by default, and a native image drag pre-empts the pointer-move
       // scroll: press on a thumbnail, move, and the browser starts carrying a ghost of the
       // picture instead of scrolling the row. That is the "dragging sometimes does nothing" —
@@ -354,15 +431,64 @@ const Attachment: React.FC<AttachmentProps> = ({
       // has `-webkit-user-drag: none` as well, since Safari honours that rather than this.
       draggable={false}
     />
+  );
+
+  let item;
+  if (media.type === "image") {
+    item = still(media.url);
+  } else if (media.type === "video" && media.posterUrl) {
+    /**
+     * A video shows its poster at rest and fetches nothing else.
+     *
+     * This row is 90px tall, and it used to render an `autoPlay` video per attachment. That
+     * downloads the entire file — `autoPlay` does so regardless of the `preload` hint, and
+     * there was no viewport gate here the way there is in `Gallery.tsx` — so the CV page spent
+     * ~11 MB, one clip of it 5.9 MB, animating thumbnails the size of a postage stamp, above
+     * and below the fold alike. The poster is a normal image and costs about 12 KB.
+     *
+     * The video is mounted only while hovered, so the fetch is the reader asking for it. It is
+     * layered over the poster rather than replacing it: a swap would blank the thumbnail for
+     * as long as the file takes to arrive, which on the first hover is the whole point of the
+     * delay. Clicking still opens the lightbox, where the video plays at a size that justifies
+     * downloading it.
+     */
+    const canPreview = hasHover && !reduceMotion;
+    item = (
+      <>
+        {still(media.posterUrl)}
+        {canPreview && preview && (
+          <video
+            src={media.url}
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            data-preview="true"
+            // Not `onLoadedData`: that fires when there is a frame decoded, which is still one
+            // paint before the poster should give way. `playing` is the first moment the video
+            // is actually showing motion, so the cross-fade never lands on a frozen frame.
+            onPlaying={() => setPreviewReady(true)}
+            data-ready={previewReady || undefined}
+          />
+        )}
+        {/* Without motion at rest, a video thumbnail is indistinguishable from an image. The
+            accessible name already says "video", so this is the sighted equivalent rather than
+            new information — hence `aria-hidden`, which also keeps it from being announced
+            twice. It sits after the video in source order so the CSS can hide it with a sibling
+            combinator once the preview is actually playing: at that point the motion is the
+            signal and the badge is just something sitting on top of it. */}
+        <span className={styles.playBadge} aria-hidden="true">
+          <PlayGlyph />
+        </span>
+      </>
+    );
   } else if (media.type === "video") {
-    item = <video 
-      src={media.url} 
-      autoPlay 
-      loop 
-      muted 
-      playsInline
-      preload={shouldLoadEagerly ? "auto" : "metadata"}
-    />
+    // No poster recorded for this asset, so there is no still to show — fall back to the
+    // previous behaviour rather than rendering an empty frame. `media.json` gives every video
+    // a poster today; this is here so that adding one without a poster degrades to "heavy"
+    // instead of to "blank".
+    item = <video src={media.url} autoPlay loop muted playsInline preload="metadata" />
   }
 
   const mediaNoun = media.type === "video" ? "video" : "image";
@@ -384,6 +510,23 @@ const Attachment: React.FC<AttachmentProps> = ({
         '--thumb-padding': `${THUMBNAIL_PADDING}px`,
       } as React.CSSProperties}
       onClick={onClick}
+      // Hovering is what fetches a video's preview. `useHasHover` gates the mount rather than
+      // these handlers, because `pointerenter` fires on a touch tap too — and there the tap is
+      // a request to open the lightbox, not to load a preview about to be covered by it.
+      onPointerEnter={() => setPreview(true)}
+      onPointerLeave={() => {
+        setPreview(false);
+        // Reset so the next hover fades in again rather than snapping to a frame that is no
+        // longer mounted. The file itself stays in the HTTP cache, so only the first hover pays.
+        setPreviewReady(false);
+      }}
+      // Keyboard users get the same affordance: the row is reachable by tab, and focus is the
+      // pointer-free equivalent of resting on a thumbnail.
+      onFocus={() => setPreview(true)}
+      onBlur={() => {
+        setPreview(false);
+        setPreviewReady(false);
+      }}
       aria-label={accessibleName}
       data-framed={media.framed}
       className={styles.media}>

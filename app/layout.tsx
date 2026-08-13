@@ -35,6 +35,18 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <head>
+        {/* The stylesheet below is render-blocking and lives on a third origin, so the first
+            paint waits on a DNS lookup, a TLS handshake, the CSS, and only then the font file
+            it names — strictly serial, because the font's URL is not known until the CSS
+            arrives. `preconnect` overlaps the first two of those with the rest of the document.
+
+            Both hosts are needed and they are different: the CSS comes from api.fontshare.com
+            and the woff2 it points at from cdn.fontshare.com, so preconnecting only the one in
+            the href leaves the handshake that actually precedes the font unstarted. The font
+            fetch is anonymous, hence `crossOrigin` — without it the browser opens a *second*
+            connection for the real request and the warmed one goes to waste. */}
+        <link rel="preconnect" href="https://api.fontshare.com" />
+        <link rel="preconnect" href="https://cdn.fontshare.com" crossOrigin="anonymous" />
         <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=switzer@1&display=swap" />
       </head>
       <body>

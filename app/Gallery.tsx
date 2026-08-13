@@ -218,7 +218,18 @@ const GalleryVideo: React.FC<GalleryFrameProps> = ({ item, isFirst, aspectRatio 
       <video
         ref={videoRef}
         src={item.url}
-        poster={item.posterUrl ?? undefined}
+        // Through the resizer like any other image: a poster is one, and at origin size these
+        // are up to 160 KB for a 540px column. It also means the row has something to paint
+        // immediately — `preload="none"` below is what keeps the video itself off the initial
+        // load, and without a poster that left an empty box until the item scrolled into view.
+        //
+        // Width only, so the default `scale-down` constrains the one axis given and the poster
+        // keeps the video's ratio — the box it fills is the same aspect-ratio frame. `poster`
+        // takes a single URL with no srcset to negotiate, so it resolves at the default DPR,
+        // which lands it at exactly the width the re-encoded video itself is.
+        poster={
+          item.posterUrl ? cloudflareImageUrl(item.posterUrl, { width: COLUMN_WIDTH }) : undefined
+        }
         aria-label={item.title ?? undefined}
         width={item.width}
         height={item.height}

@@ -62,11 +62,13 @@
     },
     "design-ruler-alignment-guides.webm": {
       "width": 1920,
-      "height": 1242
+      "height": 1242,
+      "framed": false
     },
     "design-ruler-measure.webm": {
       "width": 1920,
-      "height": 1242
+      "height": 1242,
+      "framed": false
     },
     "document-suggestions.webp": {
       "width": 2560,
@@ -205,7 +207,8 @@
     },
     "personal-website-framer.webm": {
       "width": 1920,
-      "height": 1242
+      "height": 1242,
+      "framed": false
     },
     "polytechnique-logo-dark.svg": {
       "width": 80,

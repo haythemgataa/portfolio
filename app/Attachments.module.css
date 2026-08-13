@@ -255,11 +255,12 @@
   height: 16px;
   border-radius: 999px;
   /* Not fully opaque: a hint of the frame beneath keeps it sitting *on* the image rather than
-     punching a hole in it. The glyph is offset a half-pixel right of centre because an optical
-     centre for a triangle is not its bounding box's. */
+     punching a hole in it. */
   background-color: rgba(0, 0, 0, 0.55);
   color: #fff;
-  padding-left: 1px;
+  /* No padding to nudge the glyph with: the optical offset a play triangle needs is built into
+     the path itself, against its stroke-inclusive box (see `PlayGlyph`). Correcting in both
+     places is what pushed it visibly off centre — the two offsets summed. */
   pointer-events: none;
   transition: opacity 120ms ease;
 }

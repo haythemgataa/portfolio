@@ -45,8 +45,13 @@
       "id": "pcb-layout-editing",
       "file": "pcb-layout-editing.webm",
       "title": "Cooper Intro",
-      "caption": "I created this playful video to introduce Cooper internally to the whole team. I couldn’t present it myself, as my baby boy was born the day before the presentation, so I missed their reaction — I was witnessing something far more magical.",
+      "caption": "I created this playful video to introduce Cooper internally to the whole team. I couldn’t present it myself, as my baby boy was born the day before the presentation, so I missed their reaction, I was witnessing something far more magical.",
       "date": "2026"
+    },
+    {
+      "id": "personal-website-framer",
+      "file": "personal-website-framer.webm",
+      "title": "Hero Section of a Personal Website"
     },
     {
       "id": "edit-net-class",

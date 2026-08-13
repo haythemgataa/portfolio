@@ -449,14 +449,23 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
   the media's own shape, so a row of them reads as a set. Unmatted is the image edge to edge at
   its own (clamped) ratio. The white rim is on **both** — it began as the mat's outer edge, but
   it reads just as well unmatted and it is what gives the hover shadow an edge to lift. In the dark
-  theme it is hover-only (`prefers-color-scheme: dark` and `hover: hover`): a light edge on every
-  thumbnail at once is the loudest thing on a dark page, which is why `--thumbnailFrame` was
-  already dimmed there. **The `::after` hairline waits for the pointer there too** — hiding the rim
-  alone still left a visible ring at rest, because that inner edge is a light line on a dark ground
-  as well; both belong to the same treatment. Only the *colour* changes in either case — the widths
-  are constant, because the width calculation and the hairline's radius are both measured against
-  them. `.media:focus-visible::after` outranks the dark rule on specificity, so the focus ring
-  still shows at rest. Two consequences of the rim
+  theme (`prefers-color-scheme: dark`) it is still there at rest but wears
+  `--backgroundColor` instead, so it reads as a margin of ground held around the image rather than
+  as a light edge — `--thumbnailFrame` on every thumbnail at once is the loudest thing on a dark
+  page, which is why it was already dimmed there — and takes `--thumbnailFrame` on hover. That
+  colour change *is* the dark hover state, because the lift's shadow is dark on a dark page and
+  barely registers, where in the light theme it carries the hover on its own. It was previously
+  hidden outright at rest, which left the image sitting straight on the ground with nothing between
+  them. The variable rather than a literal, so it follows the gallery route's ground too. Only the
+  *colour* ever changes — the widths are constant, because the width calculation and the hairline's
+  radius are both measured against them. **Only the `:hover` half is gated on `hover: hover`**, and
+  the split is the fix for a real bug: with the whole block gated, a touch device fell through to
+  the base rule and showed the light theme's white rim on a dark page. The rest colour is the dark
+  theme's *treatment*, not a state waiting to be revealed, so it applies whatever the pointer is;
+  `:hover` stays behind the gate because on touch it sticks after a tap, which would leave a
+  thumbnail lit behind the lightbox it just opened. The `::after` hairline is unconditional in both
+  themes: it is the edge between the rim and the image, and the rim needs an inside whichever
+  colour it is wearing. Two consequences of the rim
   existing on unmatted thumbnails, and both are about `box-sizing: border-box` making it eat into
   the width the component sets: the resize request asks for the frame *minus the border on each
   side* (asking for the whole frame would over-fetch and, with `fit: cover`, crop by two pixels),

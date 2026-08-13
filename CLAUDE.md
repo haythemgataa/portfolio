@@ -188,6 +188,19 @@ The schema and its rationale are documented in **`CONTENT-SCHEMA.md`**; the type
     referenced exactly when the light one is — the same rule as a video's poster. Without that it
     reads as unreferenced and the sweep deletes it. It is also added to `itemFiles`, where a
     non-existent name is harmless because `planGarbage` skips anything absent from the registry.
+- **Every video carries a `poster`, and that is a load-time contract rather than a nicety.**
+  Nothing resizes video: Cloudflare Image Resizing does not accept it, so a `<video>` always
+  fetches the whole file whatever box it is shown in. The poster is what both surfaces show at
+  rest — see the CV row below, and `Gallery.tsx`'s `preload="none"` — so a video without one is
+  not a missing detail but an asset that reverts to downloading megabytes to fill a thumbnail.
+  Posters are pool files like any other, counted by `collectReferences()` exactly when their
+  video is.
+- **Pool video is capped at 1080px wide, 30 fps, VP9 CRF 32, no audio track.** The originals ran
+  to 3840x2094 at 9.7 Mbps and 1920x1242 at 120 fps for media that is never shown wider than the
+  540px column; re-encoding took the pool from 34 MB to 15 MB with no visible loss on fine UI
+  text (checked at 2x magnification on the densest screenshot). Audio is stripped because every
+  `<video>` on the site — row, gallery and lightbox alike — is `muted`. Re-encoding changes the
+  file's real dimensions, so `media.json` has to be updated with them in the same pass.
 - **Dimensions are always authored**, so the build never runs `sharp`; `type` is inferred from the
   extension rather than stored, so there is one source of truth for it.
 - Optional fields are **omitted, not written as `""`**.

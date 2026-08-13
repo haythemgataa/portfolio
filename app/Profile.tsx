@@ -47,12 +47,18 @@ const Profile: React.FC<ProfileProps> = ({
 
   return (
     <>
-      {cv.sections.map((section) => (
+      {cv.sections.map((section, sectionIndex) => (
         <Section
           key={section.key}
           section={section}
           showDetails={showDetails}
           onToggleDetails={toggleDetails}
+          // Only the first item of the first section is on screen when the page loads, so it
+          // is the only thumbnail row whose images should skip the browser's viewport logic.
+          // The decision has to be made here: a row renders per item, so from inside one an
+          // index says nothing about where it sits in the document — testing that index was
+          // what put the first few thumbnails of *every* section into the initial fetch.
+          priority={sectionIndex === 0}
         />
       ))}
 
@@ -74,11 +80,14 @@ type SectionProps = {
   section: ResolvedSection,
   showDetails: boolean,
   onToggleDetails: () => void,
+  /** Whether this is the first section, and so the one on screen at load. */
+  priority?: boolean,
 };
 const Section: React.FC<SectionProps> = ({
   section,
   showDetails,
   onToggleDetails,
+  priority = false,
 }) => {
   // Descriptions are the only thing the control hides, so a section whose items carry none
   // — Awards and Speaking, today — gets no control at all rather than a dead one. Media and
@@ -93,8 +102,13 @@ const Section: React.FC<SectionProps> = ({
         toggle={hasDetails ? { open: showDetails, onToggle: onToggleDetails } : undefined}
       />
       <div className={styles.experiences}>
-        {section.items.map((item) => (
-          <ProfileItem key={item.id} item={item} showDetails={showDetails}/>
+        {section.items.map((item, itemIndex) => (
+          <ProfileItem
+            key={item.id}
+            item={item}
+            showDetails={showDetails}
+            priority={priority && itemIndex === 0}
+          />
         ))}
       </div>
     </section>
@@ -146,10 +160,13 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
 type ProfileItemProps = {
   item: ResolvedItem,
   showDetails: boolean,
+  /** Whether this item's thumbnail row is on screen at load. */
+  priority?: boolean,
 };
 const ProfileItem: React.FC<ProfileItemProps> = ({
   item,
   showDetails,
+  priority = false,
 }) => {
 
   // Icons sit wherever the author put their token, so they are part of the heading's own flow —
@@ -191,7 +208,7 @@ const ProfileItem: React.FC<ProfileItemProps> = ({
         </div>
         : null}
         {item.attachments.length > 0 ?
-          <Attachments attachments={item.attachments} label={item.heading}/>
+          <Attachments attachments={item.attachments} label={item.heading} priority={priority}/>
         : null}
       </div>
     </div>

@@ -351,16 +351,24 @@
    width calculation and the hairline's radius are measured against it.
    `--backgroundColor` rather than a literal, so it follows the ground it is imitating — including
    the gallery route's, where that variable is swapped on `body`.
-   Scoped to pointers, so a touch device in dark mode keeps the full rim it has no way to reveal.
+   Only the *hover* half is scoped to pointers, and the split matters: the rest colour is the dark
+   theme's treatment of the rim, not a state waiting to be revealed, so a touch device gets it too.
+   It was briefly the whole block that was gated, back when rest meant no rim at all and a phone
+   would otherwise have had nothing — with a ground-coloured rim there is nothing to withhold, and
+   gating it just left touch showing the light theme's white edge. `:hover` stays behind the gate
+   because on touch it sticks after a tap, which would leave a thumbnail lit behind the lightbox
+   it just opened.
    The inner hairline is left alone in both themes: it is the edge between the rim and the image,
    and the rim needs an inside whichever colour it is wearing. */
-@media (prefers-color-scheme: dark) and (hover: hover) {
+@media (prefers-color-scheme: dark) {
   .media {
     border-color: var(--backgroundColor);
   }
 
-  .media:hover {
-    border-color: var(--thumbnailFrame);
+  @media (hover: hover) {
+    .media:hover {
+      border-color: var(--thumbnailFrame);
+    }
   }
 }
 

@@ -124,6 +124,10 @@
           "subheading": "Swift (w/ Claude)",
           "url": "https://github.com/haythemgataa/design-ruler",
           "year": "2026",
+          "media": [
+            "design-ruler-measure.webm",
+            "design-ruler-alignment-guides.webm"
+          ],
           "description": "Born out of a personal need, Design Ruler is a Mac app that gives you two fullscreen overlay tools for inspecting UI: one for measuring pixel distances with automatic edge detection, and one for placing alignment guides anywhere on screen. Zoom to 4x to work pixel by pixel. Works across all monitors.\n\nAvailable as a standalone menu bar app or a Raycast extension.\n\nA work in progress, pending Apple notarization, but totally usable."
         },
         {
@@ -145,6 +149,9 @@
           "subheading": "Framer",
           "year": "2024",
           "url": "https://haythem.framer.website",
+          "media": [
+            "personal-website-framer.webm"
+          ],
           "description": "This was meant to be my main personal website and portfolio. I spent countless hours on it, hid many easter eggs, and polished every pixel to perfection. But when I finally got to adding case studies, the site felt over-designed — enough that I worried it was working against me. So I dropped the project and moved to the one you’re on now: based on the good old ReadCV, minimal and straight to the point."
         },
         {
@@ -152,6 +159,10 @@
           "heading": "Table Lamp Mod",
           "subheading": "ESP32 and HomeKit (w/ Claude)",
           "year": "2026",
+          "media": [
+            "table-lamp-mod-finished.webp",
+            "table-lamp-mod-breadboard.webp"
+          ],
           "description": "I bought a table lamp advertised as USB-C rechargeable. It wasn’t. I liked the design, so I wanted to fix that.\n\nThe idea was simple: open it, replace the battery with a larger one and the charger module with an IP2312 chip. But since I was already in there, I thought, why not try to make it smart? So I “reverse engineered” the LED controller board and used an ESP32 to take the input and send commands to the controller, then added HomeKit support to control it from my phone. Worked great — I’m still using it daily."
         }
       ]

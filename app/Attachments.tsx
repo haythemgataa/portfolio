@@ -51,23 +51,40 @@ const MIN_THUMBNAIL_RATIO = 19 / 5 / 9; // iPhone
 const ARROW_STEP = 0.8;
 
 /**
- * How many thumbnails of the one above-the-fold row are fetched eagerly.
+ * How many thumbnails of the one above-the-fold row are hinted `high`.
  *
- * Eagerness has to be rationed, not spread: `loading="eager"` opts an image out of the
- * browser's own viewport logic entirely, so marking the first few of *every* row — which is
- * what an index-only test does, since each item renders its own row — put dozens of requests
- * for thumbnails far down the page in front of the ones actually on screen. They do not queue
- * politely behind the visible ones; they compete with them. Only the row `priority` names is
- * on screen at load, and only its leading thumbnails are visible within it.
+ * Priority has to be rationed, not spread: a hint given to everything is a hint given to
+ * nothing. Only the row `priority` names is on screen at load, and only its leading
+ * thumbnails are visible within it.
  */
-const EAGER_THUMBNAILS = 3;
+const PRIORITY_THUMBNAILS = 3;
 
 /**
- * Past this point in a row that is not on screen, a thumbnail is also hinted `low`. Lazy
- * loading already defers these, but once a reader scrolls the fetches start together and the
- * hint is what keeps the leading edge of the row — the part they are looking at — first.
+ * Past this point in a row that is not on screen, a thumbnail is hinted `low`, so that when a
+ * reader does scroll, the row's leading edge — the part they are looking at — arrives first.
  */
 const DEPRIORITISE_AFTER = 3;
+
+/**
+ * Every thumbnail is fetched at load; only the *order* is rationed, via `fetchPriority` above.
+ * None of them are `loading="lazy"`, and that is a deliberate reversal.
+ *
+ * Lazy is the obvious choice and was the wrong one here, because the tabs are real routes.
+ * Switching to /gallery unmounts this whole tree and destroys every `<img>` in it — decoded
+ * pixels belong to the element, not to the URL — so coming back builds a fresh element for
+ * every thumbnail, with no memory of having been loaded a moment earlier. Each one then needs
+ * the browser to decide, from scratch, to fetch it. Chrome settles that on the next scroll;
+ * WebKit does not reliably settle it at all, which showed up on iOS as thumbnails that had
+ * been on screen before the round trip and came back blank for good. Measured on the live
+ * site: 0 of 44 elements survive the navigation, and the return trip issues 0 requests.
+ *
+ * What makes eager affordable is the resizing that came before it. The whole set is ~190 KB of
+ * AVIF — less than one of the source images it replaced — and on the return trip it is served
+ * from cache as `immutable`, so the second visit costs no network at all. The competition
+ * `loading="eager"` used to cause was a problem when these were full-size originals; at 2-6 KB
+ * apiece the `fetchPriority` hints are enough to keep the order right.
+ */
+const THUMBNAIL_LOADING = "eager" as const;
 
 /** Chevron for the edge arrows. Mirrored with a transform for the leading edge. */
 const Chevron = () => (
@@ -383,10 +400,10 @@ const Attachment: React.FC<AttachmentProps> = ({
   /** Set once the preview has a frame to show, which is what it fades in on. */
   const [previewReady, setPreviewReady] = useState(false);
 
-  // Only the on-screen row loads eagerly, and only its leading thumbnails within that.
-  // Everything else defers to the browser, which already knows what is near the viewport.
-  const eager = priority && index < EAGER_THUMBNAILS;
-  const fetchPriority = eager
+  // Everything is fetched (see THUMBNAIL_LOADING); these hints are what order it. The leading
+  // thumbnails of the on-screen row first, the tail of every off-screen row last.
+  const leading = priority && index < PRIORITY_THUMBNAILS;
+  const fetchPriority = leading
     ? "high"
     : (!priority && index >= DEPRIORITISE_AFTER ? "low" : "auto");
 
@@ -422,7 +439,7 @@ const Attachment: React.FC<AttachmentProps> = ({
       src={cloudflareImageUrl(url, { width: imageWidth, height: imageHeight, fit })}
       height={imageHeight}
       width={imageWidth}
-      loading={eager ? "eager" : "lazy"}
+      loading={THUMBNAIL_LOADING}
       fetchPriority={fetchPriority}
       // Images are draggable by default, and a native image drag pre-empts the pointer-move
       // scroll: press on a thumbnail, move, and the browser starts carrying a ghost of the

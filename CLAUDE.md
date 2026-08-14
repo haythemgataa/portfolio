@@ -259,6 +259,23 @@ Videos autoplay muted when scrolled into view and pause when they leave, via
 `prefers-reduced-motion: reduce` they stay paused and expose native controls instead
 (`app/usePrefersReducedMotion.ts`).
 
+Two things about *when* that costs anything:
+
+- **A video's poster is an `<img>`, not the `poster` attribute.** That attribute has no lazy
+  option — the browser fetches it as soon as the element is parsed, however far down the list it
+  sits — so with seven clips spread down a nine-screen page every poster was pulled before the
+  reader had scrolled a pixel, while the plain images beside them deferred correctly. As an
+  `<img>` it takes `loading="lazy"` and behaves like the rest of the page. It is layered *over*
+  the video so there is no empty frame while the file arrives, and hides on `loadeddata` rather
+  than `playing` — under reduced motion `playing` never comes, and there `preload` is
+  `"metadata"` precisely so the video can paint the frame its controls sit on. `pointer-events:
+  none` on it is load-bearing for the same reason: it covers those controls until it fades.
+- **`play()` waits for `PLAY_DWELL_MS` of the item staying on screen.** `play()` is what commits
+  to downloading the whole clip — `preload` is `"none"` until then — so starting on the
+  intersection alone meant a reader who flicked from the top of the list to the bottom pulled
+  every clip in it, several MB, having seen none of them. The `clearTimeout` on the way out is
+  the half that actually does the work. Measured: a full-page flick now starts zero videos.
+
 Hovering a video shows its playback position. Three things about it are deliberate. The value is
 read in a `requestAnimationFrame` loop **gated on hover**, not from `timeupdate` — that event
 fires about four times a second, which is visible as a bar that steps rather than travels, and the

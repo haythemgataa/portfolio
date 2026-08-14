@@ -135,6 +135,77 @@
   display: block;
 }
 
+/* The blur-up stand-in's own clip.
+   `.imageWrap` cannot be relied on for this: it drops `overflow: hidden` for both the floating
+   and the video treatments, and a blur feathers well past the element's edge on every side —
+   without a clip of its own the stand-in would smear out over the backdrop for exactly those
+   two cases. `border-radius: inherit` so it is cut to the same corner as the media. */
+.placeholderClip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* A 24px-wide copy blown up to full size, which is the whole trick: it weighs well under a
+   kilobyte, so something shaped like the picture is on screen almost at once.
+
+   Scaled past the box because blurring leaves the outer few pixels part-transparent, and at
+   this radius that reads as a soft grey vignette against the backdrop. The overflow above
+   trims the excess.
+
+   Only `transform` is here. The blur, the opacity and the transition between them are set inline
+   by Lightbox.tsx, so that how-far-along-is-this lives in one place rather than being split
+   between a `data-` attribute here and the state that drives it there. See the note on the
+   placeholder in `LightboxImage`. */
+.placeholder {
+  transform: scale(1.06);
+}
+
+/* The wait, once it is long enough to be worth admitting to. A dark disc under a light ring,
+   the same reasoning as the thumbnail's play badge: it sits on the blurred stand-in, and that
+   is whatever brightness the picture happens to be. */
+.spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
+  border-radius: 999px;
+  background-color: rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+
+.spinner::after {
+  content: '';
+  position: absolute;
+  inset: 7px;
+  border-radius: inherit;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  animation: lightboxSpin 700ms linear infinite;
+}
+
+@keyframes lightboxSpin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The indicator stays — it is status, not decoration, and a reader who has asked for less
+     motion still needs to know the wait is the page's and not theirs. It stops *rotating*
+     though: a pulse carries the same "working" without the spin. */
+  .spinner::after {
+    animation: lightboxPulse 1.4s ease-in-out infinite;
+  }
+
+  @keyframes lightboxPulse {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 1; }
+  }
+}
+
 /* The bottom control cluster: prev, the pager dots, next.
    `z-index: 11` puts it above `.carousel` (10). That matters for the steps specifically: on a wide
    image the media reaches almost to the viewport edge, so the click-half over it would land on top

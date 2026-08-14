@@ -615,6 +615,36 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
     section padding cannot collapse. `Gallery.module.css` gives its list a matching 60px bottom
     margin for the same reason.
 - Lightbox uses React Portal to render to `document.body`
+- **The lightbox requests a resized image, and used to request the original.** `LightboxImage`
+  rendered `src={media.url}` and never imported `cloudflareImageUrl`, so opening one downloaded
+  the source file — up to 394 KB of 2560x1440 webp — whatever box it landed in. It now offers a
+  `srcSet` across `LIGHTBOX_WIDTHS` with `sizes="calc(100vw - 48px)"`, capped at the media's own
+  width so Cloudflare is never asked to upscale. Most of the saving is not the resizing but
+  `format=auto` negotiating AVIF: 23-27% at full size, 65-77% once a viewport picks a smaller
+  step. `sizes` deliberately errs wide — a height-constrained picture is narrower than the
+  viewport and the attribute cannot say so, and guessing low shows as a soft image.
+- **A blurred stand-in covers the wait, and a spinner covers a long one.** `.placeholder` is a
+  24px-wide copy (under a kilobyte) blown up and blurred, sharpening as it fades once the real
+  media has a frame. Four things there are load-bearing:
+  - **The real media has no opacity of its own** — only the stand-in animates. That is the safe
+    direction: a failure can leave a blur up a moment too long, where hiding the media until
+    `load` risks pinning a sharp picture invisible behind a stand-in that never leaves.
+  - **`loaded` checks before it subscribes.** The media is usually already cached from the
+    thumbnail or gallery row that opened the lightbox, so it can be `complete` before any
+    listener is live — and an event that already fired is one you never hear. `error` counts as
+    done, so a broken file does not mean a permanent blur.
+  - **That check defers through `setTimeout`, not `requestAnimationFrame`.** Animation frames only
+    run while the page paints, so in a backgrounded tab the reveal never fires and the reader
+    comes back to the stand-in still up.
+  - **The blur sits on the image inside a plain clipping span.** `filter` applies to the *result*
+    of a clip, so blurring the clipping box feathers the blur back out past the edge that box
+    exists to contain — and the clip is needed at all because `.imageWrap` drops its
+    `overflow: hidden` for the floating and video treatments. `.placeholder`'s `scale(1.06)` is
+    sized against the blur radius, so changing one means revisiting the other.
+
+  Note for anyone verifying this in a preview pane that does not paint: CSS transitions and rAF
+  are both driven by the frame clock, so computed styles freeze at their starting values and
+  correct code reads as broken. Check the *inline* style, or set `transition: none` first.
 - **The lightbox's controls are one cluster at the bottom** — prev, the pager dots, next — in
   `.controls`. Two things about it are deliberate. The steps are anchored to the *viewport* rather
   than to the media: there are also invisible click-halves over the media, and those alone were not

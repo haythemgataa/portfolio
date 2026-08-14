@@ -437,14 +437,24 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
     dragged by grabbing the thumbnails and anything laid over one is a patch the drag dies on.
     It hides on `data-ready`, not `data-preview`: hovering a cold thumbnail leaves the poster up
     for the length of the fetch, and that is the moment the badge is most reassuring.
-- **Eagerness is rationed to one row, and `Profile.tsx` is what decides which.** `loading="eager"`
-  opts an image out of the browser's own viewport logic, so the old `index < 5` test — evaluated
-  per row, and every item renders its own row — put dozens of requests for thumbnails far down the
-  page *in front of* the ones on screen. They do not queue behind the visible ones; they compete.
-  A row cannot tell from its own index where it sits in the document, which is why `priority`
-  is threaded from `Profile` (first item of the first section) rather than inferred in
-  `Attachments`. Past `DEPRIORITISE_AFTER` in an off-screen row a thumbnail is also hinted
-  `low`, so when a reader does scroll, the row's leading edge arrives first.
+- **No CV thumbnail is `loading="lazy"`, and that is deliberate.** The tabs are real routes, so
+  switching to `/gallery` unmounts this tree and destroys every `<img>` in it — decoded pixels
+  belong to the element, not to the URL. Coming back builds a fresh element per thumbnail with
+  no memory of having been loaded, and each one then needs the browser to decide to fetch it
+  again from scratch. Chrome settles that on the next scroll; WebKit does not reliably settle it
+  at all, which showed on iOS as thumbnails that had been on screen before the round trip coming
+  back permanently blank. Measured on the live site: **0 of 44 elements survive the navigation,
+  and the return trip issues 0 requests** — the bytes were never the problem, the decision was.
+  What makes eager affordable is the resizing: the whole set is ~190 KB of AVIF, less than one
+  of the source images it replaced, and it returns from cache as `immutable`. This reverses the
+  earlier rationing, which was correct when these were full-size originals that genuinely
+  competed; at 2-6 KB apiece `fetchPriority` is enough to order them.
+- **Priority is still rationed to one row, and `Profile.tsx` is what decides which.** A hint
+  given to everything is a hint given to nothing. A row cannot tell from its own index where it
+  sits in the document, which is why `priority` is threaded from `Profile` (first item of the
+  first section) rather than inferred in `Attachments`: its leading `PRIORITY_THUMBNAILS` are
+  hinted `high`, and past `DEPRIORITISE_AFTER` in an off-screen row a thumbnail is hinted `low`,
+  so when a reader scrolls, the row's leading edge arrives first.
 - **Sticky section titles.** Each `.sectionHeader` pins at `--sticky-top`, directly below the
   tab bar. This is why section spacing in `Profile.module.css` is `padding-bottom`, not
   `margin`: a sticky element is confined to its own section box, so margins would leave a

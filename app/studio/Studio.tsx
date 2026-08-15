@@ -275,10 +275,56 @@ export default function Studio({
   const activeItem = useMemo(() => rows.find((r) => r.id === itemId) ?? null, [rows, itemId]);
 
   // ---- field editing (debounced autosave) --------------------------------
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /**
+   * One pending timer *per field*, not one for the whole tool.
+   *
+   * A single shared timer was silently lossy: each payload carries only the
+   * field it belongs to (`data: { [key]: value }`) and the server merge-patches
+   * it, so the cancelled timeout was the sole carrier of that value. Typing a
+   * heading and tabbing to the subheading inside the debounce window sent only
+   * the subheading, reported "Saved", and left the optimistic copy showing a
+   * heading that had never been written — until the next `refresh()` replaced it
+   * with what was actually on disk. Same for an asset's width followed by its
+   * height. Keyed by op+target+field, so consecutive edits to *one* field still
+   * collapse into a single write, which is the point of debouncing.
+   */
+  const saveTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+
+  const queueMutate = useCallback(
+    (key: string, op: string, payload: Record<string, unknown>, message = 'Saved') => {
+      const timers = saveTimers.current;
+      const pending = timers.get(key);
+      if (pending) clearTimeout(pending);
+      timers.set(
+        key,
+        setTimeout(() => {
+          timers.delete(key);
+          setStatus({ kind: 'busy' });
+          mutate(op, payload)
+            .then(() => setStatus({ kind: 'saved', message }))
+            .catch((error) => setStatus({ kind: 'error', message: error.message }));
+        }, 600)
+      );
+    },
+    [mutate]
+  );
+
+  // A timer that outlives the tool would fire a write against an unmounted tree.
+  useEffect(() => {
+    const timers = saveTimers.current;
+    return () => {
+      for (const timer of timers.values()) clearTimeout(timer);
+      timers.clear();
+    };
+  }, []);
 
   const queueSave = useCallback(
-    (op: string, payload: Record<string, unknown>, patch: (draft: CvFile) => void) => {
+    (
+      key: string,
+      op: string,
+      payload: Record<string, unknown>,
+      patch: (draft: CvFile) => void
+    ) => {
       // Optimistic local edit so typing stays responsive.
       setCv((prev) => {
         if (!prev) return prev;
@@ -286,21 +332,14 @@ export default function Studio({
         patch(draft);
         return draft;
       });
-
-      if (saveTimer.current) clearTimeout(saveTimer.current);
-      saveTimer.current = setTimeout(() => {
-        setStatus({ kind: 'busy' });
-        mutate(op, payload)
-          .then(() => setStatus({ kind: 'saved', message: 'Saved' }))
-          .catch((error) => setStatus({ kind: 'error', message: error.message }));
-      }, 600);
+      queueMutate(key, op, payload);
     },
-    [mutate]
+    [queueMutate]
   );
 
   const saveField = (key: string, value: string) => {
     if (selection.kind === 'profile') {
-      queueSave('profile.update', { data: { [key]: value } }, (draft) => {
+      queueSave(`profile.update::${key}`, 'profile.update', { data: { [key]: value } }, (draft) => {
         (draft.profile as Record<string, unknown>)[key] = value;
       });
       return;
@@ -309,10 +348,15 @@ export default function Studio({
     const id = activeItem.id;
 
     if (selection.kind === 'contact') {
-      queueSave('contact.update', { itemId: id, data: { [key]: value } }, (draft) => {
-        const row = draft.contact.items.find((i) => i.id === id);
-        if (row) (row as Record<string, unknown>)[key] = value;
-      });
+      queueSave(
+        `contact.update:${id}:${key}`,
+        'contact.update',
+        { itemId: id, data: { [key]: value } },
+        (draft) => {
+          const row = draft.contact.items.find((i) => i.id === id);
+          if (row) (row as Record<string, unknown>)[key] = value;
+        }
+      );
     } else if (selection.kind === 'gallery') {
       // gallery.json is a peer document, so it is patched separately from cv.
       setGallery((prev) => ({
@@ -321,21 +365,23 @@ export default function Studio({
           e.id !== id ? e : ({ ...e, [key]: value } as GalleryEntry)
         ),
       }));
-      if (saveTimer.current) clearTimeout(saveTimer.current);
-      saveTimer.current = setTimeout(() => {
-        setStatus({ kind: 'busy' });
-        mutate('gallery.update', { itemId: id, data: { [key]: value } })
-          .then(() => setStatus({ kind: 'saved', message: 'Saved' }))
-          .catch((error) => setStatus({ kind: 'error', message: error.message }));
-      }, 600);
+      queueMutate(`gallery.update:${id}:${key}`, 'gallery.update', {
+        itemId: id,
+        data: { [key]: value },
+      });
     } else {
       const sectionKey = selection.key;
-      queueSave('item.update', { sectionKey, itemId: id, data: { [key]: value } }, (draft) => {
-        const item = draft.sections
-          .find((s) => s.key === sectionKey)
-          ?.items.find((i) => i.id === id);
-        if (item) (item as Record<string, unknown>)[key] = value;
-      });
+      queueSave(
+        `item.update:${sectionKey}/${id}:${key}`,
+        'item.update',
+        { sectionKey, itemId: id, data: { [key]: value } },
+        (draft) => {
+          const item = draft.sections
+            .find((s) => s.key === sectionKey)
+            ?.items.find((i) => i.id === id);
+          if (item) (item as Record<string, unknown>)[key] = value;
+        }
+      );
     }
   };
 
@@ -382,13 +428,12 @@ export default function Studio({
       ...prev,
       [file]: { ...prev[file], [key]: local },
     }));
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      setStatus({ kind: 'busy' });
-      mutate('asset.update', { file, data: { [key]: value } })
-        .then(() => setStatus({ kind: 'saved', message: 'Asset updated' }))
-        .catch((error) => setStatus({ kind: 'error', message: error.message }));
-    }, 600);
+    queueMutate(
+      `asset.update:${file}:${key}`,
+      'asset.update',
+      { file, data: { [key]: value } },
+      'Asset updated'
+    );
   };
 
   // ---- reordering ---------------------------------------------------------
@@ -462,6 +507,15 @@ export default function Studio({
           if (dark && assets[dark]) used.add(dark);
         }
       }
+    }
+    // A poster is reachable only through its video, so it is used exactly when
+    // that video is — the registry pass `collectReferences` makes. Without it
+    // the gallery pane offered to delete a poster with "Nothing else references
+    // it", while the server (correctly) kept it. The warning was the only thing
+    // wrong, but a delete dialog that misstates the consequence is the one place
+    // that matters.
+    for (const [file, asset] of Object.entries(assets)) {
+      if (asset.poster && used.has(file)) used.add(asset.poster);
     }
     return used;
     // `assets` matters as well as `cv`: whether a `-dark` sibling counts depends on it being in
@@ -644,19 +698,30 @@ export default function Studio({
     const toGallery = selection.kind === 'gallery';
     if (!toGallery && (selection.kind !== 'section' || !activeItem)) return;
 
-    const form = new FormData();
-    form.append('attachTo', toGallery ? 'gallery' : 'cv');
-    if (!toGallery && selection.kind === 'section' && activeItem) {
-      form.append('sectionKey', selection.key);
-      form.append('itemId', activeItem.id);
-    }
-    form.append('hash', hashRef.current);
-    Array.from(files).forEach((file) => form.append('files', file));
+    const picked = Array.from(files);
 
     run(async () => {
+      // Built inside the callback, not outside it. A FormData freezes the hash
+      // at the moment it is assembled, so a replay after `run` resyncs would
+      // have re-sent the stale one and 409'd again for as long as the tab was
+      // open — which is why the 409 is also classified as `StaleContentError`
+      // here, the way `mutate` does it. Upload was the one operation that could
+      // not recover from a stale hash.
+      const form = new FormData();
+      form.append('attachTo', toGallery ? 'gallery' : 'cv');
+      if (!toGallery && selection.kind === 'section' && activeItem) {
+        form.append('sectionKey', selection.key);
+        form.append('itemId', activeItem.id);
+      }
+      form.append('hash', hashRef.current);
+      picked.forEach((file) => form.append('files', file));
+
       const res = await fetch('/studio/api/media', { method: 'POST', body: form });
       const json = await res.json().catch(() => ({ error: res.statusText }));
-      if (!res.ok) throw new Error(json.error || 'Upload failed');
+      if (!res.ok) {
+        const message = json.error || 'Upload failed';
+        throw res.status === 409 ? new StaleContentError(message) : new Error(message);
+      }
       if (json.hash) hashRef.current = json.hash;
       if (json.createdIds?.length) setItemId(json.createdIds[0]);
       if (json.warning) throw new Error(json.warning);
@@ -1089,8 +1154,12 @@ export default function Studio({
 
                 {selection.kind === 'profile' && (
                   <p className={styles.hint}>
-                    Photo: <code>public/media/profile/{String(cv.profile.photo)}</code> — replace
-                    the file on disk to change it.
+                    {/* The pool is flat — `poolPath` allows exactly one segment — so the
+                        `profile/` subdirectory this used to print stopped existing when the
+                        pool was flattened. A file written to it is ignored in silence:
+                        `findOrphans` reads the pool non-recursively. */}
+                    Photo: <code>public/media/{String(cv.profile.photo)}</code> — replace the
+                    file on disk to change it.
                   </p>
                 )}
 
@@ -1380,7 +1449,13 @@ const AskDialog: React.FC<{ ask: Ask; onClose: () => void }> = ({ ask, onClose }
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => {
           if (e.key === 'Escape') onClose();
-          if (e.key === 'Enter') {
+          // Enter submits only the dialogs that have something to type into.
+          // On the input-less ones focus is parked on Cancel precisely because
+          // the other button deletes — and this handler covers the whole
+          // subtree, so it was suppressing Cancel's own Enter→click and running
+          // the delete instead. Left to the browser, Enter now activates
+          // whichever button actually has focus.
+          if (e.key === 'Enter' && ask.input) {
             e.preventDefault();
             submit();
           }

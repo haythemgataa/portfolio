@@ -120,8 +120,27 @@ route still answers 200 and is not worth indexing — and one entry per real mar
 rather than by filtering for its name. `lastModified` is the build clock for the same reason
 `SiteFooter`'s "Last updated" is: publishing *is* rebuilding, so that date cannot go stale.
 
-There is no Open Graph or Twitter card yet — deliberately, pending a designed card image.
-`metadataBase` is already in place, so adding one is a matter of an `openGraph` block.
+**The social card is `app/opengraph-image.png`** — a Next file convention, not a `public/` asset,
+and not a `public/media/` one (that pool is reference-counted against `media.json`, so chrome put
+there reads as an orphan and can be swept). The convention buys three things a hand-written
+`images` entry does not: the type and the *real* pixel dimensions read off the artwork, and a
+content hash in the query so a redrawn card busts caches — which matters because `_headers` gives
+`/*.png` a year of `immutable`. `opengraph-image.alt.txt` beside it supplies `og:image:alt`;
+**it must not end in a newline**, because the file's bytes go into the attribute verbatim and a
+trailing one lands inside the quotes.
+
+The awkward part is inheritance, and it is worth knowing before touching either block:
+**metadata is replaced wholesale, never deep-merged.** A route that declares `openGraph` to
+change its title *loses the file convention's image*; a route that declares none inherits the
+parent's `og:url` and title, so `/gallery` announces itself as the CV at the site root. Neither
+is right alone, so `/gallery` declares the block and names the image again through `OG_IMAGE` in
+`site.ts`. It carries no width/height: the root's are measured from the artwork, and a
+hand-written second pair is exactly the copy that goes stale the day the card is redrawn.
+
+Because that path is named by hand rather than by the convention, `/gallery` checks the file
+exists before pointing at it — the same shape as `hasGalleryItems()` gating the sitemap entry.
+Without it a build with no artwork still advertises `/opengraph-image.png` and every scraper
+following it gets a 404, where the root simply emits no `og:image` at all.
 
 **No case studies exist yet.** `content/case-studies/` is absent, but `output: 'export'` requires
 `generateStaticParams()` to return at least one route, so `[slug]/page.tsx` emits a synthetic

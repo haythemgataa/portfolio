@@ -21,6 +21,23 @@ export async function generateMetadata(): Promise<Metadata> {
     metadataBase: new URL(SITE_URL),
     title: cv.profile.displayName,
     description: cv.profile.byline || '',
+    // The card's text. Its *image* is deliberately not named here: `app/opengraph-image.png` is
+    // a file convention, so Next emits `og:image` and `twitter:image` for this segment along
+    // with the type, the real pixel dimensions read off the file, and a cache-busting hash —
+    // none of which a hand-written `images` entry would carry. A child that overrides this block
+    // loses the image and has to name it again; `/gallery` does, via `OG_IMAGE`.
+    openGraph: {
+      type: 'website',
+      url: '/',
+      siteName: cv.profile.displayName,
+      title: cv.profile.displayName,
+      description: cv.profile.byline || '',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: cv.profile.displayName,
+      description: cv.profile.byline || '',
+    },
   };
 }
 

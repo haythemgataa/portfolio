@@ -83,6 +83,13 @@ const Gallery: React.FC<GalleryProps> = ({ items }) => {
       <AnimatePresence>
         {openIndex >= 0 && (
           <Lightbox
+            // Keyed on the opened item, because `startingIndex` is seeded into state and read
+            // only at mount while `openable` can change shape underneath it: toggling Reduce
+            // Motion with a lightbox open drops every video from the array, and an index that
+            // was valid against the full list then points at a different picture — or past the
+            // end of the shorter one, where nothing renders and no dot is active. Remounting on
+            // the id re-seeds the index against the array as it now stands.
+            key={openId}
             attachments={openable}
             startingIndex={openIndex}
             close={() => setOpenId(null)}

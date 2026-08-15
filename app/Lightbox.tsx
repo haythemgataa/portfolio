@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import useResizeObserver from "use-resize-observer";
 import ReactDOM from 'react-dom';
 import isMobile, { useIsMobile } from './isMobile';
+import { useHasHover } from './useHasHover';
 import { cloudflareImageUrl } from './lib/cloudflareImage';
 import styles from './Lightbox.module.css';
 
@@ -46,6 +47,18 @@ const PLACEHOLDER_FADE_MS = 320;
  */
 const SPINNER_DELAY_MS = 300;
 
+/**
+ * The scroll lock is reference-counted at module scope rather than per instance.
+ *
+ * Each instance used to save the inline values it found and put them back on unmount, which is
+ * correct for one lightbox and destructive for two: the second saves the *locked* values, and
+ * whichever unmounts last writes `overflow: hidden` and the gutter padding back onto the
+ * document — leaving the page unscrollable with nothing open and no way to recover but a reload.
+ * Counting means the values are captured once, on the way in, and restored once, on the way out.
+ */
+let scrollLocks = 0;
+let lockedStyles: { body: string; html: string; padding: string } | null = null;
+
 /** Points right; the previous control mirrors it in CSS. */
 const Chevron = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -72,7 +85,9 @@ const Lightbox: React.FC<LightboxProps> = ({
   const [currentIndex, setCurrentIndex] = useState(startingIndex);
   const scrollRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const isMobileNow = useIsMobile();
+  const hasHover = useHasHover();
   const didRestoreScroll = useRef(false);
 
   // Re-run when isMobileNow flips: on a cold isMobileValue cache the hook
@@ -108,24 +123,36 @@ const Lightbox: React.FC<LightboxProps> = ({
   // (measured — `clientWidth` still jumps the full 15px), so the width has to be
   // measured and put back by hand. It measures 0 with overlay scrollbars, which is
   // exactly right — nothing was taken away, so nothing is added.
+  //
+  // Reference-counted at module scope — see `scrollLocks` above for why saving
+  // and restoring per instance is the half of this that breaks.
   useEffect(() => {
     const html = document.documentElement;
-    const prevBodyOverflow = document.body.style.overflow;
-    const prevHtmlOverflow = html.style.overflow;
-    const prevHtmlPadding = html.style.paddingRight;
 
-    const gutter = window.innerWidth - html.clientWidth;
+    if (scrollLocks === 0) {
+      lockedStyles = {
+        body: document.body.style.overflow,
+        html: html.style.overflow,
+        padding: html.style.paddingRight,
+      };
 
-    document.body.style.overflow = 'hidden';
-    html.style.overflow = 'hidden';
-    if (gutter > 0) {
-      html.style.paddingRight = `${gutter}px`;
+      const gutter = window.innerWidth - html.clientWidth;
+
+      document.body.style.overflow = 'hidden';
+      html.style.overflow = 'hidden';
+      if (gutter > 0) {
+        html.style.paddingRight = `${gutter}px`;
+      }
     }
+    scrollLocks += 1;
 
     return () => {
-      document.body.style.overflow = prevBodyOverflow;
-      html.style.overflow = prevHtmlOverflow;
-      html.style.paddingRight = prevHtmlPadding;
+      scrollLocks -= 1;
+      if (scrollLocks > 0 || !lockedStyles) { return }
+      document.body.style.overflow = lockedStyles.body;
+      html.style.overflow = lockedStyles.html;
+      html.style.paddingRight = lockedStyles.padding;
+      lockedStyles = null;
     };
   }, []);
 
@@ -139,58 +166,114 @@ const Lightbox: React.FC<LightboxProps> = ({
     };
   }, []);
 
-  const next = () => {
-    setCurrentIndex(currentIndex => {
-      if (currentIndex < attachments.length - 1) {
-        return currentIndex + 1;
-      } else {
-        return 0;
-      }
-    });
-  }
-    
-  const prev = () => {
-    setCurrentIndex(currentIndex => {
-      if (currentIndex === 0) {
-        return attachments.length - 1;
-      } else {
-        return currentIndex - 1;
-      }
-    });
-  }
+  // Stable across renders, so the key handler below can depend on them honestly rather than
+  // omitting them and re-attaching its listener on every render. Both step through the functional
+  // form, so the only thing either actually reads is the length.
+  const count = attachments.length;
 
-  const handleKey = (event: KeyboardEvent) => {
-    if (event.key === 'Escape') {
-      close();
-    }
+  const next = React.useCallback(() => {
+    setCurrentIndex(currentIndex => (currentIndex < count - 1 ? currentIndex + 1 : 0));
+  }, [count]);
 
-    if (event.key === "ArrowRight") {
-      next();
-    }
+  const prev = React.useCallback(() => {
+    setCurrentIndex(currentIndex => (currentIndex === 0 ? count - 1 : currentIndex - 1));
+  }, [count]);
 
-    if (event.key === "ArrowLeft") {
-      prev();
-    }
-  };
-
+  /**
+   * Escape, the arrows, and the Tab trap `aria-modal` is a promise about.
+   *
+   * Declared inside the effect so it cannot capture a stale `close` — the old version listed no
+   * dependencies at all, which is why the lint rule was complaining. `next`/`prev` update through
+   * the functional form, so nothing here needs the current index.
+   *
+   * The trap is what makes the rest of the dialog's semantics true. Without it one Tab off the
+   * close button walked straight into the page behind the backdrop — the header links, the tab
+   * bar, every thumbnail button — where Enter opened a *second* lightbox over the first.
+   */
   useEffect(() => {
-    window.addEventListener('keydown', handleKey);
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        close();
+        return;
+      }
 
+      if (event.key === "ArrowRight") {
+        next();
+        return;
+      }
+
+      if (event.key === "ArrowLeft") {
+        prev();
+        return;
+      }
+
+      if (event.key !== 'Tab') { return }
+
+      const root = dialogRef.current;
+      if (!root) { return }
+      // The click-halves are `tabIndex={-1}` and excluded here for the same reason they are
+      // `aria-hidden`: the named buttons are the ones that carry this dialog's controls.
+      const focusable = Array.from(
+        root.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter(el => !el.hasAttribute('tabindex') || el.getAttribute('tabindex') !== '-1');
+      if (focusable.length === 0) { return }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+
+      if (event.shiftKey) {
+        if (active === first || !root.contains(active)) {
+          event.preventDefault();
+          last.focus();
+        }
+      } else if (active === last || !root.contains(active)) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKey);
     return () => {
       window.removeEventListener('keydown', handleKey);
     };
-  }, []);
+  }, [close, next, prev]);
+
+  /**
+   * In carousel mode the scroller decides what is on screen, so a step that only moves
+   * `currentIndex` moves nothing at all: on a touch-capable device with a keyboard — an iPad, a
+   * touchscreen laptop — ArrowRight advanced the pager dot while the media stayed put, leaving the
+   * dots reporting an item that was not being shown.
+   *
+   * The jump is instant rather than smooth on purpose. `handleScroll` derives the index back out
+   * of `scrollLeft`, so a smooth scroll would feed a run of intermediate indices back in and this
+   * effect would chase each one; landing in a single assignment means the round-trip recovers the
+   * same index and the guard below stops there.
+   */
+  useEffect(() => {
+    if (!isMobileNow) { return }
+    const el = scrollRef.current;
+    if (!el) { return }
+    const target = el.getBoundingClientRect().width * currentIndex;
+    if (Math.abs(el.scrollLeft - target) < 1) { return }
+    el.scrollLeft = target;
+  }, [currentIndex, isMobileNow]);
 
   const handleScroll = (event: React.UIEvent<HTMLElement>) => {
     if (!attachments) { return }
     const view = event.currentTarget;
-    setCurrentIndex(Math.round(
-      (view.scrollLeft / (view.scrollWidth - view.offsetWidth)) * (attachments.length - 1)
-    ));
+    // A single item has no scrollable range, so the ratio would be a division by zero and
+    // `Math.round(NaN)` would put NaN into the index.
+    const range = view.scrollWidth - view.offsetWidth;
+    if (range <= 0) { return }
+    setCurrentIndex(Math.round((view.scrollLeft / range) * (attachments.length - 1)));
   }
 
   return ReactDOM.createPortal(
     <div
+      ref={dialogRef}
       data-mobile={isMobileNow}
       role="dialog"
       aria-modal="true"
@@ -216,7 +299,16 @@ const Lightbox: React.FC<LightboxProps> = ({
                 prev={attachments && attachments.length > 1 ? prev : undefined}
                 next={attachments && attachments.length > 1 ? next : undefined}
                 key={media.url}
-                display={isVisible || isMobileNow ? true : false}
+                // `display` is about layout — in carousel mode every slide has to be laid out
+                // and visible, because scrolling is what moves between them. `active` is about
+                // *this* slide being the one on screen, and it is what may cost bytes. Running
+                // both off one flag meant that on any touch-capable device — `'ontouchstart' in
+                // window`, so a touchscreen laptop as much as a phone — opening the lightbox
+                // marked every entry active at once: every video autoplaying at `preload="auto"`
+                // and every image `eager` at full viewport width, for the one item that was
+                // tapped.
+                display={isVisible || isMobileNow}
+                active={isVisible}
                 media={media}
               />
             )
@@ -253,7 +345,12 @@ const Lightbox: React.FC<LightboxProps> = ({
             damping: 50,
           }}
           className={styles.controls}>
-          {!isMobileNow && (
+          {/* Gated on whether the pointer can hover, not on whether the device can be touched.
+              Those come apart on a touchscreen laptop, which has both — and there the touch test
+              removed the only visible way to step through the carousel while its keyboard was
+              sitting right there. A phone still hides them, because `hover: none`, and there the
+              swipe is the control. */}
+          {hasHover && (
             <button
               type="button"
               aria-label="Previous media"
@@ -272,7 +369,7 @@ const Lightbox: React.FC<LightboxProps> = ({
               )
             })}
           </div>
-          {!isMobileNow && (
+          {hasHover && (
             <button
               type="button"
               aria-label="Next media"
@@ -333,13 +430,17 @@ type LightboxImageProps = {
   media: any,
   prev?: () => void,
   next?: () => void,
+  /** Laid out and painted. True for every slide in carousel mode. */
   display: boolean,
+  /** The one slide actually on screen — the only one allowed to cost bytes. */
+  active: boolean,
 }
 const LightboxImage: React.FC<LightboxImageProps> = ({
   media,
   prev,
   next,
   display,
+  active,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -410,21 +511,21 @@ const LightboxImage: React.FC<LightboxImageProps> = ({
   // it that way keeps this effect from having to set state synchronously to *unset* it, which
   // cascades an extra render on every open and on every step through the carousel.
   useEffect(() => {
-    if (loaded || !display) { return }
+    if (loaded || !active) { return }
     const timer = window.setTimeout(() => setSpinnerDue(true), SPINNER_DELAY_MS);
     return () => window.clearTimeout(timer);
-  }, [loaded, display]);
+  }, [loaded, active]);
 
-  // Gated on `display` as well as on `loaded`: the carousel keeps the neighbours mounted, and
-  // they have no business spinning offscreen.
-  const showSpinner = spinnerDue && !loaded && display;
+  // Gated on `active` as well as on `loaded`: the carousel keeps the neighbours mounted — in
+  // carousel mode it keeps them *visible* — and they have no business spinning off screen.
+  const showSpinner = spinnerDue && !loaded && active;
 
   // Read the playhead every frame, and only for the item actually on screen — the carousel keeps
   // the neighbours mounted, so gating on `display` is what stops three loops running at once.
   // `timeupdate` would be the cheaper source and is too coarse: it fires about four times a
   // second, which at this size is plainly a bar that steps rather than travels.
   useEffect(() => {
-    if (!isVideo || !display) { return }
+    if (!isVideo || !active) { return }
 
     let frame = 0;
     const tick = () => {
@@ -437,7 +538,28 @@ const LightboxImage: React.FC<LightboxImageProps> = ({
 
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [isVideo, display]);
+  }, [isVideo, active]);
+
+  /**
+   * Start and stop playback imperatively, because `autoPlay` and `preload` are read when the
+   * element mounts and never again. Nothing in this file called `pause()`, so a video that had
+   * begun playing kept playing — decoding and streaming — for as long as the lightbox stayed
+   * open, whichever item had since been stepped to. The neighbours are deliberately kept mounted,
+   * so "off screen" is the normal state for most of them.
+   *
+   * `play()` rejects rather than throws, and does so routinely: a pause landing mid-play gives
+   * AbortError, and an autoplay policy can refuse outright. Neither is worth a console error —
+   * the poster or the stand-in is still on screen either way.
+   */
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!isVideo || !video) { return }
+    if (active) {
+      video.play().catch(() => {});
+    } else {
+      video.pause();
+    }
+  }, [isVideo, active]);
 
   // Never above the media's own width — asking for more makes Cloudflare upscale, which costs
   // bytes to invent detail. The intrinsic width is kept as the top entry so a picture that falls
@@ -511,7 +633,7 @@ const LightboxImage: React.FC<LightboxImageProps> = ({
       // height-constrained picture is narrower still, which `sizes` cannot express — erring
       // wide is the safe direction, since the cost of guessing low is a visibly soft image.
       sizes="calc(100vw - 48px)"
-      loading={display ? "eager" : "lazy"}
+      loading={active ? "eager" : "lazy"}
       decoding="async"
       alt=""
       width={media.width}
@@ -521,11 +643,11 @@ const LightboxImage: React.FC<LightboxImageProps> = ({
     <video
       ref={videoRef}
       src={media.url}
-      autoPlay={display}
+      autoPlay={active}
       muted
       playsInline
       loop
-      preload={display ? "auto" : "none"}
+      preload={active ? "auto" : "none"}
       width={media.width}
       height={media.height}
     />

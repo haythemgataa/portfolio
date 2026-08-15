@@ -1,4 +1,6 @@
 .list {
+  /* Paired with `role="list"` on the element — WebKit drops a list's implicit role once its
+     markers are removed, so this line alone costs VoiceOver the item count. */
   list-style: none;
   display: flex;
   flex-direction: column;

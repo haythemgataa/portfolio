@@ -8,6 +8,9 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: `Gallery — ${cv.profile.displayName}`,
     description: `Selected images and videos by ${cv.profile.displayName}.`,
+    // Resolved against `metadataBase` in the root layout. Declared here rather than inherited,
+    // or this route would claim / as its canonical and ask to be de-indexed in favour of it.
+    alternates: { canonical: '/gallery' },
   };
 }
 

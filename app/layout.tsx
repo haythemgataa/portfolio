@@ -6,10 +6,19 @@ import SiteFooter from "./SiteFooter";
 import Tabs from "./Tabs";
 import { loadProfileData } from "./lib/contentLoader";
 import { hasGalleryItems } from "./lib/galleryLoader";
+import { SITE_URL } from "./lib/site";
 
 export async function generateMetadata(): Promise<Metadata> {
   const cv = await loadProfileData();
   return {
+    // The site had no idea what its own origin was. `metadataBase` is what resolves every
+    // relative URL the metadata layer emits — canonicals here, and whatever a social card
+    // eventually needs — against the real host instead of being dropped or guessed at.
+    //
+    // Deliberately *not* setting `alternates.canonical` at this level: metadata is inherited,
+    // so a canonical here would be handed to every route that does not override it, and
+    // /gallery would claim to be a duplicate of /. Each page declares its own.
+    metadataBase: new URL(SITE_URL),
     title: cv.profile.displayName,
     description: cv.profile.byline || '',
   };

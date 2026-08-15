@@ -94,9 +94,35 @@ export async function loadGalleryItems(): Promise<GalleryItem[]> {
     return [];
   }
 
+  assertUniqueIds(parsed.items);
+
   const assets = await loadMediaRegistry();
 
   return parsed.items
     .map((entry, index) => resolveEntry(entry, index, assets))
     .filter((item): item is GalleryItem => item !== null);
+}
+
+/**
+ * The same guarantee `contentLoader` makes for CV item ids, for the same reason and one more.
+ * `Gallery` tracks the open item *by id* — the openable subset changes shape with a media query,
+ * so an index would go stale — and `findIndex` stops at the first match, so two entries sharing
+ * an id open the earlier one whichever was clicked. The Studio addresses entries by id too, and
+ * would misroute an edit the same way. Fail the build rather than ship it.
+ */
+function assertUniqueIds(items: Array<{ id?: string }>): void {
+  const seen = new Set<string>();
+  const duplicates = new Set<string>();
+
+  for (const entry of items) {
+    if (!entry?.id) continue;
+    if (seen.has(entry.id)) duplicates.add(entry.id);
+    seen.add(entry.id);
+  }
+
+  if (duplicates.size) {
+    throw new Error(
+      `gallery.json: duplicate entry id(s) — ${[...duplicates].join(', ')}. Ids must be unique.`
+    );
+  }
 }

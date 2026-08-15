@@ -21,6 +21,12 @@ type TabsProps = {
  */
 const Tabs: React.FC<TabsProps> = ({ showGallery = true }) => {
   const pathname = usePathname();
+  // The doc above says the gallery page always passes true. It cannot: the bar is rendered by
+  // the shared root layout, which computes `showGallery` once for both routes — so an emptied
+  // gallery.json (a supported state) took the bar off /gallery itself, and a visitor arriving
+  // from a link got a page with no way back to the CV on it. Being *on* the route is the same
+  // answer the prop was meant to carry.
+  const showGalleryTab = showGallery || pathname === "/gallery";
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [isStuck, setIsStuck] = useState(false);
 
@@ -70,7 +76,7 @@ const Tabs: React.FC<TabsProps> = ({ showGallery = true }) => {
 
   const tabs = [
     { href: "/", label: "CV" },
-    ...(showGallery ? [{ href: "/gallery", label: "Gallery" }] : []),
+    ...(showGalleryTab ? [{ href: "/gallery", label: "Gallery" }] : []),
   ];
 
   // With only one destination there is nothing to navigate between.
@@ -98,7 +104,22 @@ const Tabs: React.FC<TabsProps> = ({ showGallery = true }) => {
               key={tab.href}
               href={tab.href}
               className={styles.tab}
-              onClick={() => setPendingHref(tab.href)}
+              // Only for clicks that will actually navigate *this* tab. `onClick` runs before
+              // next/link decides, and it bails on a modified event — so cmd-clicking Gallery
+              // opened a new tab and left this page's pill parked on Gallery with `data-active`
+              // there while `aria-current` stayed on CV, for the rest of the session. Nothing
+              // resets it either: the reset is keyed on the pathname changing, and it never did.
+              onClick={(e) => {
+                if (
+                  e.defaultPrevented ||
+                  e.button !== 0 ||
+                  e.metaKey || e.ctrlKey || e.shiftKey || e.altKey ||
+                  tab.href === pathname
+                ) {
+                  return;
+                }
+                setPendingHref(tab.href);
+              }}
               // `data-active` follows the pill, since it only suppresses the hover colour on
               // whichever tab the pill is covering. `aria-current` follows the real pathname:
               // it is a claim about which page is open, and during the navigation that is

@@ -45,7 +45,11 @@ Two guards make whole-file rewrites safe, and both are load-bearing:
 - **Stale-write rejection** — the UI sends the content hash it loaded and the route
   refuses a mismatch with a 409. The hash covers all three content files, so a change to
   any of them invalidates a pending edit. Without it, a tab left open would silently revert
-  the whole CV on its next keystroke.
+  the whole CV on its next keystroke. It is **required**, not optional: `writeDoc` used to
+  test `if (expectedHash && …)`, so omitting the field skipped the check altogether and the
+  guard only bound callers who volunteered for it. Uploads go through it too — the
+  `FormData` is assembled inside the `run()` callback rather than before it, because a form
+  built once freezes the hash and a replay after the resync would re-send the stale one.
 - **Selective writes** — only files whose serialization actually changed are rewritten, so a
   CV-only edit leaves `gallery.json` untouched and out of the diff.
 
@@ -60,8 +64,24 @@ It exists only in `npm run dev`, enforced two ways in `next.config.ts`:
   non-static route handlers even when merely running `next dev`. The tradeoff is
   that static-export violations now surface at `npm run build` rather than in dev.
 
-Route handlers refuse to run outside development and reject non-localhost `Host`
-headers (`next dev` listens on 0.0.0.0).
+Route handlers refuse to run outside development, and `assertLocalDev` then checks two
+more things — each closing a hole the other does not:
+
+- **`npm run dev` binds `127.0.0.1`**, and that is what makes the `Host` allow-list mean
+  anything. `Host` is chosen by the caller, so while dev listened on 0.0.0.0 the check was
+  not an authorization check at all: anyone on the LAN could send `Host: localhost` and read
+  or destroy content. The allow-list is now the backstop rather than the guard, and it no
+  longer accepts an empty `Host` — only a hand-written request omits one.
+- **A same-origin check (`Sec-Fetch-Site`, falling back to `Origin`) on every unsafe
+  method**, which is what stops any page the author happens to visit from driving these
+  routes cross-site. Next's own dev-time cross-site guard covers its internal endpoints
+  (`/_next`, `/__nextjs`) and never sees these. Neither a JSON body sent as `text/plain` nor
+  a `multipart/form-data` upload is preflighted — both are CORS *simple* requests, and
+  `req.json()` does not consult Content-Type — so a visited page could POST
+  `{"op":"section.delete"}` blind. Section keys are guessable: they are the visible labels.
+  GET is exempt because a cross-site *read* is already contained (no `Access-Control-Allow-Origin`
+  comes back, so nothing is legible); it is the write, whose effect lands whether or not its
+  response can be read, that needed the check.
 
 ## Architecture
 

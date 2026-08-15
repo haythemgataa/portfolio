@@ -698,8 +698,40 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
   pushed down into the controls. Only height-constrained media needs it — a 1:1 video reaches the
   bottom padding where a landscape one leaves slack — but reserving it for both keeps the bar the
   same distance from the media either way. The playhead is read in a `requestAnimationFrame` loop
-  gated on `display`, since the carousel keeps the neighbours mounted and would otherwise run three
+  gated on `active`, since the carousel keeps the neighbours mounted and would otherwise run three
   loops at once.
+- **`display` and `active` are two different questions, and `LightboxImage` takes both.** `display`
+  is layout — in carousel mode (`data-mobile`) every slide has to be laid out and painted, because
+  scrolling between them is how you navigate. `active` is "this is the slide on screen", and it is
+  what gates everything that costs bytes: `autoPlay`, `preload`, `loading`, the rAF playhead loop,
+  the spinner. They were one flag, and the flag was `isVisible || isMobileNow` — so on any
+  touch-capable device (`'ontouchstart' in window`, which a touchscreen laptop satisfies as much as
+  a phone) opening the lightbox marked *every* entry active: every video autoplaying at
+  `preload="auto"`, every image `eager` at full viewport width, for the one item that was tapped.
+- **Playback is driven imperatively, because `autoPlay`/`preload` are read once at mount.** Nothing
+  in the file called `pause()`, so a video that had started kept streaming for as long as the
+  lightbox stayed open, whichever item had since been stepped to — and the neighbours are
+  deliberately kept mounted, so off-screen is the normal state for most of them. `play()` rejects
+  routinely (AbortError from a pause landing mid-play, or an autoplay refusal) and the rejection is
+  swallowed: the stand-in is still on screen either way.
+- **In carousel mode `scrollLeft` is what shows an item, so stepping has to write it.** `next()`
+  and `prev()` only moved `currentIndex`, which on a touch-capable device with a keyboard meant
+  ArrowRight advanced the pager dot while the media stayed put and the dots then named an item that
+  was not on screen. An effect assigns `scrollLeft` from `currentIndex` — *instantly*, not
+  smoothly, because `handleScroll` derives the index back out of `scrollLeft` and a smooth scroll
+  would feed a run of intermediate indices back in for the effect to chase.
+- **The step buttons are gated on `hover: hover`, not on touch capability.** Those come apart on a
+  touchscreen laptop, which has both, and the touch test was removing the only visible way to step
+  through the carousel while a keyboard sat right there. A phone still hides them — `hover: none`,
+  and there the swipe is the control.
+- **`aria-modal` is a promise, so Tab is trapped.** The key handler cycles focus within the portal
+  root; without it one Tab off the close button walked into the page behind the backdrop, where
+  Enter on a thumbnail opened a *second* lightbox over the first.
+- **The scroll lock is reference-counted at module scope.** Each instance used to save the inline
+  values it found and restore them on unmount, which is right for one lightbox and destructive for
+  two: the second captures the *locked* values, and whichever unmounts last writes
+  `overflow: hidden` and the gutter padding back onto the document — an unscrollable page with
+  nothing open and no recovery but a reload.
 - **Opening the lightbox reserves the scrollbar's width as `padding-right` on `<html>`.** Locking
   the scroll takes the scrollbar away, which widens the viewport by its width and slides the
   centred content column sideways by half of that — 7.5px at a 15px scrollbar — then back again on

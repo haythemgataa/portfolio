@@ -1,6 +1,5 @@
 import { promises as fs } from 'fs';
 import { createHash } from 'crypto';
-import { join } from 'path';
 import type {
   ContactItem,
   CvFile,
@@ -87,6 +86,23 @@ export async function readDoc(): Promise<Doc> {
   };
 }
 
+/**
+ * The stale check on its own, for callers that touch the pool before they build
+ * the document. `writeDoc` runs it again on the bytes it is about to write —
+ * this one exists so an upload can be rejected *before* anything reaches disk,
+ * not so the later check can be skipped.
+ */
+export function assertFresh(doc: Doc, expectedHash?: string): void {
+  if (!expectedHash || doc.hash !== expectedHash) {
+    throw new StudioError(
+      expectedHash
+        ? 'Content on disk changed since this page loaded, so nothing was written.'
+        : 'This page has no content hash yet, so nothing was written.',
+      409
+    );
+  }
+}
+
 async function writeAtomic(path: string, contents: string): Promise<void> {
   const tmp = `${path}.tmp`;
   await fs.writeFile(tmp, contents, 'utf8');
@@ -100,11 +116,19 @@ export async function writeDoc(
 ): Promise<string> {
   // One read serves both the stale check and the "did this file change" test.
   const current = await readDoc();
-  if (expectedHash && current.hash !== expectedHash) {
+  // Required, not optional. `if (expectedHash && …)` failed open: omitting the
+  // field skipped the check entirely, so the guard protected only callers who
+  // opted into it — and a caller with something to gain from skipping it simply
+  // would not send one. Every real caller already does.
+  if (!expectedHash || current.hash !== expectedHash) {
     throw new StudioError(
       // No instruction to reload: the client resyncs and replays the operation
       // when it can, and this text is only ever surfaced once that has failed.
-      'Content on disk changed since this page loaded, so nothing was written.',
+      // A missing hash answers 409 rather than 400 for the same reason — the
+      // client's resync gives it one, so the replay succeeds.
+      expectedHash
+        ? 'Content on disk changed since this page loaded, so nothing was written.'
+        : 'This page has no content hash yet, so nothing was written.',
       409
     );
   }
@@ -308,6 +332,16 @@ export async function removeFiles(files: string[]): Promise<string[]> {
 // ---------------------------------------------------------------------------
 
 export function updateProfile(cv: CvFile, patch: Record<string, unknown>): CvFile {
+  // `mergePatch` deletes a key cleared to "", which is right for the optional
+  // fields and wrong for the one required field. Clearing the Name box wrote a
+  // cv.json that `loadProfileData` refuses — and it refuses it from the *root
+  // layout*, so `/`, `/gallery` and `/studio` all fail together and the name
+  // cannot be typed back in. `npm run build` fails on the committed file too.
+  // Guarded here, where the empty value is still recoverable, exactly as
+  // `createSection`, `renameSection` and `updateContactLabel` guard theirs.
+  if ('displayName' in patch && !String(patch.displayName ?? '').trim()) {
+    throw new StudioError('Name is required');
+  }
   return { ...cv, profile: mergePatch(cv.profile, patch, ['photo']) };
 }
 
@@ -751,16 +785,26 @@ export function appendMedia(
  * second copy — this is what stops the CV and the gallery from each carrying
  * their own copy of the same video.
  */
-export async function writeToPool(
-  originalName: string,
-  bytes: Buffer,
-  assets: Record<string, MediaAsset>
-): Promise<{ file: string; asset: MediaAsset; deduped: boolean }> {
+/**
+ * Reject an unsupported upload without reading its bytes, so a bad file late in
+ * a multi-file selection cannot strand the ones written before it.
+ */
+export function assertUploadable(originalName: string): void {
   const ext = (originalName.split('.').pop() ?? '').toLowerCase();
   const base = slugify(originalName.replace(/\.[^.]+$/, ''), 'media');
   if (inferMediaType(`${base}.${ext}`) === null) {
     throw new StudioError(`Unsupported media type: ${originalName}`);
   }
+}
+
+export async function writeToPool(
+  originalName: string,
+  bytes: Buffer,
+  assets: Record<string, MediaAsset>
+): Promise<{ file: string; asset: MediaAsset; deduped: boolean }> {
+  assertUploadable(originalName);
+  const ext = (originalName.split('.').pop() ?? '').toLowerCase();
+  const base = slugify(originalName.replace(/\.[^.]+$/, ''), 'media');
 
   await fs.mkdir(POOL_ROOT, { recursive: true });
 

@@ -33,7 +33,7 @@
   padding: 6px 0 calc((var(--type-size) * var(--line-height)) / 2);
 }
 
-.profileSection h3 {
+.profileSection h2 {
   font-size: var(--type-size);
   font-weight: normal;
 }
@@ -144,6 +144,20 @@
   display: flex;
   flex-direction: row;
   column-gap: 36px;
+}
+
+/* The column beside the year. `styles.experienceContent` was referenced from `Profile.tsx` and
+   defined nowhere, so every row shipped `class="undefined"` and this box fell back to a flex
+   item's defaults: `flex: 0 1 auto` with `min-width: auto`, which shrink-wraps to the widest
+   thing inside it rather than filling the row. Items carrying a description happened to reach
+   full width anyway, which is what kept it quiet; an item without one gets a box as narrow as
+   its heading, and an attachment row measured against that reports edges hidden past it that
+   are not — phantom fade and phantom arrows. `min-width: 0` is the half that lets a long
+   unbroken string (a bare URL in a description) wrap instead of forcing the row wider than the
+   column and out into `overflow-x: clip`. */
+.experienceContent {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .description {

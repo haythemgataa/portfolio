@@ -136,7 +136,12 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
 }) => {
   return (
     <div className={styles.sectionHeader}>
-      <h3>{label}</h3>
+      {/* h2, not h3. `ProfileHeader`'s is the page's only h1 and this is the only other heading
+          on either route, so an h3 left every section title two levels below the page title with
+          no h2 anywhere to bridge them — a hole in the outline, and nothing for a screen
+          reader's "next level 2" to land on. Purely semantic: `.profileSection h2` overrides the
+          UA sizing, so the tag carries no visual weight of its own. */}
+      <h2>{label}</h2>
       {toggle ?
         /* The visible label already states what the button does, so there is no aria-pressed
            here: a toggle that renames itself and one that announces a pressed state are two

@@ -352,7 +352,9 @@
   width: 100%;
   height: 100%;
   overflow-x: scroll;
-  scroll-width: none;
+  /* `scroll-width` is not a property and was dropped at parse time, leaving the WebKit rule
+     below to do this alone — so Firefox drew a scrollbar across the bottom of the viewer. */
+  scrollbar-width: none;
   scroll-snap-type: x mandatory;
 }
 

@@ -269,10 +269,17 @@ there — `#2c2c2c` on `#111` already has the separation the light theme was buy
   Now the migration and the Studio always write real numbers and images and videos behave alike.
 - Missing files listed in `gallery.json` are skipped with a build warning rather than
   failing the build.
+- Each entry's `id` must be **unique**, enforced in `loadGalleryItems` the way `contentLoader`
+  enforces CV item ids. `Gallery` tracks the open item by id and `findIndex` stops at the first
+  match, so a duplicate opens the earlier entry whichever was clicked, and misroutes a Studio
+  edit the same way.
 - An absent/empty `gallery.json` renders a neutral empty state, so the route always builds.
   While the gallery has no media, `page.tsx` calls `hasGalleryItems()` and the CV page
   hides the tab bar entirely — visitors are never offered an empty tab, and the Gallery tab
-  appears on its own once media is added. `/gallery` stays reachable directly.
+  appears on its own once media is added. `/gallery` stays reachable directly, and **`Tabs.tsx`
+  re-adds the tab when the pathname is already `/gallery`**: the bar is rendered by the shared
+  root layout, which computes `showGallery` once for both routes, so an emptied gallery took the
+  bar off `/gallery` itself and left a visitor arriving from a link with no way back to the CV.
 
 Videos autoplay muted when scrolled into view and pause when they leave, via
 `IntersectionObserver`, so only one video decodes at a time. Under
@@ -362,7 +369,12 @@ point:
   unresponsive. `Tabs.tsx` keeps a `pendingHref` set by the click and discards it *during
   render* when the pathname changes (React's adjust-state-on-input pattern, not an effect,
   which would let a stale frame paint). `data-active` follows the pill; `aria-current` follows
-  the real pathname, because that is a claim about which page is open.
+  the real pathname, because that is a claim about which page is open. The click handler sets
+  `pendingHref` **only for a click that will navigate this tab** — not a modified click, not a
+  non-primary button, not the tab already open. `onClick` runs before next/link decides, and
+  next/link bails on a modified event, so cmd-clicking Gallery opened a new tab and parked *this*
+  page's pill on Gallery for the rest of the session: the reset is keyed on the pathname
+  changing, and it never changed.
 - Geometry is derived, never measured: tabs are `flex: 1 1 0` with a known `--tab-inner-gap`,
   so tab *n* starts at `n x (width + gap)`. Exact at any column width, no ResizeObserver. Each
   copy is pulled back into the bar's coordinates, which is why all of them mask to the same

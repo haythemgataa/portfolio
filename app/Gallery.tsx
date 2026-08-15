@@ -55,7 +55,9 @@ const Gallery: React.FC<GalleryProps> = ({ items }) => {
 
   return (
     <>
-      <ul className={styles.list}>
+      {/* `role="list"` restores what `list-style: none` takes away in WebKit — see the note on
+          `.list`. Redundant everywhere else and harmless there. */}
+      <ul role="list" className={styles.list}>
         {items.map((item, index) => (
           <li key={item.id} className={styles.row}>
             <GalleryMedia
@@ -281,8 +283,8 @@ const GalleryVideo: React.FC<GalleryFrameProps> = ({ item, isFirst, aspectRatio 
           the video carries the accessible name, so this is `alt=""` and aria-hidden, and it is
           click-through so the reduced-motion controls underneath stay reachable. */}
       {item.posterUrl && (
-        // eslint-disable-next-line @next/next/no-img-element -- next/image cannot emit a
-        // srcset while images.unoptimized is set, and this needs 1x/2x variants.
+        /* eslint-disable-next-line @next/next/no-img-element -- next/image cannot emit a
+           srcset while images.unoptimized is set, and this needs 1x/2x variants. */
         <img
           className={styles.poster}
           src={cloudflareImageUrl(item.posterUrl, { width: COLUMN_WIDTH, dpr: 1 })}

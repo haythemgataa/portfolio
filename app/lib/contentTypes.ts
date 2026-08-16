@@ -111,6 +111,17 @@ export type CvProfile = {
   about?: string;
   /** Filename in the public/media/ pool. */
   photo: string;
+  /**
+   * Pool filenames for the grid that teases the gallery, below About. Ordered, and array
+   * order is display order like everywhere else.
+   *
+   * Filenames rather than gallery entry ids, so this reads the same way every other media
+   * reference in the two content files does — the pool is the shared vocabulary, and an id
+   * would make cv.json depend on gallery.json's addressing. The cost is that it is a *new
+   * kind* of reference, so it has to be counted in `collectReferences` (and mirrored in the
+   * Studio's `cvUses`) or the sweep will report these as orphans and delete them.
+   */
+  galleryPreview?: string[];
 };
 
 /** Pinned to the bottom. Its items are orderable; its position is not. */
@@ -183,9 +194,15 @@ export type ResolvedSection = {
   items: ResolvedItem[];
 };
 
-export type ResolvedProfile = Omit<CvProfile, 'photo'> & {
+export type ResolvedProfile = Omit<CvProfile, 'photo' | 'galleryPreview'> & {
   /** Absolute public URL. */
   profilePhoto: string;
+  /**
+   * `galleryPreview` resolved through the registry, so the grid has real dimensions rather
+   * than assuming a ratio. Entries that resolve to nothing are dropped with a build warning,
+   * the same way a missing gallery file is, so one bad name cannot fail the export.
+   */
+  galleryPreview: ResolvedMedia[];
   /**
    * `byline` split into plain and muted runs — what actually renders. `byline` itself is the
    * brace-stripped plain string, which is what the metadata layer wants.

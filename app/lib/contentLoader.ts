@@ -168,6 +168,12 @@ export async function loadProfileData(): Promise<ResolvedCv> {
       locationSegments: splitMuted(cv.profile.location ?? ''),
       about: cv.profile.about,
       profilePhoto: assetUrl(cv.profile.photo),
+      // Resolved here rather than in the component so the grid gets each file's real
+      // dimensions — the same registry pass every other reference makes, and the reason a
+      // tile can lock its own ratio instead of assuming one.
+      galleryPreview: (cv.profile.galleryPreview ?? [])
+        .map((file) => resolveAsset(file, assets, 'cv.json: profile.galleryPreview'))
+        .filter((media): media is ResolvedMedia => media !== null),
     },
     sections,
     contact: {

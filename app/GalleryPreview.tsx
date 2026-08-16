@@ -1,24 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { cloudflareImageUrl } from "./lib/cloudflareImage";
 import styles from "./GalleryPreview.module.css";
 import type { ResolvedMedia } from "./lib/contentTypes";
 
 /**
- * A 2x2 peek at the gallery, sitting under About.
+ * A 2x2 peek at the gallery, opening the CV directly under the shared About block.
  *
- * It renders *above* the tab bar, which is the one thing to know before moving it. The bar is
- * sticky and shared by both routes, so everything above it is normally identical on each — see
- * the note on `ProfileHeader`. This block is the deliberate exception: it is CV-only, so the
- * bar starts lower on `/` than on `/gallery` and shifts when you switch tabs. That was the
- * call; the alternative was a "See more in Gallery" button on the gallery page.
+ * It sits *below* the tab bar, and that is load-bearing rather than incidental. The bar is
+ * sticky and shared, so its resting height is decided by whatever is above it — putting this
+ * up there, on the CV only, moved the bar 500px between routes and made it jump on every tab
+ * switch. Below the bar, content is free to differ per route and the bar does not move.
  *
- * Being CV-only is also why this is a client component beyond the blur-up below: only
- * `usePathname` can answer which route the shared layout is currently rendering, and on a
- * static export it answers at prerender time, so `/gallery`'s HTML simply never contains it.
+ * It is rendered by `Profile.tsx` (the CV page) rather than the layout, which is what lets it
+ * be CV-only without asking which route is being rendered. `"use client"` is here for the
+ * blur-up state below, nothing else.
  */
 
 /** The widest a tile is ever shown: the 540px column, less the frame's border and padding
@@ -152,11 +150,6 @@ const ArrowRight12 = () => (
 );
 
 const GalleryPreview: React.FC<{ items: ResolvedMedia[] }> = ({ items }) => {
-  const pathname = usePathname();
-
-  // CV-only. On a static export this is answered during prerender, so `/gallery`'s HTML never
-  // carries the block rather than shipping it and hiding it.
-  if (pathname !== "/") return null;
   if (!items.length) return null;
 
   return (

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import styles from "./layout.module.css";
+import About from "./About";
 import ProfileHeader from "./ProfileHeader";
 import SiteFooter from "./SiteFooter";
 import Tabs from "./Tabs";
@@ -96,13 +97,19 @@ export default async function RootLayout({
             <div className={styles.topGradient} aria-hidden="true">
               <div className={styles.topGradientBand} />
             </div>
-            {/* About sits with the avatar and byline, above the bar, so it reads as one
-                introduction rather than as the CV's first section. It has to live here
-                rather than in the CV page for the same reason the header does: the bar is
-                sticky and shared, so anything above it must be identical on both routes or
-                switching tabs moves the bar. */}
+            {/* The avatar/name/byline block is the *only* thing above the bar, and that is what
+                keeps the bar at the same height on both routes: it is sticky and shared, so
+                whatever sits above it decides where it rests, and anything route-specific up
+                there makes it jump when the tabs are switched.
+
+                About is below the bar for exactly that reason. It is identical on both routes,
+                so the layout renders it once here rather than each page carrying a copy. What
+                moving it bought is the space *under* the tabs, where content is free to differ
+                per route — the CV opens with a gallery teaser that `/gallery` has no business
+                showing, and the bar no longer moves because of it. */}
             <ProfileHeader profile={cv.profile} />
             <Tabs showGallery={showGallery} />
+            <About about={cv.profile.about} />
             {children}
             {/* Below the bar, so unlike the header it does not have to be identical per route —
                 it is here rather than in `Profile.tsx` because it closes the *page*, and the

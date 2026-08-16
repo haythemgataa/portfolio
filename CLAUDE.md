@@ -480,30 +480,39 @@ layout overrides it to `0` when the tab bar is not rendered at all.
 
 Three things it depends on:
 
-- `ProfileHeader.tsx` is shared by both routes so the bar lands at the same vertical
-  position on each — otherwise switching tabs would make the sticky bar jump. This is why
-  `profile.about` renders *there* rather than in `Profile.tsx`: it sits above the bar, and
-  anything above the bar has to be identical on both routes. It is consequently visible on
-  the gallery route too, and it carries no visible title — a sticky title parked above the
-  tab bar has nothing to pin below and would simply scroll away. Without a heading of its own
-  the text belongs to the byline above it, which is why the gap above it is 20px rather than
-  the 40px it needed when it was labelled; the `<section>` keeps its accessible name from
-  `aria-label`.
-- **`GalleryPreview.tsx` is the one deliberate exception to that rule, and it is a tradeoff
-  rather than an oversight.** The 2x2 teaser under About renders on the CV only, so the bar
-  rests 500px lower on `/` than on `/gallery` and shifts when the tabs are switched — measured,
-  and exactly the block's own height plus its 52px bottom margin. It was chosen over the
-  alternative, which was offering "See more in Gallery" to somebody already reading the
-  gallery. Three consequences worth knowing before touching it:
-  - **The route test is `usePathname()` inside the component**, not a prop from the layout: a
-    root layout is not told which route it is rendering. On a static export that resolves at
-    prerender, so `/gallery`'s HTML never contains the block rather than shipping it and
-    hiding it — verified by grepping both files in `out/`.
+- **`ProfileHeader.tsx` holds the avatar, name and byline, and deliberately nothing else** —
+  it is the *entire* content above the tab bar. The bar is sticky and shared, so its resting
+  height is however tall that block is; keeping it to the three things that are identical on
+  both routes is what stops the bar landing at a different height per route and jumping when
+  the tabs are switched.
+- **About renders *below* the bar, from the root layout** (`About.tsx`), and this is the second
+  arrangement rather than the original. It used to sit above the bar, with the header, on the
+  reasoning that it read as one introduction — which was fine while it was the only thing that
+  wanted to be up there. It stopped being fine when the CV grew a gallery teaser that
+  `/gallery` has no business showing: CV-only content above the bar moved the bar 500px between
+  routes. Moving About down made the space under the tabs route-free, which is what the teaser
+  now uses. Three things follow:
+  - **The layout renders About, not each page.** The text is identical on both routes, so a
+    per-page copy would be two copies of one fact. Anything genuinely per-route goes in the
+    page, below it.
+  - **The air either side of the bar is split across three files** — `.header`'s
+    `margin-bottom`, `--tab-bar-gap-top` / `--tab-bar-gap-bottom`, and `.about`'s `margin-top`.
+    The two sides are deliberately close to even so the bar reads as sitting *between* the name
+    and the page rather than being pushed onto one of them.
+  - It still carries no visible title: a sticky heading would have nothing to pin under, and
+    the `<section>` takes its accessible name from `aria-label`.
+- **`GalleryPreview.tsx` — the 2x2 teaser — is the CV page's first block**, rendered by
+  `Profile.tsx` and not by the layout. That is what makes it CV-only without a route test: the
+  layout is never told which route it is rendering, so anything conditional up there needs
+  `usePathname()`, whereas inside the CV page being on the CV *is* the condition. Four things
+  worth knowing before touching it:
+  - **It must stay below the bar.** Above it, the bar's resting height stops matching
+    `/gallery`'s and the jump comes back — measured at 500px, the block's height plus its
+    margin.
   - **`.wrap` deliberately carries no top margin.** `.about` already ends in `margin-bottom:
-    52px`, and adjacent sibling margins collapse, so one declared here would simply be
-    shadowed by the larger of the two. Its *bottom* margin repeats that 52px so the air above
-    the bar is unchanged, which is also what keeps the bar where it was on the route that does
-    not render this.
+    52px`, and adjacent sibling margins collapse, so one declared here would simply be shadowed
+    by the larger of the two — the gap above the teaser is About's, and it is the same gap the
+    gallery's first row gets on the other route.
   - **The frame's fill and hairline are `--tabInactiveBackground` and `--transparentBorder`** —
     the unselected pill's and the thumbnails' own tokens, not literals — so the three surfaces
     cannot drift and the dark theme needs no second rule.
@@ -512,6 +521,11 @@ Three things it depends on:
     *less its 1px border on each side*, the same arithmetic (and the same reason) as a
     thumbnail's. The blur-up is the lightbox's, down to the checks-before-it-subscribes effect
     and the `setTimeout` rather than `requestAnimationFrame` — see `LightboxImage`.
+- **Nothing in the content column carries a narrow-viewport indent any more.** About's body
+  copy used to take `margin-left: 16px` below 480px, inherited from the days when it was a CV
+  section whose text lined up past a section title. It sits under the tabs now, with a
+  full-width surface directly beneath it, so the indent read as a misalignment; About and the
+  teaser both take the whole column at every width, the same edges the avatar and the bar use.
 - `.profile` and `.gallery` are both centred (`margin: 0 auto`), which is what makes the
   full-bleed `calc(50% - 50vw)` margins land symmetrically on either route.
 - `globals.css` uses `overflow-x: clip` (not `hidden`) on `html, body`. `hidden` makes them

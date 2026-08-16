@@ -31,8 +31,13 @@
       "id": "board-setup-net-classes",
       "file": "board-setup-net-classes.webp",
       "date": "2026",
-      "title": "Net Classes",
+      "title": "AI Suggestions for Net Classes",
       "caption": "This screen shows how AI suggestions would land and be previewed next to existing content."
+    },
+    {
+      "id": "personal-website-framer",
+      "file": "personal-website-framer.webm",
+      "title": "Hero Section of a Personal Website"
     },
     {
       "id": "document-suggestions",
@@ -49,11 +54,6 @@
       "date": "2026"
     },
     {
-      "id": "personal-website-framer",
-      "file": "personal-website-framer.webm",
-      "title": "Hero Section of a Personal Website"
-    },
-    {
       "id": "edit-net-class",
       "file": "edit-net-class.webp",
       "date": "2025",
@@ -67,30 +67,10 @@
       "caption": "Showing how DeepPCB evolved over time. Constant feedback, new features, and mixed testing (internal and based on VWO data, provided by the UX team)."
     },
     {
-      "id": "check-with-cooper",
-      "file": "check-with-cooper.webm",
-      "date": "2026",
-      "title": "A Nudge Animation",
-      "caption": "We wanted to push users to try Cooper, so we added this nudge animation that shows up when the cursor gets near the Start Routing button."
-    },
-    {
-      "id": "cooper-mascot",
-      "file": "cooper-mascot.webp",
-      "date": "2026",
-      "title": "Cooper Mascot",
-      "caption": "Showing possible variations for Cooper, like how it would look when there’s an error, or when idle, or loading a response…"
-    },
-    {
-      "id": "thinking",
-      "file": "thinking.webm",
+      "id": "home-grid-view",
+      "file": "home-grid-view.webp",
       "date": "2023",
-      "title": "LLM Loading Animation"
-    },
-    {
-      "id": "timeline-view",
-      "file": "timeline-view.webp",
-      "date": "2024",
-      "title": "Timeline View"
+      "title": "Grid of Articles"
     },
     {
       "id": "instanovo-404-page",
@@ -99,16 +79,36 @@
       "title": "Custom 404 Page"
     },
     {
-      "id": "home-grid-view",
-      "file": "home-grid-view.webp",
-      "date": "2023",
-      "title": "Grid of Articles"
+      "id": "timeline-view",
+      "file": "timeline-view.webp",
+      "date": "2024",
+      "title": "Timeline View"
+    },
+    {
+      "id": "check-with-cooper",
+      "file": "check-with-cooper.webm",
+      "date": "2026",
+      "title": "A Nudge Animation",
+      "caption": "We wanted to push users to try Cooper, so we added this nudge animation that shows up when the cursor gets near the Start Routing button."
     },
     {
       "id": "rhfacile-dashboard",
       "file": "rhfacile-dashboard.webp",
       "date": "2021",
       "title": "HR Tool for Small to Medium Companies — Admin Dashboard"
+    },
+    {
+      "id": "thinking",
+      "file": "thinking.webm",
+      "date": "2023",
+      "title": "LLM Loading Animation"
+    },
+    {
+      "id": "cooper-mascot",
+      "file": "cooper-mascot.webp",
+      "date": "2026",
+      "title": "Cooper Mascot",
+      "caption": "Showing possible variations for Cooper, like how it would look when there’s an error, or when idle, or loading a response…"
     },
     {
       "id": "deeppcb-loading-animation",

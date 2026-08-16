@@ -182,12 +182,12 @@ Should site chrome ever need a real image file, note that it does **not** belong
 it that nothing references is reported as an orphan and can be swept; chrome has no content
 record to be referenced by, so it belongs at the `public/` root instead.
 
-The first case to come up — the footer's signature — took a third option and needed no file at
-all. It is a single monochrome path, so `Signature.tsx` inlines it the way `Arrow12.tsx` does,
-which also solves the theming: it has to be near-black on the light ground and near-white on the
-dark one, and `currentColor` only sees the page's colour when the SVG is part of the document. An
-`<img>` is an independent document, so a file would have meant either a second `-dark` copy or a
-filter, plus a request for one path. Inline chrome is the default worth reaching for first.
+There is a third option worth reaching for before either: inline chrome, needing no file at all.
+`Arrow12.tsx` writes its single monochrome path straight into the document, which also solves
+the theming — a mark has to be near-black on the light ground and near-white on the dark one,
+and `currentColor` only sees the page's colour when the SVG is part of the document. An `<img>`
+is an independent document, so a file would have meant either a second `-dark` copy or a filter,
+plus a request for one path.
 
 `content/` sits outside `public/` deliberately: it is compiler input, not a static asset.
 Keeping it in `public/` shipped 27 never-requested JSON files to the CDN and made the whole
@@ -271,14 +271,17 @@ The schema and its rationale are documented in **`CONTENT-SCHEMA.md`**; the type
   file's real dimensions, so `media.json` has to be updated with them in the same pass.
 - **Dimensions are always authored**, so the build never runs `sharp`; `type` is inferred from the
   extension rather than stored, so there is one source of truth for it.
-- **`{...}` in `profile.byline` sets that run in the lightest grey** (see CONTENT-SCHEMA.md). The
-  second free-text token, and deliberately not the heading's `[...]`: sharing a delimiter would
-  make `[Engineer]` a missing-image reference rather than a muted span. It names no pool file, so
-  unlike the icon token it needs no reference counting. The half worth remembering is that the
-  byline is *also* the site's `description`, `og:description` and `twitter:description` — so the
-  loader hands the metadata layer a brace-stripped `byline` and the component renders
-  `bylineSegments`, the same split as a heading's `heading` vs `headingSegments`. Writing the raw
-  string into metadata would ship a literal `{` into the search result and the social card.
+- **`{...}` sets that run in the lightest grey** (see CONTENT-SCHEMA.md). The second free-text
+  token, and deliberately not the heading's `[...]`: sharing a delimiter would make `[Engineer]`
+  a missing-image reference rather than a muted span. It names no pool file, so unlike the icon
+  token it needs no reference counting. `profile.byline` and `profile.location` both take it —
+  `splitMuted`/`plainText` are named for the treatment rather than for the byline they were
+  written for, so a third field reuses them instead of growing another delimiter. The half worth
+  remembering is that the byline is *also* the site's `description`, `og:description` and
+  `twitter:description` — so the loader hands the metadata layer a brace-stripped string and the
+  component renders `bylineSegments`, the same split as a heading's `heading` vs
+  `headingSegments`. Writing the raw string into metadata would ship a literal `{` into the
+  search result and the social card.
 - Optional fields are **omitted, not written as `""`**.
 
 One naming seam to know about: media is authored under `media` but the loader resolves it to
@@ -701,12 +704,25 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
 - **Server components** (async): `layout.tsx`, `page.tsx`, `[slug]/page.tsx` — handle data loading
 - **Client components** (`"use client"`): `Profile.tsx`, `Attachments.tsx`, `Lightbox.tsx`, `Scrollbar.tsx`, `RichText.tsx`, `Gallery.tsx`, `Tabs.tsx`
 - **`SiteFooter.tsx` is in the root layout**, below the bar, so it closes both routes — the gallery
-  would otherwise just stop after its last item. Two things there:
+  would otherwise just stop after its last item. It carries the published date at one end and
+  `profile.location` at the other. Four things there:
   - Its "Last updated" is `new Date()` at module scope in a *server* component, so it is evaluated
     once during the build and baked into the export. That is what the phrase means for a static
     site, and it is deliberately not a content field: a date that has to be remembered goes stale,
     while this one cannot, because publishing *is* rebuilding. `timeZone: 'UTC'` keeps a build near
     midnight on the 1st from naming the wrong month.
+  - **That is also why the typing animation lives in `TypedDate.tsx` and the footer stays a server
+    component.** The animation needs `"use client"`; moving the whole footer across that boundary
+    would move `new Date()` into the visitor's browser, quietly turning "last updated" into *today*
+    for everyone. The date is computed in the footer and arrives in the child as a finished string.
+  - **The date renders complete and is emptied on approach**, not on mount. Complete is what the
+    export contains, so a reader with JavaScript off — or with `prefers-reduced-motion` set, where
+    there is no animation at all — simply reads it. The emptying happens in the IntersectionObserver
+    callback rather than in the effect body, which keeps a wasted render off every page load; the
+    observer's `rootMargin` fires it ~240px before the box is on screen, so nobody watches the
+    finished date blank itself and retype. Measured on a stepped scroll: zero frames where the
+    complete date is visible before the animation starts. Reduced motion is *derived* during render
+    rather than written back as state — assigning it in the effect trips `set-state-in-effect`.
   - The gap above it is **padding, not margin**, and that is the only reason the two routes agree.
     The gallery's list ends in a margin, which collapses with an adjacent margin — a 16px top
     margin disappeared into the list's 60px and left the gallery 16px tighter than the CV, whose

@@ -1,14 +1,14 @@
 import Image from "next/image";
 import RichText from "./RichText";
 import styles from "./ProfileHeader.module.css";
-import type { BylineSegment } from "./lib/contentTypes";
+import type { MutedSegment } from "./lib/contentTypes";
 
 type ProfileHeaderProps = {
   profile: {
     profilePhoto: string,
     displayName: string,
     byline?: string,
-    bylineSegments?: BylineSegment[],
+    bylineSegments?: MutedSegment[],
     about?: string,
   },
 };

@@ -263,12 +263,29 @@ The schema and its rationale are documented in **`CONTENT-SCHEMA.md`**; the type
   not a missing detail but an asset that reverts to downloading megabytes to fill a thumbnail.
   Posters are pool files like any other, counted by `collectReferences()` exactly when their
   video is.
-- **Pool video is capped at 1080px wide, 30 fps, VP9 CRF 32, no audio track.** The originals ran
-  to 3840x2094 at 9.7 Mbps and 1920x1242 at 120 fps for media that is never shown wider than the
-  540px column; re-encoding took the pool from 34 MB to 15 MB with no visible loss on fine UI
-  text (checked at 2x magnification on the densest screenshot). Audio is stripped because every
+- **Pool video is capped at 1920px wide, 30 fps, VP9 CRF 30, no audio track**, and neither cap
+  ever upscales — a 25 fps or sub-1920 source keeps what it has. Audio is stripped because every
   `<video>` on the site — row, gallery and lightbox alike — is `muted`. Re-encoding changes the
   file's real dimensions, so `media.json` has to be updated with them in the same pass.
+
+  The cap was 1080px at CRF 32 for one release, and the thing to understand before lowering it
+  again is **which of the two axes was actually costing the bytes**. The captures ran to
+  3840x2094 and, on three clips, 60-120 fps — for media never shown wider than the 540px column,
+  which is what made 1080px look free. It is not: the column is the *resting* size, and the
+  lightbox renders at `calc(100vw - 48px)`, so 1080px is upscaled well past native the moment a
+  clip is opened. On the Design Ruler screencasts that measured 0.946 luma SSIM against the
+  original — visible as softened UI text, which is exactly the content these clips exist to show.
+
+  The framerate was the cheap axis and the resolution was the expensive one. Dropping to 30 fps
+  alone pays for the full 1920px width: at CRF 30 every clip came back at **0.986-0.999 luma
+  SSIM while staying smaller than the original file it was cut from**. Going further to CRF 24
+  bought 0.994 -> 0.996 for another 1.7 MB on one clip, which is why 30 is the setting. Measure
+  SSIM against the original rather than eyeballing a thumbnail: at 540px every one of these
+  looks fine, and the loss only surfaces where the clip is opened.
+
+  This is affordable because nothing fetches a video on page load — the CV row and the gallery
+  both rest on a poster, and `Gallery.tsx` waits out `PLAY_DWELL_MS` before `play()` commits to
+  the download. Weight here is paid by a reader who actually opens the clip, not by everyone.
 - **Dimensions are always authored**, so the build never runs `sharp`; `type` is inferred from the
   extension rather than stored, so there is one source of truth for it.
 - **`{...}` sets that run in the lightest grey** (see CONTENT-SCHEMA.md). The second free-text

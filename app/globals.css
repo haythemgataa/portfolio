@@ -2,6 +2,21 @@
   --type-size: 14px;
   --secondary-type-size: 12px;
   --line-height: 1.6;
+  /* The site uses exactly two weights, and they are declared here rather than as literals at
+     each use so the pairing can be judged as a pair. Switzer is loaded as a variable font
+     (`switzer@1`, one 43 KB file spanning 100-900), so the choice costs nothing to change and
+     no value here needs adding to the font request. Base is every word of running text, plus
+     the tab labels; the emphasis is reserved for the name, the section titles and the beta
+     badge — so the weight marks the page's landmarks rather than its navigation, and the tabs
+     sit at the same weight as the prose they switch between. Keep the gap at two steps or
+     more — at 400/500 the difference read as a rendering artefact rather than intent.
+
+     Both values are off the 100s grid, which only works *because* the font is variable: the
+     axis is continuous, so 350 and 550 are real interpolated instances. Swapping the request
+     for static cuts (`switzer@400,500`) would silently snap them to the nearest shipped weight
+     and collapse the pairing — so that trade is not the byte-saving it looks like from here. */
+  --weight-base: 350;
+  --weight-emphasis: 550;
   --emoji-font: "color-emoji";
   --default-font: "Switzer", sans-serif;
   --backgroundColor: #fff;
@@ -174,6 +189,7 @@ body {
   transition: background-color var(--ground-fade) ease;
   font-family: var(--default-font), sans-serif;
   font-size: var(--type-size);
+  font-weight: var(--weight-base);
   line-height: var(--line-height);
   color: var(--grey1);
   -webkit-font-smoothing: antialiased;

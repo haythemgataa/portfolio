@@ -12,9 +12,16 @@
   margin-top: 24px;
 }
 
+/* The gap down to the byline is half-leading, not margin — neither element has one. At the
+   body's 1.6 that is ~6px of empty box under a 20px name, which read as a bigger step than the
+   two lines of one introduction want. 1.2 closes it without touching either element's box.
+   The beta badge is `inline-block` and taller than the text it sits in, so it would grow the
+   line box back if this went much tighter. */
 .profileHeader h1 {
   font-size: 20px;
-  font-weight: 350;
+  font-weight: var(--weight-emphasis);
+  letter-spacing: -0.04em;
+  line-height: 1.2;
 }
 
 .byline {
@@ -23,7 +30,7 @@
 
 .betaBadge {
   font-size: 10px;
-  font-weight: 500;
+  font-weight: var(--weight-emphasis);
   line-height: 1;
   padding: 3px 6px;
   margin-left: 8px;

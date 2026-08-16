@@ -35,7 +35,8 @@
 
 .profileSection h2 {
   font-size: var(--type-size);
-  font-weight: normal;
+  font-weight: var(--weight-emphasis);
+  letter-spacing: -0.02em;
 }
 
 /* Tertiary: no fill and no border, just muted label text that comes forward on hover. It
@@ -167,8 +168,21 @@
   flex-direction: column;
 }
 
+/* A prose link keeps its underline at rest and gains nothing on hover. It sits mid-sentence, so
+   a weight step there would reflow the paragraph around it — the words after it shuffle along
+   the line and can drop to the next — where the same step on a heading only moves the heading's
+   own trailing arrow. The heading is a line to itself; this is not. */
 .description p a {
   border-bottom: 1px solid var(--wash1);
+}
+
+/* The wipe is a travelling edge and the weight step reflows the text as it goes, so both are
+   motion in the sense this query means. The hover state itself still applies — it just arrives
+   instantly, which is the reachable end of the same transition. */
+@media (prefers-reduced-motion: reduce) {
+  .title a {
+    transition: none;
+  }
 }
 
 .year {
@@ -189,8 +203,41 @@
   white-space: nowrap;
 }
 
-.title a:hover {
-  border-bottom: 1px solid;
+/* The heading link's hover: the underline wipes in from the left and the text gains a step of
+   weight. Two things about how it is built.
+
+   The underline is a background gradient sized from `0%` to `100%`, not the `border-bottom` it
+   replaced. A border is binary — it exists or it does not — so there is nothing to transition
+   between; `background-size` is a length that animates, which is what buys the wipe. It also
+   stays out of the way of the `[filename]` icons in the heading, since a background paints
+   behind them rather than boxing them the way a border does.
+
+   The weight step interpolates only because Switzer is loaded as a variable font — see
+   `--weight-base` in globals.css. With static cuts this would snap from one weight to the next
+   at some arbitrary point in the transition instead of travelling. It is expressed against the
+   token rather than as a literal so it follows the base weight if that is ever retuned. */
+.title a {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0% 1px;
+  transition:
+    background-size 200ms ease,
+    font-weight 150ms ease;
+}
+
+/* Only the `:hover` half is gated, never the rest state above — the same split `.media:hover`
+   uses in Attachments.module.css, and for the same reason: a touch device that fell through to
+   no base rule at all would lose the treatment rather than just the hover.
+
+   The gate is what keeps a tapped link from staying bold and underlined. These headings are
+   `target="_blank"`, so on touch `:hover` sticks after the tap and the reader comes back from
+   the opened tab to a link still lit, with nothing to clear it but a tap somewhere else. */
+@media (hover: hover) {
+  .title a:hover {
+    background-size: 100% 1px;
+    font-weight: calc(var(--weight-base) + 100);
+  }
 }
 
 /* An inline icon inside a heading, from a `[filename]` token — a tool's app icon, a company's

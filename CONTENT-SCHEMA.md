@@ -40,7 +40,7 @@ Two things that follow from that, worth stating because they are easy to assume:
   "version": 1,
   "profile": {
     "displayName": "Haythem Gataa",
-    "byline": "Software Designer & Engineer in Tunisia",
+    "byline": "Software Designer {& Engineer} in Tunisia",
     "about": "I'm a detail-oriented Software Designer…",
     "photo": "profile.webp"
   },
@@ -99,6 +99,29 @@ Rules:
 
 One naming seam: media is authored under `media` but the loader resolves it to
 `attachments`, because that is the prop `Attachments.tsx` already takes.
+
+### Muted runs in the byline
+
+`{...}` anywhere inside `profile.byline` sets that run in `--grey3`, the lightest of the
+three text greys — so a byline can lead with the primary role and let the rest sit back:
+
+```json
+"byline": "Product Designer {& Engineer}"
+```
+
+Four things to know:
+
+- **Braces, not the heading's square brackets.** The two tokens mean different things and
+  both are hand-authored, so sharing a delimiter would make `[Engineer]` a missing-image
+  reference instead of a muted span.
+- **The braces are stripped from the plain string.** `byline` is also the site's
+  `description`, `og:description` and `twitter:description`, so the loader hands the metadata
+  layer a brace-free string and the component renders `bylineSegments` instead. Same split as
+  a heading's `heading` vs `headingSegments`, for the same reason.
+- **It names no pool file**, so unlike `[filename]` it needs no reference counting — there is
+  nothing for the sweep to delete and nothing to mirror in the Studio's `cvUses`.
+- **Empty braces render nothing** rather than an empty span, and an unclosed `{` is left as
+  the literal character — the pattern only matches a closed pair on one line.
 
 ### Inline icons in headings
 

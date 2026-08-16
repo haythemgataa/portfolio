@@ -1,12 +1,14 @@
 import Image from "next/image";
 import RichText from "./RichText";
 import styles from "./ProfileHeader.module.css";
+import type { BylineSegment } from "./lib/contentTypes";
 
 type ProfileHeaderProps = {
   profile: {
     profilePhoto: string,
     displayName: string,
     byline?: string,
+    bylineSegments?: BylineSegment[],
     about?: string,
   },
 };
@@ -43,7 +45,19 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profile }) => {
               <span className={styles.betaBadge}>beta</span>
             )}
           </h1>
-          <div className={styles.byline}>{profile.byline}</div>
+          {/* Segments when the loader supplied them, the plain string otherwise — so a caller
+              that only has the raw byline still renders, just without the muted runs. */}
+          <div className={styles.byline}>
+            {profile.bylineSegments?.length
+              ? profile.bylineSegments.map((segment, i) =>
+                  segment.kind === "muted" ? (
+                    <span key={i} className={styles.bylineMuted}>{segment.text}</span>
+                  ) : (
+                    <span key={i}>{segment.text}</span>
+                  ),
+                )
+              : profile.byline}
+          </div>
         </div>
       </div>
 

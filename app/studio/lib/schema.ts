@@ -30,7 +30,8 @@ export const PROFILE_FIELDS: FieldDef[] = [
     key: 'byline',
     label: 'Byline',
     type: 'text',
-    placeholder: 'Software Designer & Engineer in Tunisia',
+    placeholder: 'Software Designer {& Engineer} in Tunisia',
+    hint: 'Wrap any run in {braces} to set it in the lighter grey. The braces are stripped from the search-result and social-card description, so only the styling is affected.',
   },
   {
     key: 'about',

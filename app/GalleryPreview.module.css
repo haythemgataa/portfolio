@@ -1,11 +1,9 @@
-/* The gallery teaser under About.
+/* The gallery teaser, opening the CV under the shared About block.
 
-   No top margin on purpose: `.about` already carries `margin-bottom: 52px`, and adjacent
-   sibling margins collapse, so declaring one here would just be shadowed by the larger of the
-   two. The bottom margin repeats that 52px so the air above the tab bar is exactly what it was
-   before this block existed — the bar adds its own `--tab-bar-gap-top` below this, so this is
-   not the whole gap. When the block is absent (the gallery route, or nothing authored),
-   About's own margin lands in the same place and the bar does not move on that route. */
+   No top margin on purpose: `.about` already ends in `margin-bottom: 52px`, and adjacent
+   sibling margins collapse, so one declared here would simply be shadowed by the larger of the
+   two — the gap above is About's, and it is the same gap the gallery's first row gets on the
+   other route. The bottom margin is the step down to the CV's first section header. */
 .wrap {
   margin-bottom: 52px;
 }
@@ -118,10 +116,5 @@
   }
 }
 
-/* Below 480px the CV indents its bodies past the section title, and About already follows
-   that. This sits with About, so it follows it too. */
-@media (max-width: 480px) {
-  .wrap {
-    margin-left: 16px;
-  }
-}
+/* No narrow-viewport indent. This and About both take the whole content column at every
+   width — the same edges the avatar and the tab bar use. */

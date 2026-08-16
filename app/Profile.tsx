@@ -3,6 +3,7 @@
 import { useState } from "react";
 import RichText from "./RichText";
 import Arrow12 from "./Arrow12";
+import GalleryPreview from "./GalleryPreview";
 import styles from "./Profile.module.css";
 import Attachments from "./Attachments";
 import { cloudflareImageUrl } from "./lib/cloudflareImage";
@@ -47,6 +48,12 @@ const Profile: React.FC<ProfileProps> = ({
 
   return (
     <>
+      {/* Opens the CV, directly under the shared About the layout renders above it. It lives
+          in the page rather than the layout precisely because it is CV-only: the layout is not
+          told which route it is rendering, so anything conditional up there needs a pathname
+          test, whereas down here being on the CV *is* the condition. */}
+      <GalleryPreview items={cv.profile.galleryPreview} />
+
       {cv.sections.map((section, sectionIndex) => (
         <Section
           key={section.key}

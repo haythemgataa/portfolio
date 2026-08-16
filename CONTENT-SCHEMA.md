@@ -224,8 +224,8 @@ drag them anywhere and hope, the document makes position structural:
 | Region | Position | Orderable? | Source |
 |---|---|---|---|
 | Header — photo, name, byline | always first | no | `profile` |
-| About | always second, above the tab bar; renders untitled | no | `profile.about` |
-| Gallery teaser — a 2x2 grid | always third, above the tab bar; **CV route only** | no | `profile.galleryPreview` |
+| About | always second, directly below the tab bar; renders untitled | no | `profile.about` |
+| Gallery teaser — a 2x2 grid | always third, below About; **CV route only** | no | `profile.galleryPreview` |
 | Work Experience, Education, Awards, Speaking, … | between | **yes** | `sections[]` |
 | Contact | always last | no | `contact` |
 | Footer — published date and location | below both routes, outside the CV | no | `profile.location` |

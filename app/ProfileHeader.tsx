@@ -1,8 +1,6 @@
 import Image from "next/image";
-import GalleryPreview from "./GalleryPreview";
-import RichText from "./RichText";
 import styles from "./ProfileHeader.module.css";
-import type { MutedSegment, ResolvedMedia } from "./lib/contentTypes";
+import type { MutedSegment } from "./lib/contentTypes";
 
 type ProfileHeaderProps = {
   profile: {
@@ -10,25 +8,24 @@ type ProfileHeaderProps = {
     displayName: string,
     byline?: string,
     bylineSegments?: MutedSegment[],
-    about?: string,
-    galleryPreview?: ResolvedMedia[],
   },
 };
 
 /**
- * Avatar, name, byline and About. Shared by the CV and the gallery so the tab bar directly
- * beneath it lands in the same place on both routes — without this, switching tabs would
- * shift the (sticky) tab bar vertically.
+ * Avatar, name and byline — and deliberately nothing else.
  *
- * About used to be the CV's first section, below the bar. Up here it is deliberately *not*
- * a section: no sticky header, because a title that pins above the tab bar has nothing to
- * pin below and would just scroll away. It carries no visible title either — the text sits
- * directly under the byline, where it reads as the rest of the introduction rather than as
- * a labelled block. The <section> keeps its accessible name from aria-label instead.
+ * This is the *entire* content above the tab bar, and that is the point: the bar is sticky and
+ * shared by both routes, so its resting position is however tall this block is. Keeping it to
+ * the three things that are identical on `/` and `/gallery` is what stops the bar landing at a
+ * different height per route and jumping when the tabs are switched.
+ *
+ * About used to live here for that reason, back when it was the only thing that wanted to sit
+ * above the bar. It has moved below it (see `About.tsx`), which is what freed the space under
+ * the tabs for content that differs per route — the CV's gallery teaser being the first.
  */
 const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profile }) => {
   return (
-    <header>
+    <header className={styles.header}>
       <div className={styles.profileHeader}>
         <div className={styles.profilePhoto}>
           <Image
@@ -62,20 +59,6 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profile }) => {
           </div>
         </div>
       </div>
-
-      {profile.about ? (
-        <section className={styles.about} aria-label="About">
-          <div className={styles.description}>
-            <RichText text={profile.about} />
-          </div>
-        </section>
-      ) : null}
-
-      {/* The one thing above the bar that is *not* identical on both routes — it renders on the
-          CV only, so the bar starts lower here than on /gallery and shifts when tabs are
-          switched. Deliberate: the alternative was offering "See more in Gallery" to someone
-          already in the gallery. The component makes that call itself, from the pathname. */}
-      <GalleryPreview items={profile.galleryPreview ?? []} />
     </header>
   );
 };

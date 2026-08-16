@@ -10,7 +10,7 @@ import type {
   ResolvedMedia,
   ResolvedSection,
 } from './contentTypes';
-import { darkVariant, splitHeading } from './contentTypes';
+import { darkVariant, plainByline, splitByline, splitHeading } from './contentTypes';
 import { assetUrl, loadMediaRegistry, resolveAsset } from './mediaRegistry';
 
 /**
@@ -158,7 +158,10 @@ export async function loadProfileData(): Promise<ResolvedCv> {
   return {
     profile: {
       displayName: cv.profile.displayName,
-      byline: cv.profile.byline,
+      // Stripped, not raw: this is what the metadata layer reads. The braces render via
+      // `bylineSegments` instead.
+      byline: plainByline(cv.profile.byline),
+      bylineSegments: splitByline(cv.profile.byline ?? ''),
       about: cv.profile.about,
       profilePhoto: assetUrl(cv.profile.photo),
     },

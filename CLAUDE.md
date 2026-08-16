@@ -271,6 +271,14 @@ The schema and its rationale are documented in **`CONTENT-SCHEMA.md`**; the type
   file's real dimensions, so `media.json` has to be updated with them in the same pass.
 - **Dimensions are always authored**, so the build never runs `sharp`; `type` is inferred from the
   extension rather than stored, so there is one source of truth for it.
+- **`{...}` in `profile.byline` sets that run in the lightest grey** (see CONTENT-SCHEMA.md). The
+  second free-text token, and deliberately not the heading's `[...]`: sharing a delimiter would
+  make `[Engineer]` a missing-image reference rather than a muted span. It names no pool file, so
+  unlike the icon token it needs no reference counting. The half worth remembering is that the
+  byline is *also* the site's `description`, `og:description` and `twitter:description` — so the
+  loader hands the metadata layer a brace-stripped `byline` and the component renders
+  `bylineSegments`, the same split as a heading's `heading` vs `headingSegments`. Writing the raw
+  string into metadata would ship a literal `{` into the search result and the social card.
 - Optional fields are **omitted, not written as `""`**.
 
 One naming seam to know about: media is authored under `media` but the loader resolves it to

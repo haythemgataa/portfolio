@@ -28,6 +28,13 @@
   color: var(--grey2);
 }
 
+/* A `{...}` run in the byline — see `splitByline` in lib/contentTypes.ts. `--grey3` is the
+   lightest of the three text greys, and the same one the year column and the details toggle
+   use, so the byline's second half sits at an established level rather than a new one. */
+.bylineMuted {
+  color: var(--grey3);
+}
+
 .betaBadge {
   font-size: 10px;
   font-weight: var(--weight-emphasis);

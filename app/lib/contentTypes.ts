@@ -180,6 +180,11 @@ export type ResolvedSection = {
 export type ResolvedProfile = Omit<CvProfile, 'photo'> & {
   /** Absolute public URL. */
   profilePhoto: string;
+  /**
+   * `byline` split into plain and muted runs — what actually renders. `byline` itself is the
+   * brace-stripped plain string, which is what the metadata layer wants.
+   */
+  bylineSegments: BylineSegment[];
 };
 
 export type ResolvedContact = {
@@ -283,4 +288,60 @@ export function darkVariant(file: string): string | null {
   if (stem.endsWith('-dark')) return null;
 
   return `${stem}-dark${file.slice(dot)}`;
+}
+
+// ---------------------------------------------------------------------------
+// Muted spans in the byline
+// ---------------------------------------------------------------------------
+
+/**
+ * `{...}` inside the byline renders that run in the muted grey — "Product Designer
+ * {& Engineer}" sets the second half back so the first reads as the primary role.
+ *
+ * Braces rather than the heading's square brackets, and that is not arbitrary: the two tokens
+ * mean different things and both are authored by hand, so a shared delimiter would make
+ * "[Engineer]" silently a missing-image reference instead of a muted span. Braces are also
+ * absent from every byline this CV is likely to carry, where brackets are not.
+ *
+ * Built fresh on each call for the same reason `tokenPattern` is — a `g` regex carries
+ * `lastIndex` between uses and a shared instance would skip tokens depending on who ran last.
+ */
+function mutedPattern(): RegExp {
+  return /\{([^{}\n]*)\}/g;
+}
+
+export type BylineSegment = { kind: 'text' | 'muted'; text: string };
+
+/**
+ * Split a byline into plain and muted runs. Pure and dependency-free, matching `splitHeading`,
+ * so the loader and the Studio can share it.
+ */
+export function splitByline(byline: string): BylineSegment[] {
+  const segments: BylineSegment[] = [];
+  const pattern = mutedPattern();
+  let last = 0;
+
+  for (let m = pattern.exec(byline); m !== null; m = pattern.exec(byline)) {
+    if (m.index > last) segments.push({ kind: 'text', text: byline.slice(last, m.index) });
+    if (m[1]) segments.push({ kind: 'muted', text: m[1] });
+    last = m.index + m[0].length;
+  }
+  if (last < byline.length) segments.push({ kind: 'text', text: byline.slice(last) });
+
+  return segments;
+}
+
+/**
+ * The byline with its braces removed — the plain string.
+ *
+ * This is the half that is easy to forget and expensive to get wrong: the byline is also the
+ * site's `description`, its `og:description` and its `twitter:description` (see `layout.tsx`),
+ * so without stripping, a literal `{` would ship into the search result and the social card.
+ * Same split as a heading's `heading` vs `headingSegments`, and for the same reason.
+ */
+export function plainByline(byline?: string): string {
+  if (!byline) return '';
+  return splitByline(byline)
+    .map((s) => s.text)
+    .join('');
 }

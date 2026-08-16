@@ -10,7 +10,7 @@ import type {
   ResolvedMedia,
   ResolvedSection,
 } from './contentTypes';
-import { darkVariant, splitHeading } from './contentTypes';
+import { darkVariant, plainText, splitMuted, splitHeading } from './contentTypes';
 import { assetUrl, loadMediaRegistry, resolveAsset } from './mediaRegistry';
 
 /**
@@ -158,9 +158,22 @@ export async function loadProfileData(): Promise<ResolvedCv> {
   return {
     profile: {
       displayName: cv.profile.displayName,
-      byline: cv.profile.byline,
+      // Stripped, not raw: this is what the metadata layer reads. The braces render via
+      // `bylineSegments` instead.
+      byline: plainText(cv.profile.byline),
+      bylineSegments: splitMuted(cv.profile.byline ?? ''),
+      // Stripped for the same reason, even though nothing reads it today: a raw brace sitting
+      // in a resolved field is a trap for whatever picks it up next.
+      location: plainText(cv.profile.location),
+      locationSegments: splitMuted(cv.profile.location ?? ''),
       about: cv.profile.about,
       profilePhoto: assetUrl(cv.profile.photo),
+      // Resolved here rather than in the component so the grid gets each file's real
+      // dimensions — the same registry pass every other reference makes, and the reason a
+      // tile can lock its own ratio instead of assuming one.
+      galleryPreview: (cv.profile.galleryPreview ?? [])
+        .map((file) => resolveAsset(file, assets, 'cv.json: profile.galleryPreview'))
+        .filter((media): media is ResolvedMedia => media !== null),
     },
     sections,
     contact: {

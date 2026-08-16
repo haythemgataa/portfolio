@@ -101,10 +101,27 @@ export type CvSection = {
 export type CvProfile = {
   displayName: string;
   byline?: string;
+  /**
+   * Where you are, shown in the footer. Takes `{...}` muted runs like the byline does —
+   * "Tunisia {(GMT+1)}" sets the offset back from the place. Content rather than markup
+   * because it is a fact about the person, and one the Studio has to be able to edit.
+   */
+  location?: string;
   /** Markdown. */
   about?: string;
   /** Filename in the public/media/ pool. */
   photo: string;
+  /**
+   * Pool filenames for the grid that teases the gallery, below About. Ordered, and array
+   * order is display order like everywhere else.
+   *
+   * Filenames rather than gallery entry ids, so this reads the same way every other media
+   * reference in the two content files does — the pool is the shared vocabulary, and an id
+   * would make cv.json depend on gallery.json's addressing. The cost is that it is a *new
+   * kind* of reference, so it has to be counted in `collectReferences` (and mirrored in the
+   * Studio's `cvUses`) or the sweep will report these as orphans and delete them.
+   */
+  galleryPreview?: string[];
 };
 
 /** Pinned to the bottom. Its items are orderable; its position is not. */
@@ -177,9 +194,22 @@ export type ResolvedSection = {
   items: ResolvedItem[];
 };
 
-export type ResolvedProfile = Omit<CvProfile, 'photo'> & {
+export type ResolvedProfile = Omit<CvProfile, 'photo' | 'galleryPreview'> & {
   /** Absolute public URL. */
   profilePhoto: string;
+  /**
+   * `galleryPreview` resolved through the registry, so the grid has real dimensions rather
+   * than assuming a ratio. Entries that resolve to nothing are dropped with a build warning,
+   * the same way a missing gallery file is, so one bad name cannot fail the export.
+   */
+  galleryPreview: ResolvedMedia[];
+  /**
+   * `byline` split into plain and muted runs — what actually renders. `byline` itself is the
+   * brace-stripped plain string, which is what the metadata layer wants.
+   */
+  bylineSegments: MutedSegment[];
+  /** `location` split the same way. Empty when none is authored. */
+  locationSegments: MutedSegment[];
 };
 
 export type ResolvedContact = {
@@ -283,4 +313,65 @@ export function darkVariant(file: string): string | null {
   if (stem.endsWith('-dark')) return null;
 
   return `${stem}-dark${file.slice(dot)}`;
+}
+
+// ---------------------------------------------------------------------------
+// Muted runs in free text
+// ---------------------------------------------------------------------------
+
+/**
+ * `{...}` in an authored string renders that run in the muted grey — "Product Designer
+ * {& Engineer}" sets the second half back so the first reads as the primary role, and
+ * "Tunisia {(GMT+1)}" does the same for the footer's offset.
+ *
+ * Named for the treatment rather than for the byline it was written for, because two fields
+ * use it now. Anything else that wants the same thing should reuse it rather than grow a
+ * second delimiter.
+ *
+ * Braces rather than the heading's square brackets, and that is not arbitrary: the two tokens
+ * mean different things and both are authored by hand, so a shared delimiter would make
+ * "[Engineer]" silently a missing-image reference instead of a muted span. Braces are also
+ * absent from every byline this CV is likely to carry, where brackets are not.
+ *
+ * Built fresh on each call for the same reason `tokenPattern` is — a `g` regex carries
+ * `lastIndex` between uses and a shared instance would skip tokens depending on who ran last.
+ */
+function mutedPattern(): RegExp {
+  return /\{([^{}\n]*)\}/g;
+}
+
+export type MutedSegment = { kind: 'text' | 'muted'; text: string };
+
+/**
+ * Split an authored string into plain and muted runs. Pure and dependency-free, matching
+ * `splitHeading`, so the loader and the Studio can share it.
+ */
+export function splitMuted(text: string): MutedSegment[] {
+  const segments: MutedSegment[] = [];
+  const pattern = mutedPattern();
+  let last = 0;
+
+  for (let m = pattern.exec(text); m !== null; m = pattern.exec(text)) {
+    if (m.index > last) segments.push({ kind: 'text', text: text.slice(last, m.index) });
+    if (m[1]) segments.push({ kind: 'muted', text: m[1] });
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) segments.push({ kind: 'text', text: text.slice(last) });
+
+  return segments;
+}
+
+/**
+ * An authored string with its braces removed — the plain text.
+ *
+ * This is the half that is easy to forget and expensive to get wrong: the byline is also the
+ * site's `description`, its `og:description` and its `twitter:description` (see `layout.tsx`),
+ * so without stripping, a literal `{` would ship into the search result and the social card.
+ * Same split as a heading's `heading` vs `headingSegments`, and for the same reason.
+ */
+export function plainText(text?: string): string {
+  if (!text) return '';
+  return splitMuted(text)
+    .map((s) => s.text)
+    .join('');
 }

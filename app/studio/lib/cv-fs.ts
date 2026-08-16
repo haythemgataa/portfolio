@@ -252,6 +252,10 @@ export function collectReferences(
   };
 
   if (cv.profile?.photo) bump(cv.profile.photo);
+  // The gallery-teaser grid under About. These are usually gallery entries too, so they would
+  // often be counted anyway — but "usually" is not a reference count: drop one from the gallery
+  // and the sweep would delete a file the home page is still showing.
+  for (const file of cv.profile?.galleryPreview ?? []) bump(file);
   for (const section of cv.sections ?? []) {
     for (const item of section.items ?? []) {
       for (const file of item.media ?? []) bump(file);

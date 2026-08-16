@@ -2,9 +2,16 @@
   "version": 1,
   "profile": {
     "displayName": "Haythem Gataa",
-    "byline": "Product Designer & Engineer in Tunisia (GMT+1)",
+    "byline": "Product Designer {& Engineer}",
+    "location": "Tunisia {(GMT+1)}",
     "about": "I’m a Product Designer, passionate about micro-interactions, animations, and the art of design. With a track record of bringing products to life and enhancing existing ones (over 6 years), I blend creativity with my engineering background to deliver mindful user experiences.",
-    "photo": "profile.webp"
+    "photo": "profile.webp",
+    "galleryPreview": [
+      "invoices-page.webp",
+      "clicky.webp",
+      "stolen-from-a-bento.webp",
+      "ios-app-icon.webp"
+    ]
   },
   "sections": [
     {

@@ -107,7 +107,7 @@ export default async function RootLayout({
             {/* Below the bar, so unlike the header it does not have to be identical per route —
                 it is here rather than in `Profile.tsx` because it closes the *page*, and the
                 gallery would otherwise just stop after its last item. */}
-            <SiteFooter />
+            <SiteFooter location={cv.profile.locationSegments} />
           </div>
         </div>
       </body>

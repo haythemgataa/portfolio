@@ -9,10 +9,11 @@
       "caption": "A screen showing how moving nets from one category to the other should work. This is one of multiple screens that show different states. Since the interaction was a bit hard to understand from still screens, I shipped a fully functional clone using Claude Artifacts to let team members test it and give feedback, and to assist devs."
     },
     {
-      "id": "mobile-app-flow",
-      "file": "groupado-pro-learning-hero.webp",
-      "title": "Landing Page Hero Section",
-      "date": "2022"
+      "id": "claude-for-ghostty-icon",
+      "file": "claude-for-ghostty-icon.webp",
+      "date": "2026",
+      "title": "Custom macOS Icon for Ghostty Terminal",
+      "caption": "I use Ghostty exclusively for Claude Code, so I made two custom icons, each a hybrid between the Ghostty icon and the Claude Code mascot. This made it easier for me to find the app in the Dock."
     },
     {
       "id": "dashboard-explorations",
@@ -21,18 +22,35 @@
       "date": "2026"
     },
     {
-      "id": "claude-for-ghostty-icon",
-      "file": "claude-for-ghostty-icon.webp",
-      "date": "2026",
-      "title": "Custom macOS Icon for Ghostty Terminal",
-      "caption": "I use Ghostty exclusively for Claude Code, so I made two custom icons, each a hybrid between the Ghostty icon and the Claude Code mascot. This made it easier for me to find the app in the Dock."
+      "id": "pcb-cube",
+      "file": "pcb-cube.webp",
+      "title": "PCB Cube",
+      "date": "2024",
+      "caption": "A rubik cube design I made for DeepPCB to be given away in events. Turned out to be super hard to solve! I've only met two people who managed to solve it. "
     },
     {
       "id": "board-setup-net-classes",
       "file": "board-setup-net-classes.webp",
       "date": "2026",
-      "title": "Net Classes",
+      "title": "AI Suggestions for Net Classes",
       "caption": "This screen shows how AI suggestions would land and be previewed next to existing content."
+    },
+    {
+      "id": "mobile-app-flow",
+      "file": "groupado-pro-learning-hero.webp",
+      "title": "Landing Page Hero Section",
+      "date": "2022"
+    },
+    {
+      "id": "personal-website-framer",
+      "file": "personal-website-framer.webm",
+      "title": "Hero Section of a Personal Website"
+    },
+    {
+      "id": "invoices-page",
+      "file": "invoices-page.webp",
+      "title": "Invoices Page",
+      "date": "2023"
     },
     {
       "id": "document-suggestions",
@@ -49,15 +67,16 @@
       "date": "2026"
     },
     {
-      "id": "personal-website-framer",
-      "file": "personal-website-framer.webm",
-      "title": "Hero Section of a Personal Website"
-    },
-    {
       "id": "edit-net-class",
       "file": "edit-net-class.webp",
       "date": "2025",
       "title": "Popup to Edit a Net Class"
+    },
+    {
+      "id": "all-lines",
+      "file": "all-lines.webp",
+      "title": "InstaDeep Logo Artwork",
+      "date": "2024"
     },
     {
       "id": "board-viewer-evolution-2023-2026",
@@ -67,11 +86,53 @@
       "caption": "Showing how DeepPCB evolved over time. Constant feedback, new features, and mixed testing (internal and based on VWO data, provided by the UX team)."
     },
     {
+      "id": "home-grid-view",
+      "file": "home-grid-view.webp",
+      "date": "2023",
+      "title": "Grid of Articles"
+    },
+    {
+      "id": "instanovo-404-page",
+      "file": "instanovo-404-page.webm",
+      "date": "2024",
+      "title": "Custom 404 Page"
+    },
+    {
+      "id": "tasty-stickers",
+      "file": "tasty-stickers.webp",
+      "title": "Stickers I Made Just for Fun",
+      "date": "2024"
+    },
+    {
+      "id": "timeline-view",
+      "file": "timeline-view.webp",
+      "date": "2024",
+      "title": "Timeline View"
+    },
+    {
       "id": "check-with-cooper",
       "file": "check-with-cooper.webm",
       "date": "2026",
       "title": "A Nudge Animation",
       "caption": "We wanted to push users to try Cooper, so we added this nudge animation that shows up when the cursor gets near the Start Routing button."
+    },
+    {
+      "id": "rhfacile-dashboard",
+      "file": "rhfacile-dashboard.webp",
+      "date": "2021",
+      "title": "HR Tool for Small to Medium Companies — Admin Dashboard"
+    },
+    {
+      "id": "clicky",
+      "file": "clicky.webp",
+      "title": "Buttons from a Design System",
+      "date": "2025"
+    },
+    {
+      "id": "thinking",
+      "file": "thinking.webm",
+      "date": "2023",
+      "title": "LLM Loading Animation"
     },
     {
       "id": "cooper-mascot",
@@ -81,40 +142,22 @@
       "caption": "Showing possible variations for Cooper, like how it would look when there’s an error, or when idle, or loading a response…"
     },
     {
-      "id": "thinking",
-      "file": "thinking.webm",
-      "date": "2023",
-      "title": "LLM Loading Animation"
-    },
-    {
-      "id": "timeline-view",
-      "file": "timeline-view.webp",
-      "date": "2024",
-      "title": "Timeline View"
-    },
-    {
-      "id": "instanovo-404-page",
-      "file": "instanovo-404-page.webm",
-      "date": "2024",
-      "title": "Custom 404 Page"
-    },
-    {
-      "id": "home-grid-view",
-      "file": "home-grid-view.webp",
-      "date": "2023",
-      "title": "Grid of Articles"
-    },
-    {
-      "id": "rhfacile-dashboard",
-      "file": "rhfacile-dashboard.webp",
-      "date": "2021",
-      "title": "HR Tool for Small to Medium Companies — Admin Dashboard"
+      "id": "ios-app-icon",
+      "file": "ios-app-icon.webp",
+      "title": "iOS App Icon for a Shopping App",
+      "date": "2024"
     },
     {
       "id": "deeppcb-loading-animation",
       "file": "deeppcb-loading-animation.webm",
       "date": "2023",
       "title": "Lottie Loading Animation"
+    },
+    {
+      "id": "stolen-from-a-bento",
+      "file": "stolen-from-a-bento.webp",
+      "title": "Stolen from a Bento Grid",
+      "date": "2023"
     }
   ]
 }

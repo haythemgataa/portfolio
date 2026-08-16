@@ -1,13 +1,17 @@
 import Image from "next/image";
+import GalleryPreview from "./GalleryPreview";
 import RichText from "./RichText";
 import styles from "./ProfileHeader.module.css";
+import type { MutedSegment, ResolvedMedia } from "./lib/contentTypes";
 
 type ProfileHeaderProps = {
   profile: {
     profilePhoto: string,
     displayName: string,
     byline?: string,
+    bylineSegments?: MutedSegment[],
     about?: string,
+    galleryPreview?: ResolvedMedia[],
   },
 };
 
@@ -43,7 +47,19 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profile }) => {
               <span className={styles.betaBadge}>beta</span>
             )}
           </h1>
-          <div className={styles.byline}>{profile.byline}</div>
+          {/* Segments when the loader supplied them, the plain string otherwise — so a caller
+              that only has the raw byline still renders, just without the muted runs. */}
+          <div className={styles.byline}>
+            {profile.bylineSegments?.length
+              ? profile.bylineSegments.map((segment, i) =>
+                  segment.kind === "muted" ? (
+                    <span key={i} className={styles.bylineMuted}>{segment.text}</span>
+                  ) : (
+                    <span key={i}>{segment.text}</span>
+                  ),
+                )
+              : profile.byline}
+          </div>
         </div>
       </div>
 
@@ -54,6 +70,12 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profile }) => {
           </div>
         </section>
       ) : null}
+
+      {/* The one thing above the bar that is *not* identical on both routes — it renders on the
+          CV only, so the bar starts lower here than on /gallery and shifts when tabs are
+          switched. Deliberate: the alternative was offering "See more in Gallery" to someone
+          already in the gallery. The component makes that call itself, from the pathname. */}
+      <GalleryPreview items={profile.galleryPreview ?? []} />
     </header>
   );
 };

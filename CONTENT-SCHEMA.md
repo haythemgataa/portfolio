@@ -40,9 +40,11 @@ Two things that follow from that, worth stating because they are easy to assume:
   "version": 1,
   "profile": {
     "displayName": "Haythem Gataa",
-    "byline": "Software Designer & Engineer in Tunisia",
+    "byline": "Software Designer {& Engineer}",
+    "location": "Tunisia {(GMT+1)}",
     "about": "I'm a detail-oriented Software Designer…",
-    "photo": "profile.webp"
+    "photo": "profile.webp",
+    "galleryPreview": ["invoices-page.webp", "clicky.webp", "stolen-from-a-bento.webp"]
   },
   "sections": [
     {
@@ -99,6 +101,57 @@ Rules:
 
 One naming seam: media is authored under `media` but the loader resolves it to
 `attachments`, because that is the prop `Attachments.tsx` already takes.
+
+### `profile.galleryPreview`
+
+An ordered list of pool filenames — array order is display order, like everywhere else —
+rendered as a 2x2 grid under About that teases the gallery. Omit it, or leave it empty, and
+the block does not render at all.
+
+```json
+"galleryPreview": ["invoices-page.webp", "clicky.webp", "stolen-from-a-bento.webp", "ios-app-icon.webp"]
+```
+
+Three things to know:
+
+- **These are pool filenames, not gallery entry ids**, even though in practice the four are
+  usually gallery entries too. The pool is the shared vocabulary both content files already
+  speak; an id would make `cv.json` depend on `gallery.json`'s addressing scheme.
+- **It is therefore a new *kind* of reference, and it is counted.** `collectReferences` in
+  `app/studio/lib/cv-fs.ts` bumps each of these, and `cvUses` in `Studio.tsx` mirrors it.
+  Without that the sweep would report a file as an orphan the moment it left the gallery —
+  while the home page was still showing it. "Usually also a gallery entry" is not a
+  reference count.
+- **Four is what the layout expects**, since the grid is two fixed columns. A fifth entry
+  starts a third row rather than being dropped, which is legal but is not the design.
+
+### Muted runs in free text
+
+`{...}` sets that run in `--grey3`, the lightest of the three text greys — so a string can
+lead with what matters and let the rest sit back. Two fields take it, `profile.byline` and
+`profile.location`:
+
+```json
+"byline": "Product Designer {& Engineer}",
+"location": "Tunisia {(GMT+1)}"
+```
+
+Five things to know:
+
+- **Braces, not the heading's square brackets.** The two tokens mean different things and
+  both are hand-authored, so sharing a delimiter would make `[Engineer]` a missing-image
+  reference instead of a muted span.
+- **The helpers are named for the treatment, not the field.** `splitMuted` and `plainText`
+  in `app/lib/contentTypes.ts` — a third field that wants this should reuse them rather than
+  introduce another delimiter.
+- **The braces are stripped from the plain string.** `byline` is also the site's
+  `description`, `og:description` and `twitter:description`, so the loader hands the metadata
+  layer a brace-free string and the component renders `bylineSegments` instead. Same split as
+  a heading's `heading` vs `headingSegments`, for the same reason.
+- **It names no pool file**, so unlike `[filename]` it needs no reference counting — there is
+  nothing for the sweep to delete and nothing to mirror in the Studio's `cvUses`.
+- **Empty braces render nothing** rather than an empty span, and an unclosed `{` is left as
+  the literal character — the pattern only matches a closed pair on one line.
 
 ### Inline icons in headings
 
@@ -172,8 +225,10 @@ drag them anywhere and hope, the document makes position structural:
 |---|---|---|---|
 | Header — photo, name, byline | always first | no | `profile` |
 | About | always second, above the tab bar; renders untitled | no | `profile.about` |
+| Gallery teaser — a 2x2 grid | always third, above the tab bar; **CV route only** | no | `profile.galleryPreview` |
 | Work Experience, Education, Awards, Speaking, … | between | **yes** | `sections[]` |
 | Contact | always last | no | `contact` |
+| Footer — published date and location | below both routes, outside the CV | no | `profile.location` |
 
 `sections[]` therefore holds **only** the homogeneous timeline-shaped sections —
 every entry renders identically (`year` gutter + heading + subheading +

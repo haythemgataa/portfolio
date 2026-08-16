@@ -155,7 +155,7 @@
     background-color var(--ground-fade) ease,
     color 150ms ease;
   font-size: var(--type-size);
-  font-weight: 500;
+  font-weight: var(--weight-base);
   line-height: 1;
   white-space: nowrap;
   text-decoration: none;
@@ -348,7 +348,7 @@
   padding: 4px 8px;
   border: 1px solid transparent;
   font-size: var(--type-size);
-  font-weight: 500;
+  font-weight: var(--weight-base);
   line-height: 1;
   white-space: nowrap;
   color: var(--tabActiveForeground);

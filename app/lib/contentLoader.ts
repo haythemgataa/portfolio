@@ -10,7 +10,7 @@ import type {
   ResolvedMedia,
   ResolvedSection,
 } from './contentTypes';
-import { darkVariant, plainByline, splitByline, splitHeading } from './contentTypes';
+import { darkVariant, plainText, splitMuted, splitHeading } from './contentTypes';
 import { assetUrl, loadMediaRegistry, resolveAsset } from './mediaRegistry';
 
 /**
@@ -160,8 +160,12 @@ export async function loadProfileData(): Promise<ResolvedCv> {
       displayName: cv.profile.displayName,
       // Stripped, not raw: this is what the metadata layer reads. The braces render via
       // `bylineSegments` instead.
-      byline: plainByline(cv.profile.byline),
-      bylineSegments: splitByline(cv.profile.byline ?? ''),
+      byline: plainText(cv.profile.byline),
+      bylineSegments: splitMuted(cv.profile.byline ?? ''),
+      // Stripped for the same reason, even though nothing reads it today: a raw brace sitting
+      // in a resolved field is a trap for whatever picks it up next.
+      location: plainText(cv.profile.location),
+      locationSegments: splitMuted(cv.profile.location ?? ''),
       about: cv.profile.about,
       profilePhoto: assetUrl(cv.profile.photo),
     },

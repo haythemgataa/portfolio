@@ -34,6 +34,13 @@ export const PROFILE_FIELDS: FieldDef[] = [
     hint: 'Wrap any run in {braces} to set it in the lighter grey. The braces are stripped from the search-result and social-card description, so only the styling is affected.',
   },
   {
+    key: 'location',
+    label: 'Location',
+    type: 'text',
+    placeholder: 'Tunisia {(GMT+1)}',
+    hint: 'Shown in the footer, opposite the last-updated date. Takes {braces} the same way.',
+  },
+  {
     key: 'about',
     label: 'About',
     type: 'markdown',

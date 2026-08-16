@@ -101,6 +101,12 @@ export type CvSection = {
 export type CvProfile = {
   displayName: string;
   byline?: string;
+  /**
+   * Where you are, shown in the footer. Takes `{...}` muted runs like the byline does —
+   * "Tunisia {(GMT+1)}" sets the offset back from the place. Content rather than markup
+   * because it is a fact about the person, and one the Studio has to be able to edit.
+   */
+  location?: string;
   /** Markdown. */
   about?: string;
   /** Filename in the public/media/ pool. */
@@ -184,7 +190,9 @@ export type ResolvedProfile = Omit<CvProfile, 'photo'> & {
    * `byline` split into plain and muted runs — what actually renders. `byline` itself is the
    * brace-stripped plain string, which is what the metadata layer wants.
    */
-  bylineSegments: BylineSegment[];
+  bylineSegments: MutedSegment[];
+  /** `location` split the same way. Empty when none is authored. */
+  locationSegments: MutedSegment[];
 };
 
 export type ResolvedContact = {
@@ -291,12 +299,17 @@ export function darkVariant(file: string): string | null {
 }
 
 // ---------------------------------------------------------------------------
-// Muted spans in the byline
+// Muted runs in free text
 // ---------------------------------------------------------------------------
 
 /**
- * `{...}` inside the byline renders that run in the muted grey — "Product Designer
- * {& Engineer}" sets the second half back so the first reads as the primary role.
+ * `{...}` in an authored string renders that run in the muted grey — "Product Designer
+ * {& Engineer}" sets the second half back so the first reads as the primary role, and
+ * "Tunisia {(GMT+1)}" does the same for the footer's offset.
+ *
+ * Named for the treatment rather than for the byline it was written for, because two fields
+ * use it now. Anything else that wants the same thing should reuse it rather than grow a
+ * second delimiter.
  *
  * Braces rather than the heading's square brackets, and that is not arbitrary: the two tokens
  * mean different things and both are authored by hand, so a shared delimiter would make
@@ -310,38 +323,38 @@ function mutedPattern(): RegExp {
   return /\{([^{}\n]*)\}/g;
 }
 
-export type BylineSegment = { kind: 'text' | 'muted'; text: string };
+export type MutedSegment = { kind: 'text' | 'muted'; text: string };
 
 /**
- * Split a byline into plain and muted runs. Pure and dependency-free, matching `splitHeading`,
- * so the loader and the Studio can share it.
+ * Split an authored string into plain and muted runs. Pure and dependency-free, matching
+ * `splitHeading`, so the loader and the Studio can share it.
  */
-export function splitByline(byline: string): BylineSegment[] {
-  const segments: BylineSegment[] = [];
+export function splitMuted(text: string): MutedSegment[] {
+  const segments: MutedSegment[] = [];
   const pattern = mutedPattern();
   let last = 0;
 
-  for (let m = pattern.exec(byline); m !== null; m = pattern.exec(byline)) {
-    if (m.index > last) segments.push({ kind: 'text', text: byline.slice(last, m.index) });
+  for (let m = pattern.exec(text); m !== null; m = pattern.exec(text)) {
+    if (m.index > last) segments.push({ kind: 'text', text: text.slice(last, m.index) });
     if (m[1]) segments.push({ kind: 'muted', text: m[1] });
     last = m.index + m[0].length;
   }
-  if (last < byline.length) segments.push({ kind: 'text', text: byline.slice(last) });
+  if (last < text.length) segments.push({ kind: 'text', text: text.slice(last) });
 
   return segments;
 }
 
 /**
- * The byline with its braces removed — the plain string.
+ * An authored string with its braces removed — the plain text.
  *
  * This is the half that is easy to forget and expensive to get wrong: the byline is also the
  * site's `description`, its `og:description` and its `twitter:description` (see `layout.tsx`),
  * so without stripping, a literal `{` would ship into the search result and the social card.
  * Same split as a heading's `heading` vs `headingSegments`, and for the same reason.
  */
-export function plainByline(byline?: string): string {
-  if (!byline) return '';
-  return splitByline(byline)
+export function plainText(text?: string): string {
+  if (!text) return '';
+  return splitMuted(text)
     .map((s) => s.text)
     .join('');
 }

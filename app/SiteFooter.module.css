@@ -9,12 +9,28 @@
      vanished into the list's 60px and the gallery came out 16px tighter than the CV, whose
      section padding cannot collapse. Padding never collapses, so both add up to the same 76px. */
   padding-top: 16px;
-  padding-bottom: 8px;
+  /* Room for the cursor, which is absolutely positioned and so contributes nothing to the
+     page's height — it hangs about 64px below this line at its lowest, and whatever is not
+     reserved here gets cut off at the bottom of the document. That is not hypothetical: the
+     column's own vertical padding is `clamp(24px, …, 72px)`, so a wide window happened to have
+     enough slack and a 560px one clipped the cursor by 33px. Reserved unconditionally rather
+     than only while the cursor is mounted, because adding it at that point would shove the
+     footer up 40px while the reader is watching. */
+  padding-bottom: 60px;
 }
 
-/* The colophon and the date sit on one line at opposite ends, and stack once the column gets
-   narrow enough that they would otherwise collide. `column-gap` covers the row, `row-gap` the
-   stacked case. */
+/* The date at one end and the location at the other, stacking once the column gets narrow
+   enough that they would otherwise collide. `column-gap` covers the row, `row-gap` the
+   stacked case.
+
+   `wrap-reverse`, not `wrap`, so the location comes out *above* the date once they stack.
+   Stacked, the date wants to be last: the cursor animation ends below it, and with the location
+   underneath, the hand would land on top of the location instead of in clear space.
+
+   Reversing the cross axis rather than reordering under a media query, because the point at
+   which these two collide is a fact about how wide the two strings are — and one of them is a
+   date whose width changes with the month. A breakpoint would be a guess at that; this fires
+   exactly when the wrap actually happens. */
 .row {
   display: flex;
   flex-direction: row;
@@ -22,11 +38,291 @@
   justify-content: space-between;
   column-gap: 24px;
   row-gap: 4px;
-  flex-wrap: wrap;
+  flex-wrap: wrap-reverse;
 }
 
-.colophon,
+/* `relative` so the cursor can be positioned against the whole line — its first mark is
+   "below Last updated", which is the label, not the box at the end. */
 .updated {
+  color: var(--grey3);
+  position: relative;
+}
+
+/* The cursor. Positioned by its top-left corner and offset in the inline style so the arrow's
+   *tip* lands on each target — see `CURSOR_HOTSPOT` in LastUpdated.tsx.
+
+   `position: absolute` keeps it out of flow, which matters twice: the footer's height does not
+   change when it mounts, and the line does not reflow as it travels. It is also
+   `pointer-events: none`, because a decorative graphic sitting over the end of a line of text
+   should not be selectable or catch a cursor of the reader's own.
+
+   Only `transform` animates — no `left`/`top` — so the travel is handed to the compositor
+   rather than laying out the footer sixty times a second. */
+.cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  pointer-events: none;
+  transition: transform var(--cursor-move, 520ms) cubic-bezier(0.33, 0, 0.16, 1);
+  animation: cursorIn 220ms ease both;
+}
+
+/* The clap scales the hand well past the 96x53 viewBox and throws its sparks above the top
+   edge, both of which an SVG clips away by default. */
+.cursor svg {
+  overflow: visible;
+}
+
+/* The swap itself: the outgoing pointer scales down and blurs away while the incoming one
+   arrives. Both layers exist at all times — see the note in FigmaCursor — because a transition
+   needs something to transition *from*, and markup swapped at the moment of change can only cut.
+
+   The blur lives on these layers and not on the pointer groups inside them, which is what keeps
+   it away from the `filter="url(#…)"` drop shadows: a CSS `filter` overrides the presentation
+   attribute outright, so blurring the same element would silently drop its shadow.
+
+   The incoming pointer overshoots — that is the pop. It is in the easing rather than in
+   keyframes so the two directions can share one declaration; the outgoing one runs the same
+   curve backwards, where the overshoot reads as it being pulled away.
+
+   Both turn clockwise: the outgoing one winds away to +32deg, and the incoming one starts at
+   -32deg and unwinds to nothing, which is the same direction of travel. Mirroring the signs
+   instead would have them counter-rotate, and the pair reads as two things being wrung apart
+   rather than as one handing over to the next. */
+.cursorArrowLayer,
+.cursorHandLayer {
+  transform-box: fill-box;
+  transform-origin: center;
+  filter: blur(0);
+  transition:
+    opacity 220ms ease,
+    filter 220ms ease,
+    transform 300ms cubic-bezier(0.34, 1.9, 0.64, 1);
+}
+
+/* The hand's tip is ~6px from the arrow's, and the element is positioned by the arrow's — see
+   `POINTER_HOTSPOT` in LastUpdated.tsx. This is where that difference is paid, on the layer
+   rather than in the element's offset, so the swap moves nothing: `hand - arrow` negated. It
+   is carried in *both* states below, or the hand would slide those 6px as it arrives. */
+.cursorHandLayer {
+  transform: translate(-6.4px, 4.3px);
+}
+
+.cursor[data-pointer="hand"] .cursorArrowLayer {
+  opacity: 0;
+  filter: blur(3.5px);
+  transform: scale(0.3) rotate(32deg);
+}
+
+.cursor[data-pointer="arrow"] .cursorHandLayer {
+  opacity: 0;
+  filter: blur(3.5px);
+  transform: translate(-6.4px, 4.3px) scale(0.3) rotate(-32deg);
+}
+
+/* The click. Scaling the pointer rather than the whole cursor is what the gesture actually looks
+   like — in a multiplayer cursor the pointer reacts and the name pill rides along unchanged —
+   and it is the reason this SVG is inlined at all: nothing outside an `<img>` can reach a group
+   inside it.
+
+   `transform-box: fill-box` would measure against the group's own bounding box; the origin here
+   is in viewBox units instead, pinned to the tip, so the pointer shrinks *into* the point it is
+   aiming at rather than sliding off it. The arrow and the hand have tips in different places, so
+   the origin is per-pointer — these two pairs must match `POINTER_HOTSPOT` in LastUpdated.tsx,
+   which positions against the same points. */
+.cursorPointer {
+  transform-origin: 6px 6.5px;
+  transition: transform 100ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cursor[data-pointer="hand"] .cursorPointer {
+  transform-origin: 12.4px 2.2px;
+}
+
+.cursor[data-clicking="true"] .cursorPointer {
+  transform: scale(0.78);
+}
+
+/* The parting wave. It pivots at the wrist rather than the fingertip the click uses — rotating
+   about the tip would swing the whole hand through an arc, which is a wipe, not a wave. This
+   rule must stay *after* the `data-pointer="hand"` origin above: both are one class, one
+   attribute and one class, so they carry the same specificity and source order is what decides.
+
+   `handWave`'s duration has to match `WAVE_MS` in LastUpdated.tsx, which is what clears the
+   attribute afterwards. */
+.cursor[data-waving="true"] .cursorPointer {
+  transform-origin: 12px 21px;
+  animation: handWave 900ms ease-in-out;
+}
+
+/* The clap's trigger: a small circle laid over the hand, centred on it. Deliberately tight —
+   the greeting should be the reward for actually arriving at the hand, not for passing within
+   a few centimetres of it — so the radius is a little wider than the 19px hand and no more.
+
+   It sits inside `.cursor`, so it travels with the hand for free and needs no position of its
+   own beyond the offset to the hand's middle (12, 12 in the SVG's units, which are px here).
+   `.cursor` is `pointer-events: none`; this one element opts back in.
+
+   `cursor: none` rather than a `cursor:` image, and that is what buys the second half of the
+   greeting. A cursor image is stamped by the compositor and cannot be animated, so it could only
+   ever be a still hand arriving; hiding the real pointer and drawing `.userHand` in its place is
+   what lets the reader's hand clap too. The drawn one covers exactly this circle, so the native
+   pointer returns the instant they leave. */
+.clapZone {
+  --clap-radius: 20px;
+  position: absolute;
+  left: calc(12px - var(--clap-radius));
+  top: calc(12px - var(--clap-radius));
+  width: calc(var(--clap-radius) * 2);
+  height: calc(var(--clap-radius) * 2);
+  border-radius: 50%;
+  pointer-events: auto;
+  cursor: none;
+}
+
+/* The reader's hand. Positioned by the component on every pointer move, so no transition here —
+   easing the position would make it lag the pointer it is standing in for. */
+.userHand {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* It claps on the same curve and duration as the site's hand, pivoting at its own wrist, so the
+   two meet as one gesture rather than two things happening near each other. */
+.userHandArt {
+  display: block;
+  transform-origin: 12px 21px;
+}
+
+.cursor[data-clapping="true"] .userHandArt {
+  animation: handClap 560ms linear;
+}
+
+/* Nothing is travelling toward anything on a touch screen, and `pointerenter` there fires on a
+   tap — which would clap for someone who never approached. */
+@media (hover: none) {
+  .clapZone {
+    display: none;
+  }
+}
+
+/* The clap — the hand meeting the reader's pointer when it comes over. Traced off the
+   reference: it is not a symmetrical pulse but a rise, a *hold*, and a settle, which is what
+   makes it read as two things meeting and resting together rather than as a throb.
+
+   It pivots at the wrist like the wave, so the hand rises to meet the pointer instead of
+   inflating in place. Placed after both the hand-origin and waving rules, since all three carry
+   the same specificity and the last one wins — and it also takes precedence in the component,
+   which drops `data-waving` while a clap is running so the two never animate the same property
+   at once.
+
+   `handClap`'s duration has to match `CLAP_MS` in LastUpdated.tsx. */
+.cursor[data-clapping="true"] .cursorPointer {
+  transform-origin: 12px 21px;
+  animation: handClap 560ms linear;
+}
+
+/* Two keyframes, not three: the hold in the middle was the dead moment — the hand reached its
+   peak and then sat there, which is the one thing a clap does not do. It turns round at the
+   peak instant and starts coming back.
+
+   The easing is per-keyframe and the animation itself is `linear`, because the two halves want
+   opposite curves and a single function cannot give both. The rise is heavily eased *out* — it
+   leaves at full speed and decelerates into the peak, so the contact is where the energy is —
+   and the fall eases from that stop back to rest. Put one curve across the whole thing and
+   either the impact goes soft or the settle snaps. */
+@keyframes handClap {
+  0% {
+    transform: scale(1);
+    animation-timing-function: cubic-bezier(0.05, 0.85, 0.15, 1);
+  }
+  20% {
+    transform: scale(1.42);
+    animation-timing-function: cubic-bezier(0.36, 0, 0.18, 1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* The impact marks. Invisible at rest — they exist only in the instant of contact, so they come
+   in fast, spread slightly, and are gone well before the hand has finished settling. */
+.cursorSpark {
+  opacity: 0;
+  /* Against their own bounding box, so the spread grows outward from the marks themselves —
+     the SVG default would scale them about the viewBox origin and fling them sideways. */
+  transform-box: fill-box;
+  transform-origin: center bottom;
+}
+
+.cursor[data-clapping="true"] .cursorSpark {
+  animation: sparkFlash 420ms ease-out;
+}
+
+@keyframes sparkFlash {
+  0% {
+    opacity: 0;
+    transform: translateY(3px) scale(0.6);
+  }
+  25% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-2px) scale(1.1);
+  }
+}
+
+/* Decaying, so it settles rather than stopping dead on the last swing. The rotations are small
+   — this is a 19px hand, and past about 15deg the fingers start to read as toppling over. */
+@keyframes handWave {
+  0% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(-14deg);
+  }
+  40% {
+    transform: rotate(11deg);
+  }
+  60% {
+    transform: rotate(-8deg);
+  }
+  80% {
+    transform: rotate(5deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+/* Opacity only, deliberately. `transform` on this element is the cursor's *position*, written
+   from the component — an animation touching it here would win over the inline style for its
+   whole duration and snap the cursor to the corner of the line before jumping back. */
+@keyframes cursorIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* The place reads at full contrast and the offset sits back, which is the same label/value
+   split running the other way across the row: "Last updated:" is quiet and its date is not.
+   So the two ends mirror each other rather than each inventing a weighting. */
+.location {
+  color: var(--grey1);
+}
+
+/* A `{...}` run — see `splitMuted` in lib/contentTypes.ts. Same grey as `.updated`, so the
+   offset and the label it faces sit at one level. */
+.locationMuted {
   color: var(--grey3);
 }
 
@@ -36,13 +332,129 @@
   color: var(--grey1);
 }
 
-/* `display: flex` so the box is the glyph's height rather than a text line's, which would leave
-   an unexplained few pixels under it. `--grey1` is what makes it near-black on the light ground
-   and near-white on the dark one, through `currentColor` inside the SVG. */
-.signature {
-  display: flex;
-  margin-top: 12px;
-  color: var(--grey1);
+/* The box around the published date — step one of the animation being built on it.
+
+   `inline-block` rather than a plain inline box: an inline element's vertical padding and
+   border paint outside the line box without reserving room, so the box would overlap the line
+   above and the row would not grow to fit it. As an inline-block it takes real space, which is
+   also what makes it measurable and transformable once there is something to animate.
+
+   The colour is `--blue`, the one already in globals.css, rather than a second near-identical
+   literal alongside it. */
+.date {
+  display: inline-block;
+  /* Transparent at rest and coloured by `data-boxed`, so the 2px it occupies is constant and
+     the frame can come and go without moving the date a pixel. */
+  border: 1px solid transparent;
+  /* The containing block for the selection handles and underline, which are absolutely
+     positioned so they never widen the box the cursor is aiming at. */
+  position: relative;
+}
+
+/* A strut, and it is what keeps the animation from starting with a jolt. An inline-block with no
+   content collapses to nothing, so at zero characters the box would be a 2px dot that snapped to
+   full height the moment the first letter arrived. A zero-width space is a real text run, so it
+   carries the line height without carrying any width — the box holds its height from the first
+   frame and only grows sideways, which is the whole point of it growing with the text. */
+.date::before {
+  content: "\200b";
+}
+
+/* Figma's selection state, drawn on the box by the second click.
+
+   Every measurement is expressed against these two so the geometry stays adjustable from one
+   place. `--handle-inset` is where the maths lives: an absolutely positioned child resolves
+   against the *padding* box, which sits inside the box's 1px border, so reaching a given depth
+   past the visible edge means counting that border. At 8px square and 3px deep the handle's
+   outer edge lands 5px outside the border and 3px of it covers the corner. */
+.date {
+  --handle-size: 8px;
+  --handle-depth: 4px;
+  --handle-inset: calc(var(--handle-depth) - var(--handle-size) - 1px);
+  /* Where the underline sits, measured up from the box's inner bottom edge — so it tracks the
+     type rather than the frame.
+
+     It sits *on the baseline*, zero offset: the letters rest on it and a descender crosses it,
+     which is how Figma marks a text layer's baseline rather than how typography draws an
+     underline. At 14px Switzer the baseline is 17.5px below the box's top and its inner bottom
+     edge is at 23.4px, which puts the rule's top there at 5px up.
+
+     Dropping it to clear the "g" was the wrong read: it left the rule detached from every
+     letter that does not descend, and would have looked stranded outright in a month with no
+     descender at all — "May 2026", "Nov 2026". On the baseline it meets the whole word.
+
+     Derived from the font's metrics, not the box's, so changing `--type-size`, `--line-height`
+     or the typeface means remeasuring where the baseline lands. */
+  --underline-offset: 5px;
+}
+
+/* The underline sits inside the box, flush under the letters — the line belongs to the text,
+   the way Figma marks a text layer's baseline, rather than being a rule hung under the frame. */
+.selectionUnderline {
+  position: absolute;
+  /* -1px, not 0: this resolves against the padding box, which sits inside the box's 1px
+     border, so `left: 0` would leave the rule a pixel short at each end and it would read as
+     misaligned rather than as the box's own underline. */
+  left: -1px;
+  right: -1px;
+  bottom: var(--underline-offset);
+  height: 1px;
+  background-color: var(--blue);
+}
+
+/* White-filled with a blue edge, the way Figma draws a resize handle — a solid blue square
+   would read as a bullet sitting on the corner rather than as something grabbable.
+   `--backgroundColor` rather than white, so it follows the dark theme and the gallery's
+   muted ground instead of punching four light holes in them. */
+.handle {
+  position: absolute;
+  width: var(--handle-size);
+  height: var(--handle-size);
+  background-color: var(--backgroundColor);
+  border: 1px solid var(--blue);
+  box-sizing: border-box;
+}
+
+.handle[data-corner="top-left"] {
+  top: var(--handle-inset);
+  left: var(--handle-inset);
+}
+
+.handle[data-corner="top-right"] {
+  top: var(--handle-inset);
+  right: var(--handle-inset);
+}
+
+.handle[data-corner="bottom-left"] {
+  bottom: var(--handle-inset);
+  left: var(--handle-inset);
+}
+
+.handle[data-corner="bottom-right"] {
+  bottom: var(--handle-inset);
+  right: var(--handle-inset);
+}
+
+/* The frame is only drawn while the animation owns the date — before the first character, and
+   again once the hand has taken over and cleared the selection. `transparent` rather than
+   `border: 0` in the base rule above: the border keeps its 2px throughout, so the box appearing
+   and disappearing never shunts the line sideways. */
+.date[data-boxed="true"] {
+  border-color: var(--blue);
+}
+
+/* The typed box is `aria-hidden`— a half-typed date is not a fact worth announcing, and without
+   hiding it the date would be read twice — so the real text rides here instead. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 /* The CV indents its bodies past the section title below 480px; the footer follows so its left

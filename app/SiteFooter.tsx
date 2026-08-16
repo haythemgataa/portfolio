@@ -1,8 +1,14 @@
-import Signature from "./Signature";
+import LastUpdated from "./LastUpdated";
 import styles from "./SiteFooter.module.css";
+import type { MutedSegment } from "./lib/contentTypes";
+
+type SiteFooterProps = {
+  /** `profile.location`, already split — see `splitMuted`. Omitted or empty renders nothing. */
+  location?: MutedSegment[],
+};
 
 /**
- * The page's closing line: a colophon, when the site was last published, and the signature.
+ * The page's closing line: when the site was last published, and where its author is.
  *
  * A server component with no state, so `LAST_UPDATED` below is evaluated once during the build
  * and baked into the export — which is exactly what "last updated" means for a static site. It
@@ -18,23 +24,25 @@ const LAST_UPDATED = new Date().toLocaleDateString("en-US", {
   timeZone: "UTC",
 });
 
-const SiteFooter = () => {
+const SiteFooter: React.FC<SiteFooterProps> = ({ location }) => {
   return (
     <footer className={styles.footer}>
       <div className={styles.row}>
-        {/* The emphasis is visual hierarchy, not meaning — "love" is not more *important* than
-            the words around it — so these are spans rather than <strong>, which would have a
-            screen reader stress them. */}
-        <p className={styles.colophon}>
-          Made with <span className={styles.strong}>love</span> and{" "}
-          <span className={styles.strong}>care</span>.
-        </p>
-        <p className={styles.updated}>
-          Last updated: <span className={styles.strong}>{LAST_UPDATED}</span>
-        </p>
-      </div>
-      <div className={styles.signature}>
-        <Signature />
+        {/* The date is computed here, in a server component, so it stays the build's date —
+            see the note on LastUpdated for why that boundary matters. It renders the whole
+            line, label included, because the cursor is positioned against it. */}
+        <LastUpdated date={LAST_UPDATED} />
+        {location?.length ? (
+          <p className={styles.location}>
+            {location.map((segment, i) =>
+              segment.kind === "muted" ? (
+                <span key={i} className={styles.locationMuted}>{segment.text}</span>
+              ) : (
+                <span key={i}>{segment.text}</span>
+              ),
+            )}
+          </p>
+        ) : null}
       </div>
     </footer>
   );

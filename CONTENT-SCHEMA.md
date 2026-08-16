@@ -40,7 +40,8 @@ Two things that follow from that, worth stating because they are easy to assume:
   "version": 1,
   "profile": {
     "displayName": "Haythem Gataa",
-    "byline": "Software Designer {& Engineer} in Tunisia",
+    "byline": "Software Designer {& Engineer}",
+    "location": "Tunisia {(GMT+1)}",
     "about": "I'm a detail-oriented Software Designer…",
     "photo": "profile.webp"
   },
@@ -100,20 +101,25 @@ Rules:
 One naming seam: media is authored under `media` but the loader resolves it to
 `attachments`, because that is the prop `Attachments.tsx` already takes.
 
-### Muted runs in the byline
+### Muted runs in free text
 
-`{...}` anywhere inside `profile.byline` sets that run in `--grey3`, the lightest of the
-three text greys — so a byline can lead with the primary role and let the rest sit back:
+`{...}` sets that run in `--grey3`, the lightest of the three text greys — so a string can
+lead with what matters and let the rest sit back. Two fields take it, `profile.byline` and
+`profile.location`:
 
 ```json
-"byline": "Product Designer {& Engineer}"
+"byline": "Product Designer {& Engineer}",
+"location": "Tunisia {(GMT+1)}"
 ```
 
-Four things to know:
+Five things to know:
 
 - **Braces, not the heading's square brackets.** The two tokens mean different things and
   both are hand-authored, so sharing a delimiter would make `[Engineer]` a missing-image
   reference instead of a muted span.
+- **The helpers are named for the treatment, not the field.** `splitMuted` and `plainText`
+  in `app/lib/contentTypes.ts` — a third field that wants this should reuse them rather than
+  introduce another delimiter.
 - **The braces are stripped from the plain string.** `byline` is also the site's
   `description`, `og:description` and `twitter:description`, so the loader hands the metadata
   layer a brace-free string and the component renders `bylineSegments` instead. Same split as
@@ -197,6 +203,7 @@ drag them anywhere and hope, the document makes position structural:
 | About | always second, above the tab bar; renders untitled | no | `profile.about` |
 | Work Experience, Education, Awards, Speaking, … | between | **yes** | `sections[]` |
 | Contact | always last | no | `contact` |
+| Footer — published date and location | below both routes, outside the CV | no | `profile.location` |
 
 `sections[]` therefore holds **only** the homogeneous timeline-shaped sections —
 every entry renders identically (`year` gutter + heading + subheading +

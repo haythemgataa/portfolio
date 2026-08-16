@@ -489,6 +489,29 @@ Three things it depends on:
   the text belongs to the byline above it, which is why the gap above it is 20px rather than
   the 40px it needed when it was labelled; the `<section>` keeps its accessible name from
   `aria-label`.
+- **`GalleryPreview.tsx` is the one deliberate exception to that rule, and it is a tradeoff
+  rather than an oversight.** The 2x2 teaser under About renders on the CV only, so the bar
+  rests 500px lower on `/` than on `/gallery` and shifts when the tabs are switched — measured,
+  and exactly the block's own height plus its 52px bottom margin. It was chosen over the
+  alternative, which was offering "See more in Gallery" to somebody already reading the
+  gallery. Three consequences worth knowing before touching it:
+  - **The route test is `usePathname()` inside the component**, not a prop from the layout: a
+    root layout is not told which route it is rendering. On a static export that resolves at
+    prerender, so `/gallery`'s HTML never contains the block rather than shipping it and
+    hiding it — verified by grepping both files in `out/`.
+  - **`.wrap` deliberately carries no top margin.** `.about` already ends in `margin-bottom:
+    52px`, and adjacent sibling margins collapse, so one declared here would simply be
+    shadowed by the larger of the two. Its *bottom* margin repeats that 52px so the air above
+    the bar is unchanged, which is also what keeps the bar where it was on the route that does
+    not render this.
+  - **The frame's fill and hairline are `--tabInactiveBackground` and `--transparentBorder`** —
+    the unselected pill's and the thumbnails' own tokens, not literals — so the three surfaces
+    cannot drift and the dark theme needs no second rule.
+  - Tiles lock a 4:3 border box whatever the media's own shape is and fill it with
+    `object-fit: cover`, so the four read as a set; the Cloudflare request asks for the tile
+    *less its 1px border on each side*, the same arithmetic (and the same reason) as a
+    thumbnail's. The blur-up is the lightbox's, down to the checks-before-it-subscribes effect
+    and the `setTimeout` rather than `requestAnimationFrame` — see `LightboxImage`.
 - `.profile` and `.gallery` are both centred (`margin: 0 auto`), which is what makes the
   full-bleed `calc(50% - 50vw)` margins land symmetrically on either route.
 - `globals.css` uses `overflow-x: clip` (not `hidden`) on `html, body`. `hidden` makes them

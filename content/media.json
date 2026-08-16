@@ -1,6 +1,10 @@
 {
   "version": 1,
   "assets": {
+    "all-lines.webp": {
+      "width": 2000,
+      "height": 1500
+    },
     "award-ceremony-poster.webp": {
       "width": 1254,
       "height": 704
@@ -52,6 +56,10 @@
     "claude-logo.svg": {
       "width": 80,
       "height": 80
+    },
+    "clicky.webp": {
+      "width": 2000,
+      "height": 1500
     },
     "code-camping.webp": {
       "width": 1080,
@@ -192,6 +200,15 @@
       "height": 588,
       "poster": "instanovo-404-page-poster.webp"
     },
+    "invoices-page.webp": {
+      "width": 2000,
+      "height": 1500
+    },
+    "ios-app-icon.webp": {
+      "width": 2000,
+      "height": 1500,
+      "framed": false
+    },
     "irise-archery-camp-photos.webp": {
       "width": 1195,
       "height": 927,
@@ -235,6 +252,11 @@
       "width": 1110,
       "height": 948,
       "floating": true
+    },
+    "pcb-cube.webp": {
+      "width": 2000,
+      "height": 1500,
+      "framed": false
     },
     "pcb-layout-editing-poster.webp": {
       "width": 1600,
@@ -287,6 +309,11 @@
       "width": 2560,
       "height": 1440
     },
+    "stolen-from-a-bento.webp": {
+      "width": 2000,
+      "height": 1500,
+      "framed": false
+    },
     "table-lamp-mod-breadboard.webp": {
       "width": 1280,
       "height": 960,
@@ -295,6 +322,11 @@
     "table-lamp-mod-finished.webp": {
       "width": 1280,
       "height": 1280,
+      "framed": false
+    },
+    "tasty-stickers.webp": {
+      "width": 2000,
+      "height": 1500,
       "framed": false
     },
     "thinking-poster.webp": {

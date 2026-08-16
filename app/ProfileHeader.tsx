@@ -1,7 +1,8 @@
 import Image from "next/image";
+import GalleryPreview from "./GalleryPreview";
 import RichText from "./RichText";
 import styles from "./ProfileHeader.module.css";
-import type { MutedSegment } from "./lib/contentTypes";
+import type { MutedSegment, ResolvedMedia } from "./lib/contentTypes";
 
 type ProfileHeaderProps = {
   profile: {
@@ -10,6 +11,7 @@ type ProfileHeaderProps = {
     byline?: string,
     bylineSegments?: MutedSegment[],
     about?: string,
+    galleryPreview?: ResolvedMedia[],
   },
 };
 
@@ -68,6 +70,12 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profile }) => {
           </div>
         </section>
       ) : null}
+
+      {/* The one thing above the bar that is *not* identical on both routes — it renders on the
+          CV only, so the bar starts lower here than on /gallery and shifts when tabs are
+          switched. Deliberate: the alternative was offering "See more in Gallery" to someone
+          already in the gallery. The component makes that call itself, from the pathname. */}
+      <GalleryPreview items={profile.galleryPreview ?? []} />
     </header>
   );
 };

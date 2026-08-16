@@ -497,6 +497,8 @@ export default function Studio({
   const cvUses = useMemo(() => {
     const used = new Set<string>();
     if (cv?.profile?.photo) used.add(cv.profile.photo);
+    // Counted for the same reason the server counts it — see `collectReferences`.
+    for (const f of cv?.profile?.galleryPreview ?? []) used.add(f);
     for (const s of cv?.sections ?? []) {
       for (const i of s.items ?? []) {
         for (const f of i.media ?? []) used.add(f);

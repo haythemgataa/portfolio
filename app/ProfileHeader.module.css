@@ -1,9 +1,12 @@
-/* The introduction above the tab bar: avatar and name, then About.
+/* Everything above the tab bar, which is now only the avatar, name and byline.
 
-   The three gaps here are what set the page's opening rhythm — space above the avatar, the
-   step down to About, and the step from About to the bar. They are declared as one block so
-   that rhythm is legible in one place; the bar contributes its own `--tab-bar-gap-top` below
-   this, so the gap before it is the sum of the two. */
+   The gap below is the step down to the bar, and it pairs with the bar's own
+   `--tab-bar-gap-top` — the air above the tabs is the sum of the two, and About's matching
+   `margin-top` under the bar is what keeps the two sides of it close to even. */
+.header {
+  margin-bottom: 16px;
+}
+
 .profileHeader {
   display: flex;
   flex-direction: row;
@@ -63,31 +66,4 @@
   object-fit: cover;
 }
 
-/* Both gaps stepped up (from 20px / 40px) to give the intro more air on either side. The
-   asymmetry is the part to keep: without a heading of its own the text belongs to the byline
-   above it, so it stays nearer that than the bar below — set them equal and it reads as
-   stranded between the name and the tabs, which is what the original 40px above did. The gap
-   below adds to the bar's own `--tab-bar-gap-top`, so it is not the whole air above the tabs. */
-.about {
-  margin-top: 32px;
-  margin-bottom: 52px;
-}
-
-.description {
-  color: var(--grey2);
-  display: flex;
-  flex-direction: column;
-  row-gap: calc((var(--type-size) * var(--line-height)) / 2);
-}
-
-.description p a {
-  border-bottom: 1px solid var(--wash1);
-}
-
-/* Below 480px the CV indents its bodies past the section title; About keeps doing the same
-   now that it lives here rather than in Profile.module.css. */
-@media (max-width: 480px) {
-  .description {
-    margin-left: 16px;
-  }
-}
+/* `.about` and `.description` moved to About.module.css when About moved below the tab bar. */

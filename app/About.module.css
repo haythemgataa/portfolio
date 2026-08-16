@@ -1,0 +1,22 @@
+/* The gap above pairs with the bar's own `--tab-bar-gap-bottom`, so the air under the tabs is
+   the sum of the two — kept close to the air above them, so the bar reads as sitting between
+   the name and the page rather than being pushed onto either.
+
+   The gap below is the step down to whatever the route puts next: the CV's gallery teaser, or
+   the gallery's first row. It is a margin and it collapses with the teaser's (absent) top
+   margin on purpose — see the note in GalleryPreview.module.css. */
+.about {
+  margin-top: 24px;
+  margin-bottom: 52px;
+}
+
+.description {
+  color: var(--grey2);
+  display: flex;
+  flex-direction: column;
+  row-gap: calc((var(--type-size) * var(--line-height)) / 2);
+}
+
+.description p a {
+  border-bottom: 1px solid var(--wash1);
+}

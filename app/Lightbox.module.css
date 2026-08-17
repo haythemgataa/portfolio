@@ -29,7 +29,7 @@
    — a 1:1 video reaches the bottom padding where a landscape one leaves slack — but reserving it
    for both keeps the bar's distance from the media identical either way. */
 .lightboxImage[data-video="true"] {
-  padding-bottom: 80px;
+  padding-bottom: 88px;
 }
 
 .lightboxInner {
@@ -57,7 +57,7 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  border: 1px solid var(--transparentBorder);
+  border: 1px solid var(--border);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
@@ -104,18 +104,53 @@
 
 /* Below the media, not over it: `top: 100%` on a box spanning the wrap makes it exactly the
    video's width and keeps it out of the wrap's own sizing, which the aspect-ratio arithmetic in
-   the component depends on. It sits in the padding `.lightboxImage` already reserves. */
-.videoProgress {
+   the component depends on. It sits in the padding `.lightboxImage` already reserves.
+
+   The band is 24px tall around a 5px bar, because a 5px drag target is a 5px drag target and this
+   one has to be caught with a pointer. The bar stays where it was before the band grew around it:
+   2px of margin plus half the 19px difference is the 12px it used to carry alone. It is
+   deliberately the same *width* as the bar and takes no horizontal padding — `ratioFromPointer`
+   measures against this element, so an inset here would map every press to the wrong time. */
+.scrubber {
   position: absolute;
   top: 100%;
   left: 0;
   right: 0;
-  height: 5px;
-  margin-top: 12px;
+  height: 24px;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  /* The carousel scrolls horizontally on an ancestor and a scrub *is* a horizontal drag, so the
+     browser has to be told which one owns the gesture before it starts — otherwise a touch scrub
+     pages to the next item. */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.scrubber:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
   border-radius: 999px;
-  background-color: var(--wash1);
+}
+
+.videoProgress {
+  width: 100%;
+  height: 5px;
+  border-radius: 999px;
+  background-color: var(--background-muted);
   overflow: hidden;
-  pointer-events: none;
+  transition: height 120ms ease;
+}
+
+/* The whole affordance, in place of a handle: the bar thickens under a pointer that could grab
+   it and stays thick for as long as one is. A thumb would be the conventional answer and reads
+   as a control bolted onto a page that has none anywhere else. */
+.scrubber:hover .videoProgress,
+.scrubber:focus-visible .videoProgress,
+.scrubber[data-scrubbing] .videoProgress {
+  height: 7px;
 }
 
 /* Width rather than a transform, for the reason the gallery's bar gives: `scaleX` squashes the
@@ -123,7 +158,64 @@
 .videoProgressValue {
   height: 100%;
   border-radius: inherit;
-  background-color: var(--grey2);
+  background-color: var(--foreground-secondary);
+}
+
+/* Press the picture to play or pause it. This covers the media, which is why a video gets no
+   click-halves — see the note at the call site. */
+.playToggle {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  appearance: none;
+  border: none;
+  border-radius: inherit;
+  background-color: transparent;
+  cursor: pointer;
+}
+
+.playToggle:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: -2px;
+}
+
+/* Literal black and white rather than theme tokens, the same reasoning as the thumbnail's play
+   badge: it sits on arbitrary media — a near-white screenshot in one item, a dark editor in the
+   next — so it cannot borrow the page's foreground and stay legible. */
+.playBadge {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  background-color: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+
+/* While it is playing the badge is gone, and stays gone under a pointer: the motion is the
+   signal, and a dark disc parked in the middle of the picture is not — least of all one that
+   appears the moment a reader moves the mouse across the thing they are watching. The whole
+   surface is the button, so there is nothing to point at that hovering would disambiguate. */
+.playBadge[data-playing="true"] {
+  opacity: 0;
+}
+
+/* Focus is the exception, and not for symmetry with hover: a keyboard user gets the ring around
+   the media and nothing inside it saying what pressing would do. */
+.playToggle:focus-visible .playBadge {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .videoProgress,
+  .playBadge {
+    transition: none;
+  }
 }
 
 .imageWrap img,
@@ -233,7 +325,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background-color: var(--grey1);
+  background-color: var(--foreground-primary);
   opacity: 0.1;
 }
 
@@ -267,7 +359,7 @@
   position: absolute;
   z-index: 0;
   inset: 0;
-  background-color: var(--backgroundColor);
+  background-color: var(--background-primary);
   cursor: pointer;
 }
 
@@ -288,14 +380,24 @@
   appearance: none;
   border: none;
   border-radius: 50%;
-  background-color: var(--wash2);
-  color: var(--grey2);
+  /* `--background-muted` is the fill that lifts off whichever ground this lands on, which is the
+     whole reason the route swap is expressed in these two tokens: the backdrop is
+     `--background-primary`, so on the gallery it is the wash and this is the page's white, and on
+     the CV it is the other way round. Neither route needs a rule of its own, and neither does the
+     dark theme. */
+  background-color: var(--background-muted);
+  color: var(--foreground-secondary);
   cursor: pointer;
-  transition: color 150ms ease;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
 }
 
+/* Fill and glyph both move. The glyph alone was the whole hover state and it barely registered —
+   a 28px chevron shifting one grey step, on a control the pointer is already covering. */
 .step:hover {
-  color: var(--grey1);
+  background-color: var(--background-hover);
+  color: var(--foreground-primary);
 }
 
 .step:focus-visible {
@@ -308,7 +410,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .step {
+  .step,
+  .close {
     transition: none;
   }
 }
@@ -320,10 +423,24 @@
   height: 24px;
   border-radius: 16px;
   border: none;
-  background-color: var(--wash2);
+  /* Same token as `.step`, for the same reason and so the two cannot drift: both sit directly on
+     the backdrop, which is `--background-primary` and therefore the gallery route's muted ground. */
+  background-color: var(--background-muted);
+  /* Same pair as `.step`, so the cluster and the corner read as one set of controls rather than
+     two weights of the same idea. The bars below take `currentColor`, which is what lets one
+     declaration drive both of them and the hover. */
+  color: var(--foreground-secondary);
   top: 12px;
   right: 12px;
   cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.close:hover {
+  background-color: var(--background-hover);
+  color: var(--foreground-primary);
 }
 
 .close::after,
@@ -332,7 +449,7 @@
   position: absolute;
   width: 2px;
   height: 11px;
-  background-color: var(--grey3);
+  background-color: currentColor;
   left: 50%;
   top: 50%;
   border-radius: 1px;

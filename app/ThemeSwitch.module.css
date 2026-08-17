@@ -1,0 +1,42 @@
+/* Parked in the bottom-right corner, opposite Next's own dev indicator in the bottom-left so the
+   two never overlap. `fixed` rather than in flow because this belongs to the session, not to the
+   document — it should not move the footer or take part in either route's layout.
+
+   It wears the same surface and hairline as every other raised control on the page, so it reads
+   as belonging to the site even though it ships on no production build. */
+.switch {
+  position: fixed;
+  z-index: 30;
+  right: 16px;
+  bottom: 16px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  appearance: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background-color: var(--background-muted);
+  color: var(--foreground-secondary);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.switch:hover {
+  background-color: var(--background-hover);
+  color: var(--foreground-primary);
+}
+
+.switch:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .switch {
+    transition: none;
+  }
+}

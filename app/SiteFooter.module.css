@@ -44,7 +44,7 @@
 /* `relative` so the cursor can be positioned against the whole line — its first mark is
    "below Last updated", which is the label, not the box at the end. */
 .updated {
-  color: var(--grey3);
+  color: var(--foreground-tertiary);
   position: relative;
 }
 
@@ -317,19 +317,19 @@
    split running the other way across the row: "Last updated:" is quiet and its date is not.
    So the two ends mirror each other rather than each inventing a weighting. */
 .location {
-  color: var(--grey1);
+  color: var(--foreground-primary);
 }
 
 /* A `{...}` run — see `splitMuted` in lib/contentTypes.ts. Same grey as `.updated`, so the
    offset and the label it faces sit at one level. */
 .locationMuted {
-  color: var(--grey3);
+  color: var(--foreground-tertiary);
 }
 
 /* Not bold — the emphasis is a step up in contrast, matching how the `.year` gutter and the
    headings beside it already separate label from value across this page. */
 .strong {
-  color: var(--grey1);
+  color: var(--foreground-primary);
 }
 
 /* The box around the published date — step one of the animation being built on it.
@@ -404,13 +404,13 @@
 
 /* White-filled with a blue edge, the way Figma draws a resize handle — a solid blue square
    would read as a bullet sitting on the corner rather than as something grabbable.
-   `--backgroundColor` rather than white, so it follows the dark theme and the gallery's
+   `--background-primary` rather than white, so it follows the dark theme and the gallery's
    muted ground instead of punching four light holes in them. */
 .handle {
   position: absolute;
   width: var(--handle-size);
   height: var(--handle-size);
-  background-color: var(--backgroundColor);
+  background-color: var(--background-primary);
   border: 1px solid var(--blue);
   box-sizing: border-box;
 }

@@ -103,7 +103,6 @@
 .media {
   border-radius: 10px;
   border: var(--thumb-border) solid var(--background-primary);
-  overflow: hidden;
   position: relative;
   cursor: pointer;
   /* Reset the UA button styling — this is a <button> for keyboard access, not a chrome button.
@@ -136,7 +135,6 @@
   inset: var(--thumb-padding);
   margin: auto;
   border-radius: 3px;
-  overflow: hidden;
   /* Below the image, not around it: a tight contact shadow plus a softer one carrying most of
      the offset, so the photo reads as resting on the mat rather than glowing.
 
@@ -147,17 +145,49 @@
      follows the collage's silhouette, and for an opaque image it follows the rounded rect
      exactly as before.
 
-     It applies to the *rendered* result, so `overflow: hidden` above still rounds the corners
-     and the shadow is drawn outside that clip — in the mat, which has room for it. */
+     **This element must not also clip**, which is what the rounding below is about. It used to
+     carry `overflow: hidden` to round the image, and on WebKit that silently ate the shadow: an
+     element's own overflow clip is applied to its filter output there, so the shadow was cut
+     flat at the print's edge on every matted thumbnail in iOS Safari — invisible on an opaque
+     screenshot, obvious on a collage whose artwork reaches the frame's edge. Blink does not
+     apply the clip that way, so the bug does not exist in Chrome at any width, which is why this
+     looked like a mobile-only problem and is really a WebKit one. Nothing here needs a clip
+     anyway: the frame is exactly the image's box, so the image has nothing to overflow with. */
   filter:
     drop-shadow(0 1px 1px rgba(0, 0, 0, 0.07))
     drop-shadow(0 2px 4px rgba(0, 0, 0, 0.11));
 }
 
-/* Unmatted: no mat to sit in, so the image is the thumbnail. */
+/* The corner the clip above used to cut, moved onto the media itself. `contain` makes the image
+   fill this frame exactly — the frame *is* its box — so rounding it here is the same pixels the
+   clip produced, and the shadow now traces this rounded alpha rather than a clipped rectangle.
+   The preview video takes it too: it is `inset: 0` in the same frame, so it is the same box. */
+.media[data-framed="true"] .frame img,
+.media[data-framed="true"] .frame video {
+  border-radius: inherit;
+}
+
+/* Unmatted: no mat to sit in, so the image is the thumbnail. `.frame` carries no radius of its
+   own here and the image reaches all four edges, so this is the treatment that actually needs
+   `.media` to clip — see the rule below. */
 .media[data-framed="false"] .frame {
   position: absolute;
   inset: 0;
+}
+
+/* The clip is scoped to the unmatted treatment, and used to be on `.media` for both.
+   Matted, it had nothing to clip and one thing to cut. `.frame` is the button's only child; it
+   is inset 14px on every side, and it rounds and clips its own image — so nothing in a matted
+   thumbnail ever reaches `.media`'s edge except the drop-shadow the mat exists to show. The wash
+   does not need it either: a background is clipped to the border box's radius whatever `overflow`
+   says.
+   Leaving it there made the shadow depend on slack rather than on room — 12px of mat against a
+   shadow reaching ~6px, all four sides inside the clip by coincidence of those two numbers. Any
+   future change to `THUMBNAIL_PADDING`, to the blur, or to an engine's idea of where a filter's
+   output may paint, and it starts being shaved. Removing the clip means the shadow is bounded by
+   `.scrollableArea`, which already keeps `--hover-room` for exactly this kind of overpaint. */
+.media[data-framed="false"] {
+  overflow: hidden;
 }
 
 /* Inset ring: the gallery scroll container clips anything drawn outside the thumbnail,

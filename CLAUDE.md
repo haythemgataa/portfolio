@@ -782,8 +782,25 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
     `yuva420p`, mockup collages floating on transparency, and a box shadow draws a rectangle
     around artwork that has no rectangle in it. A filter shadows the alpha of what the element
     rendered, so it follows the collage's silhouette and, for an opaque image, the rounded rect
-    exactly as a box shadow would. It applies to the rendered result, so the clip above still
-    rounds the corners and the shadow lands outside it, in the mat.
+    exactly as a box shadow would.
+    **The element carrying that filter must not also carry a clip**, which is why the print's 3px
+    rounding is on the `img` (and the preview `video`) rather than on `.frame`. `.frame` used to
+    take `overflow: hidden` alongside the filter, and on WebKit an element's own overflow clip is
+    applied to its *filter output* — so the shadow, which lies entirely outside that box, was
+    thrown away. Every matted thumbnail on iOS Safari was therefore shadowless, and had been
+    silently: the loss is invisible on an opaque screenshot and obvious on a collage whose artwork
+    reaches the frame's edge, which is how it was eventually reported. Blink does not apply the
+    clip that way, so no width in Chrome shows it — this reads like a mobile bug and is an engine
+    one. Reproduced minimally in the iOS Simulator: two identical mats, one with `filter` +
+    `overflow: hidden` on the same element and one with the clip moved to the `img`; the first
+    renders no shadow at all, the second renders it. Nothing was lost by dropping the clip — the
+    frame *is* the image's box under `object-fit: contain`, so there was never anything to
+    overflow, and `border-radius: inherit` on the media reproduces the same corner.
+    `.media`'s own `overflow: hidden` went the same way and is now scoped to the unmatted
+    treatment, which is the only one whose image reaches the button's edges. On a matted thumbnail
+    it clipped nothing — `.frame` is the only child and is inset 14px — while leaving the shadow
+    dependent on 12px of mat happening to exceed its ~6px reach. The shadow is now bounded only by
+    `.scrollableArea`, which already reserves `--hover-room` for overpaint.
     The production URL keeps that alpha: `cloudflareImageUrl()` emits no `background` and never
     `fit=pad`, and `format=auto` negotiates AVIF or WebP, both of which carry alpha.
   - The Cloudflare request asks for whichever box the image actually occupies — the inner box

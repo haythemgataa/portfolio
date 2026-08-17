@@ -112,8 +112,11 @@
   --backdrop: light-dark(rgba(0, 0, 0, .3), rgba(0, 0, 0, .5));
   /* The tab bar's own geometry, kept here because two other things are measured against
      it: the fade that hangs below it, and `--sticky-top` — the offset every sticky section
-     header parks at. Hardcoding 68px in three files would let them drift apart silently. */
-  --tab-bar-height: 36px;
+     header parks at. Hardcoding the number in three files would let them drift apart silently.
+     32px is the floor for the label rather than a round number: the pill's inner height is that
+     less its 1px hairline top and bottom, and `.tab`'s own `4px` of vertical padding around a
+     `--type-size` line at `line-height: 1` needs 24px of it. */
+  --tab-bar-height: 32px;
   /* Asymmetric on purpose: the bar carries more air above it than below, so it groups with the
      content it introduces rather than floating between the two. Both halves are padding on the
      sticky wrapper, so `--sticky-top` — where section headers park — is the sum of the three. */

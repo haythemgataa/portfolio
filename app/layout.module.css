@@ -8,11 +8,25 @@
    `position: relative` so `.topGradient` can be measured against this box. It deliberately
    sets no z-index: that would make this a stacking context and trap the sticky chrome's
    z-indexes inside it. */
+/* The vertical padding is deliberately *not* symmetric, and the reason is that the footer brings
+   60px of its own. `SiteFooter`'s `padding-bottom` is room reserved for the cursor, which is
+   absolutely positioned and so adds nothing to the page's height — measured, it reaches within a
+   pixel of that padding's edge and no further. So a matching bottom padding here was 72px of air
+   *below* the lowest thing on the page, and the total came to 132px against the 72px above the
+   avatar: the page read as though it had been left hanging.
+   24px puts the bottom total at 84px — still a touch more than the top, which is right when the
+   bottom is the end of a scroll and has a cursor animating in it, and still ~23px of clear space
+   below the cursor's lowest frame.
+   It cannot go much lower. Below ~588px wide the clamp is at its 24px floor, and *that* is the
+   width where the cursor's reserve is thinnest: the footer's 60px plus whatever is left here has
+   to cover the ~61px the cursor hangs below its line, or the bottom of the document cuts it off
+   — which is what the 60px was added to fix in the first place. */
 .column {
   width: 100%;
   max-width: 540px;
   margin: 0 auto;
-  padding: clamp(24px, calc((100vw - 540px) / 2), 72px) 0;
+  padding-top: clamp(24px, calc((100vw - 540px) / 2), 72px);
+  padding-bottom: 24px;
   position: relative;
 }
 

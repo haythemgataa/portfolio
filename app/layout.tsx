@@ -78,8 +78,24 @@ export default async function RootLayout({
     hasGalleryItems(),
   ]);
 
+  /* The theme script below writes `data-theme` onto `<html>` before React hydrates, which is the
+     entire point of it being inline and blocking — and it is also, unavoidably, a hydration
+     mismatch: the server sent no such attribute and React's own render produces none, so React
+     reports the DOM it found as wrong. The attribute is *deliberately* not part of the render,
+     because there is nothing to render it from on the server — the value lives in the visitor's
+     `localStorage` — so the warning has nothing to tell us and no way to be satisfied.
+     `suppressHydrationWarning` covers exactly one element's own attributes and text, not its
+     subtree, so nothing below is silenced.
+
+     Gated on the same flag as the script rather than set unconditionally: on the production
+     branch no script is emitted, nothing mutates this element, and a genuine `<html>` mismatch
+     there should still be reported. The suppression is kept as narrow as its cause.
+
+     A plain block comment rather than a JSX one, and that is not a style choice: a JSX comment is
+     an expression container, valid only among an element's children, so at the top of a
+     `return (` it does not parse. */
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning={THEME_SWITCH_ENABLED}>
       <head>
         {/* The stylesheet below is render-blocking and lives on a third origin, so the first
             paint waits on a DNS lookup, a TLS handshake, the CSS, and only then the font file

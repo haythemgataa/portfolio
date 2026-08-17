@@ -1142,6 +1142,16 @@ so one attribute repaints the site. Four things about it:
   Next registers every client component in its manifest regardless of which branch renders it.
 - An inline script in `<head>` applies the stored theme before first paint. It has to be inline
   and blocking; anything deferred to React runs after the browser has painted, which is the flash.
+  **That is also a hydration mismatch, and `<html>` carries `suppressHydrationWarning` because of
+  it.** The script writes `data-theme` before React hydrates, while the server sent no such
+  attribute and the render produces none — deliberately, since the value lives in the visitor's
+  `localStorage` and does not exist on the server. So React reported the DOM as wrong about
+  something no change to the render could satisfy. The prop is gated on the same flag as the
+  script rather than set unconditionally: production emits no script, nothing mutates that
+  element, and a real `<html>` mismatch there should still be reported. It covers one element's
+  own attributes and text, never its subtree. Verified: `<html lang="en">` is byte-identical in
+  both builds, and the prop reaches the production payload only as `"suppressHydrationWarning":
+  false` — data, not an attribute.
 - The stored mode is read with `useSyncExternalStore`, not copied into state from an effect —
   `localStorage` is the store, and `set-state-in-effect` is an error in this repo's lint config.
 - "System" removes the attribute rather than setting `data-theme="system"`, since `:root`'s

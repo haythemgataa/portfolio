@@ -7,6 +7,15 @@
  *
  * Callers must keep width/height bounded and must never pass values straight from
  * content files: unbounded transform params are a billing/DoS vector on the account.
+ *
+ * **The source URL arrives carrying a `?v=` content hash** — see `assetUrl` in mediaRegistry.ts —
+ * so it is appended here as `/cdn-cgi/image/<options>/media/<file>?v=<hash>`. That form is
+ * verified against the live edge, not assumed: 200 with byte-identical output next to the
+ * unversioned request, and a different hash reported `MISS`, which is the busting the hash is
+ * for. It matters because this wraps every image on the site, so a transform that rejected the
+ * query would 404 all of them — and `/cdn-cgi/image/` exists only on Cloudflare's edge, so
+ * neither a local build nor `npm run check:cdn` would notice (that script counts variant URLs,
+ * it never fetches one).
  */
 
 /**

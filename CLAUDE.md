@@ -269,7 +269,7 @@ The schema and its rationale are documented in **`CONTENT-SCHEMA.md`**; the type
   Anything that changes a file's real dimensions means updating `media.json` in the same pass;
   nothing measures video at build time.
 
-  Width is chosen per clip, not by rule — today 3456 (`design-ruler-*`), 2560
+  Width is chosen per clip, not by rule — today 3444 (`design-ruler-*`), 2560
   (`personal-website-framer`), 1920 (`instanovo-404-page`). What decides it is where the clip is
   looked at, and the trap is that `calc(100vw - 48px)` is **CSS** pixels: on a Retina display a
   1728px window is ~1680 CSS px and so ~3360 *device* pixels, where a 1920-wide file is upscaled
@@ -279,12 +279,15 @@ The schema and its rationale are documented in **`CONTENT-SCHEMA.md`**; the type
   The cap was 1080px at CRF 32 for one release, and the lesson from raising it is **which axis was
   actually costing the bytes**. At 1080px the Design Ruler clips measured 0.946 luma SSIM against
   their source, visible as softened UI text. Framerate is the cheap axis and resolution the
-  expensive one, which is what paid for 1920 at 30 fps (0.963-0.986 across the pool). Measure SSIM
-  with the encode upscaled back to the source's size, the way the lightbox shows it — at 540px
-  every one of these looks fine and the loss only surfaces where the clip is opened.
+  expensive one, which is what paid for 1920 at 30 fps (0.963-0.986 across the pool as it then
+  stood). Measure SSIM with the encode upscaled back to the source's size, the way the lightbox
+  shows it — at 540px every one of these looks fine and the loss only surfaces where the clip is
+  opened.
 
-  **Re-encoding is not automatically an improvement, and on one clip it is strictly a loss.**
-  `design-ruler-alignment-guides.webm` is the untouched ReplayKit capture: VP9, 3456x2234,
+  **Re-encoding is not automatically an improvement, and on one clip it was strictly a loss.** That
+  lesson binds any capture that arrives *already* VP9, which is the case to watch for rather than a
+  fact about the file in the pool today (see the re-capture note below).
+  `design-ruler-alignment-guides.webm` used to be the untouched ReplayKit capture: VP9, 3456x2234,
   container-declared 120 fps but variable-rate — 912 real frames over 18.8s, so ~48 fps average
   rather than the 2260 the declaration implies. Every re-encode of it came out **both larger and
   worse**, because a quality target spends bits faithfully reproducing the source's own
@@ -301,9 +304,9 @@ The schema and its rationale are documented in **`CONTENT-SCHEMA.md`**; the type
   frame *more* expensive (100.6 -> 125.5 kbit), because the residual against a predecessor further
   away in time is larger — so frames removed never equals bytes saved.
 
-  That file is therefore **remuxed, not re-encoded** — `-c copy -map_metadata -1 -fflags +bitexact`
+  That file was therefore **remuxed, not re-encoded** — `-c copy -map_metadata -1 -fflags +bitexact`
   leaves the coded bitstream bit-identical (verify with matching `framemd5`) and only rewrites the
-  container. Two things follow:
+  container. Two things follow, and they still bind the next VP9 capture:
 
   - **The remux is not optional.** Captures arrive carrying
     `COM.APPLE.QUICKTIME.AUTHOR=ReplayKitRecording` and siblings, and `public/media/` is served
@@ -314,6 +317,25 @@ The schema and its rationale are documented in **`CONTENT-SCHEMA.md`**; the type
     there is no way to strip the metadata *and* cap the fps without paying for the re-encode. The
     30 fps rule binds re-encodes; it does not bind a capture that is already smaller than every
     re-encode of it.
+
+  **Neither of those applies to the three clips re-captured in Aug 2026.** `design-ruler-measure`,
+  `design-ruler-alignment-guides` and `personal-website-framer` were re-recorded to crop the macOS
+  menu bar out of frame, and they arrive as 30 fps CFR **H.264** at 3444x2160. WebM cannot carry
+  H.264, so `-c copy` is not on the table and the remux exception lapses: all three are ordinary
+  CRF 30 re-encodes, at native width for the two Design Ruler clips and 2560 for the Framer one.
+  The re-crop changes the aspect (1.594 against the old 1.547), so their posters were regenerated
+  too — a poster is its own asset with its own `media.json` dimensions, and nothing derives one from
+  the other. Measured 0.987-0.993 mean luma SSIM against those sources, better than the pool's
+  older numbers because an H.264 export is an easier thing to reproduce than a raw capture.
+
+  One thing that surfaced there and is worth knowing before tuning CRF on a screencast: **on
+  near-static UI footage SSIM barely responds to CRF at all.** On `design-ruler-measure`, CRF 30 /
+  34 / 38 measured 0.9911 / 0.9907 / 0.9903 mean and 0.8169 / 0.8167 / 0.8167 at the 1st percentile,
+  while the file went 6.87 -> 5.16 -> 4.01 MB; 1:1 crops of static text are indistinguishable. Almost
+  every frame is identical to its predecessor, so the metric is dominated by frames that cost nearly
+  nothing either way and the bits all go to the moving stretch. CRF 30 is still the rule, but do not
+  read a flat SSIM curve as proof that a higher CRF is free — judge these by looking at the moving
+  section.
 
   This is affordable because nothing fetches a video on page load — the CV row and the gallery
   both rest on a poster, and `Gallery.tsx` waits out `PLAY_DWELL_MS` before `play()` commits to

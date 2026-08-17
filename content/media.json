@@ -90,21 +90,21 @@
     },
     "design-ruler-alignment-guides-poster.webp": {
       "width": 1600,
-      "height": 1036
+      "height": 1004
     },
     "design-ruler-alignment-guides.webm": {
-      "width": 1920,
-      "height": 1242,
+      "width": 3444,
+      "height": 2160,
       "framed": false,
       "poster": "design-ruler-alignment-guides-poster.webp"
     },
     "design-ruler-measure-poster.webp": {
       "width": 1600,
-      "height": 1036
+      "height": 1004
     },
     "design-ruler-measure.webm": {
-      "width": 1920,
-      "height": 1242,
+      "width": 3444,
+      "height": 2160,
       "framed": false,
       "poster": "design-ruler-measure-poster.webp"
     },
@@ -269,11 +269,11 @@
     },
     "personal-website-framer-poster.webp": {
       "width": 1600,
-      "height": 1036
+      "height": 1004
     },
     "personal-website-framer.webm": {
-      "width": 1920,
-      "height": 1242,
+      "width": 2560,
+      "height": 1606,
       "framed": false,
       "poster": "personal-website-framer-poster.webp"
     },

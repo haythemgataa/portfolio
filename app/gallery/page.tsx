@@ -59,12 +59,8 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function GalleryPage() {
   const items = await loadGalleryItems();
 
-  // `data-page` is what globals.css matches on to swap the page's ground colour for this
-  // route. It has to be a plain attribute rather than a CSS-module class: the selector lives
-  // on `body`, outside any module's scope, so it cannot reference a hashed class name.
-  return (
-    <div data-page="gallery">
-      <Gallery items={items} />
-    </div>
-  );
+  // No wrapper: this used to carry `data-page="gallery"`, which `globals.css` matched on `body`
+  // to swap the page's ground for this route. That swap is gone — both routes now sit on
+  // `--background-primary` — so the attribute had nothing reading it and the div nothing to do.
+  return <Gallery items={items} />;
 }

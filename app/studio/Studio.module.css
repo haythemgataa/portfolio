@@ -8,8 +8,8 @@
   z-index: 100;
   display: flex;
   flex-direction: column;
-  color: var(--grey1);
-  background: var(--backgroundColor);
+  color: var(--foreground-primary);
+  background: var(--background-primary);
 }
 
 /* ---- top bar ---- */
@@ -20,7 +20,7 @@
   justify-content: space-between;
   gap: 16px;
   padding: 12px 20px;
-  border-bottom: 1px solid var(--primaryBorderColor);
+  border-bottom: 1px solid var(--background-muted);
   flex: 0 0 auto;
 }
 
@@ -37,8 +37,8 @@
   letter-spacing: 0.06em;
   padding: 2px 6px;
   border-radius: 4px;
-  background: var(--wash2);
-  color: var(--grey2);
+  background: var(--background-muted);
+  color: var(--foreground-secondary);
 }
 
 .topbarRight {
@@ -49,13 +49,13 @@
 
 .status {
   font-size: var(--secondary-type-size);
-  color: var(--grey3);
+  color: var(--foreground-tertiary);
   min-height: 1em;
 }
 
 .status_saved { color: var(--green); }
 .status_error { color: var(--red); }
-.status_busy { color: var(--grey3); }
+.status_busy { color: var(--foreground-tertiary); }
 
 .link {
   font-size: var(--secondary-type-size);
@@ -72,7 +72,7 @@
 }
 
 .pane {
-  border-right: 1px solid var(--primaryBorderColor);
+  border-right: 1px solid var(--background-muted);
   overflow-y: auto;
   min-height: 0;
 }
@@ -92,15 +92,15 @@
   justify-content: space-between;
   gap: 8px;
   padding: 12px 16px;
-  background: var(--backgroundColor);
-  border-bottom: 1px solid var(--secondaryBorderColor);
+  background: var(--background-primary);
+  border-bottom: 1px solid var(--background-muted);
 }
 
 .paneHeader h2 {
   font-size: var(--secondary-type-size);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--grey3);
+  color: var(--foreground-tertiary);
   font-weight: 600;
 }
 
@@ -120,15 +120,15 @@
   align-items: center;
   gap: 8px;
   padding: 10px 12px 10px 8px;
-  border-bottom: 1px solid var(--secondaryBorderColor);
+  border-bottom: 1px solid var(--background-muted);
   cursor: pointer;
   user-select: none;
 }
 
-.row:hover { background: var(--wash2); }
+.row:hover { background: var(--background-muted); }
 
 .rowActive {
-  background: var(--inputBackgroundColor);
+  background: var(--background-muted);
   box-shadow: inset 2px 0 0 var(--blue);
 }
 
@@ -144,7 +144,7 @@
 .rowPinned .rowMeta { font-style: italic; }
 
 .grip {
-  color: var(--grey3);
+  color: var(--foreground-tertiary);
   cursor: grab;
   font-size: 12px;
   line-height: 1;
@@ -168,7 +168,7 @@
 
 .rowMeta {
   font-size: 11px;
-  color: var(--grey3);
+  color: var(--foreground-tertiary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -190,13 +190,13 @@
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: var(--grey2);
+  color: var(--foreground-secondary);
   cursor: pointer;
   font-size: 12px;
   line-height: 1;
 }
 
-.rowActions button:hover:not(:disabled) { background: var(--wash1); }
+.rowActions button:hover:not(:disabled) { background: var(--background-hover); }
 .rowActions button:disabled { opacity: 0.25; cursor: default; }
 .danger:hover:not(:disabled) { color: var(--red); }
 
@@ -214,7 +214,7 @@
 .path {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 11px;
-  color: var(--grey3);
+  color: var(--foreground-tertiary);
 }
 
 .form {
@@ -236,7 +236,7 @@
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--grey3);
+  color: var(--foreground-tertiary);
   font-weight: 600;
 }
 
@@ -267,10 +267,10 @@
 .textarea {
   width: 100%;
   padding: 9px 11px;
-  border: 1px solid var(--primaryBorderColor);
+  border: 1px solid var(--background-muted);
   border-radius: 6px;
-  background: var(--inputBackgroundColor);
-  color: var(--grey1);
+  background: var(--background-muted);
+  color: var(--foreground-primary);
   font-family: inherit;
   font-size: var(--type-size);
   line-height: var(--line-height);
@@ -292,7 +292,7 @@
 
 .hint {
   font-size: 11px;
-  color: var(--grey3);
+  color: var(--foreground-tertiary);
 }
 
 .error {
@@ -305,7 +305,7 @@
 .mediaSection { margin-top: 32px; max-width: 720px; }
 
 .dropzone {
-  border: 1px dashed var(--primaryBorderColor);
+  border: 1px dashed var(--background-muted);
   border-radius: 8px;
   padding: 12px;
   margin-top: 12px;
@@ -320,10 +320,10 @@
 
 .mediaCard {
   position: relative;
-  border: 1px solid var(--primaryBorderColor);
+  border: 1px solid var(--background-muted);
   border-radius: 6px;
   overflow: hidden;
-  background: var(--wash2);
+  background: var(--background-muted);
   cursor: grab;
 }
 
@@ -339,7 +339,7 @@
   align-items: center;
   justify-content: center;
   height: 90px;
-  color: var(--grey3);
+  color: var(--foreground-tertiary);
   font-size: 12px;
 }
 
@@ -396,15 +396,15 @@
   gap: 6px;
   padding: 5px 10px;
   border-radius: 6px;
-  border: 1px solid var(--primaryBorderColor);
-  background: var(--backgroundColor);
-  color: var(--grey2);
+  border: 1px solid var(--background-muted);
+  background: var(--background-primary);
+  color: var(--foreground-secondary);
   font-family: inherit;
   font-size: var(--secondary-type-size);
   cursor: pointer;
 }
 
-.ghostButton:hover { background: var(--wash2); color: var(--grey1); }
+.ghostButton:hover { background: var(--background-muted); color: var(--foreground-primary); }
 
 /* A picker that reads as one of the header's buttons. `display: inline-flex` is
    not honoured on a select, so it borrows everything but the box model. */
@@ -412,15 +412,15 @@
   max-width: 180px;
   padding: 5px 10px;
   border-radius: 6px;
-  border: 1px solid var(--primaryBorderColor);
-  background: var(--backgroundColor);
-  color: var(--grey2);
+  border: 1px solid var(--background-muted);
+  background: var(--background-primary);
+  color: var(--foreground-secondary);
   font-family: inherit;
   font-size: var(--secondary-type-size);
   cursor: pointer;
 }
 
-.ghostSelect:hover { background: var(--wash2); color: var(--grey1); }
+.ghostSelect:hover { background: var(--background-muted); color: var(--foreground-primary); }
 
 .primaryButton {
   background: var(--blue);
@@ -472,22 +472,22 @@
   align-items: flex-start;
   gap: 12px;
   padding: 20px;
-  border: 1px solid var(--primaryBorderColor);
+  border: 1px solid var(--background-muted);
   border-radius: 10px;
-  background: var(--backgroundColor);
+  background: var(--background-primary);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.24);
 }
 
 .dialogTitle {
   font-size: 15px;
   font-weight: 500;
-  color: var(--grey1);
+  color: var(--foreground-primary);
 }
 
 .dialogDetail {
   font-size: var(--secondary-type-size);
   line-height: var(--line-height);
-  color: var(--grey2);
+  color: var(--foreground-secondary);
 }
 
 /* Confirm last, so the reading order ends on the action and tab order reaches Cancel first. */
@@ -500,7 +500,7 @@
 
 .empty {
   padding: 24px 16px;
-  color: var(--grey3);
+  color: var(--foreground-tertiary);
   font-size: var(--secondary-type-size);
 }
 
@@ -517,7 +517,7 @@
   .editor {
     overflow: visible;
     border-right: none;
-    border-bottom: 1px solid var(--primaryBorderColor);
+    border-bottom: 1px solid var(--background-muted);
   }
 
   /* Three sticky headers inside ONE scroll container all pin to the same top

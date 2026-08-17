@@ -6,6 +6,7 @@ import useResizeObserver from "use-resize-observer";
 import ReactDOM from 'react-dom';
 import isMobile, { useIsMobile } from './isMobile';
 import { useHasHover } from './useHasHover';
+import { usePrefersReducedMotion } from './usePrefersReducedMotion';
 import { cloudflareImageUrl } from './lib/cloudflareImage';
 import styles from './Lightbox.module.css';
 
@@ -48,6 +49,57 @@ const PLACEHOLDER_FADE_MS = 320;
 const SPINNER_DELAY_MS = 300;
 
 /**
+ * How far one arrow press moves the playhead when the scrubber has focus.
+ *
+ * The pool is UI screencasts of 10-30 seconds, so this is a meaningful jump without being most
+ * of the clip. Home/End cover the ends, which is what a slider's keyboard contract asks for.
+ */
+const SEEK_STEP_SECONDS = 5;
+
+/**
+ * How far a slide sits from centre while it is not the one on screen, in px.
+ *
+ * The slide is what makes a step read as a step: with the media stacked in one grid cell and only
+ * the opacity moving, cycling through a set of similar screenshots looked like the same picture
+ * being redrawn. Small on purpose — it is a hint of travel behind the crossfade, not a carousel
+ * sweeping past. It is measured in px rather than a percentage because the media's own width varies
+ * with its aspect ratio, and a portrait item drifting further than a landscape one for the same
+ * step is exactly the inconsistency this is meant to smooth over.
+ */
+const SLIDE_SHIFT_PX = 24;
+
+/**
+ * The step's motion, and softer than the 700/50 spring the rest of this dialog's chrome uses.
+ *
+ * That one lands in about 150ms, which for a fade is right and for 24px of travel is over before it
+ * reads as movement at all.
+ */
+const SLIDE_TRANSITION = {
+  type: 'spring',
+  stiffness: 360,
+  damping: 34,
+} as const;
+
+/**
+ * Where along the scrubber a pointer landed, 0 to 1.
+ *
+ * Measured against the element the handler is on rather than the bar inside it, which is only
+ * safe because the two are the same width — the band is taller than the bar and never wider, so
+ * there is no inset to subtract. Giving `.scrubber` horizontal padding would silently skew this.
+ */
+const ratioFromPointer = (event: React.PointerEvent<HTMLElement>) => {
+  const bounds = event.currentTarget.getBoundingClientRect();
+  return bounds.width > 0 ? (event.clientX - bounds.left) / bounds.width : 0;
+};
+
+/** `m:ss`, which is all these clips ever need. Only ever read aloud, via `aria-valuetext`. */
+const formatTime = (seconds: number) => {
+  if (!Number.isFinite(seconds) || seconds < 0) { return '0:00' }
+  const whole = Math.floor(seconds);
+  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
+};
+
+/**
  * The scroll lock is reference-counted at module scope rather than per instance.
  *
  * Each instance used to save the inline values it found and put them back on unmount, which is
@@ -58,6 +110,31 @@ const SPINNER_DELAY_MS = 300;
  */
 let scrollLocks = 0;
 let lockedStyles: { body: string; html: string; padding: string } | null = null;
+
+/**
+ * The transport glyphs, at the size the badge over the media wants them.
+ *
+ * The triangle's points put its centroid a shade right of the box's centre — a play triangle
+ * centred on its bounding box reads as sitting left, because its mass is not where its box is.
+ */
+const PlayGlyph = () => (
+  <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+    <path
+      d="M7.5 5.2 15.5 10 7.5 14.8Z"
+      fill="currentColor"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const PauseGlyph = () => (
+  <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+    <rect x="6" y="5" width="3" height="10" rx="1.5" fill="currentColor" />
+    <rect x="11" y="5" width="3" height="10" rx="1.5" fill="currentColor" />
+  </svg>
+);
 
 /** Points right; the previous control mirrors it in CSS. */
 const Chevron = () => (
@@ -309,6 +386,12 @@ const Lightbox: React.FC<LightboxProps> = ({
                 // tapped.
                 display={isVisible || isMobileNow}
                 active={isVisible}
+                // Which side of the current item this one is, which is all the slide needs to know:
+                // -1 parks it to the left, +1 to the right, 0 is centred and on screen. Derived
+                // from the index rather than from a stored direction, so the pair either side of a
+                // step move as one exchange — the outgoing slide leaves the way the incoming one
+                // came in, without anything having to remember which way the reader went.
+                relative={Math.sign(index - currentIndex)}
                 media={media}
               />
             )
@@ -356,7 +439,11 @@ const Lightbox: React.FC<LightboxProps> = ({
               aria-label="Previous media"
               className={`${styles.step} ${styles.stepPrev}`}
               onClick={() => prev()}>
-              <Chevron />
+              {/* The glyph is wrapped so the press has something to move that is not the button
+                  itself — see `.stepIcon`, which leans it in the direction of travel. */}
+              <span className={styles.stepIcon}>
+                <Chevron />
+              </span>
             </button>
           )}
           <div className={styles.dots}>
@@ -377,7 +464,9 @@ const Lightbox: React.FC<LightboxProps> = ({
               // has a rule (it mirrors the glyph).
               className={styles.step}
               onClick={() => next()}>
-              <Chevron />
+              <span className={styles.stepIcon}>
+                <Chevron />
+              </span>
             </button>
           )}
         </motion.div>
@@ -421,7 +510,15 @@ const Lightbox: React.FC<LightboxProps> = ({
           damping: 50,
         }}
         className={styles.close}
-        onClick={() => close()}/>
+        onClick={() => close()}>
+        {/* The cross, as two real elements rather than the button's pseudo-elements. That is what
+            lets the press compress it as one shape — see `.closeIcon`. `aria-hidden` because the
+            button's own label already says what it does. */}
+        <span className={styles.closeIcon} aria-hidden="true">
+          <span className={styles.closeBar} />
+          <span className={styles.closeBar} />
+        </span>
+      </motion.button>
     </div>
   , document.body);
 }
@@ -434,6 +531,8 @@ type LightboxImageProps = {
   display: boolean,
   /** The one slide actually on screen — the only one allowed to cost bytes. */
   active: boolean,
+  /** -1, 0 or +1: which side of the item on screen this one waits on. */
+  relative: number,
 }
 const LightboxImage: React.FC<LightboxImageProps> = ({
   media,
@@ -441,13 +540,20 @@ const LightboxImage: React.FC<LightboxImageProps> = ({
   next,
   display,
   active,
+  relative,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const isMobileNow = useIsMobile();
+  const prefersReducedMotion = usePrefersReducedMotion();
   const [containerAspectRatio, setContainerAspectRatio] = useState((window.innerWidth - 48) / (window.innerHeight - 96));
   const [progress, setProgress] = useState(0);
+  /** Read off the element rather than tracked alongside it — see the subscription below. */
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [duration, setDuration] = useState(0);
+  /** A pointer is dragging the scrubber, which is what hands it the playhead. */
+  const [scrubbing, setScrubbing] = useState(false);
   /** Whether the real media has arrived, which is what the stand-in gives way to. */
   const [loaded, setLoaded] = useState(false);
   /** Armed by the delay timer; `showSpinner` below is the value actually rendered. */
@@ -520,12 +626,96 @@ const LightboxImage: React.FC<LightboxImageProps> = ({
   // carousel mode it keeps them *visible* — and they have no business spinning off screen.
   const showSpinner = spinnerDue && !loaded && active;
 
+  /**
+   * Playback state and duration, both read *off* the element rather than tracked beside it.
+   *
+   * The video stops for reasons this component never asked for — an autoplay refusal, a step to
+   * another item, a media key — so a flag set wherever `pause()` happens to be called is a flag
+   * that goes stale, and it is the transport button's label. Duration rides along because it
+   * arrives on the same schedule: not at mount, and possibly before a listener is live, which is
+   * why both are read once up front as well as subscribed to. Neither initial read costs a render
+   * — they set the values already there.
+   */
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!isVideo || !video) { return }
+
+    const syncPlaying = () => setIsPlaying(!video.paused);
+    const syncDuration = () => setDuration(Number.isFinite(video.duration) ? video.duration : 0);
+
+    syncPlaying();
+    syncDuration();
+
+    video.addEventListener('play', syncPlaying);
+    video.addEventListener('pause', syncPlaying);
+    video.addEventListener('durationchange', syncDuration);
+    return () => {
+      video.removeEventListener('play', syncPlaying);
+      video.removeEventListener('pause', syncPlaying);
+      video.removeEventListener('durationchange', syncDuration);
+    };
+  }, [isVideo]);
+
+  /**
+   * Move the playhead, and move the bar with it in the same breath.
+   *
+   * Writing `progress` here rather than waiting for the loop below to notice is what makes a
+   * scrub feel attached to the pointer: seeking a paused video runs no loop at all, and even
+   * playing, `currentTime` lags a seek until the decoder catches up.
+   */
+  const seekToRatio = React.useCallback((ratio: number) => {
+    const video = videoRef.current;
+    if (!video || !(video.duration > 0)) { return }
+    const clamped = Math.min(1, Math.max(0, ratio));
+    video.currentTime = clamped * video.duration;
+    setProgress(clamped);
+  }, []);
+
+  const togglePlay = React.useCallback(() => {
+    const video = videoRef.current;
+    if (!video) { return }
+    if (video.paused) {
+      // Rejects routinely — an autoplay policy, or a pause landing mid-play. The frame on screen
+      // is unchanged either way, so there is nothing to report.
+      video.play().catch(() => {});
+    } else {
+      video.pause();
+    }
+  }, []);
+
+  /**
+   * Space toggles the video that is actually on screen.
+   *
+   * Gated on `active`, so exactly one of the mounted slides is listening — the neighbours stay
+   * mounted and would otherwise all answer the same keypress. A focused button or link is left
+   * alone: Space is how those are activated, and stealing it would break the close and step
+   * controls.
+   */
+  useEffect(() => {
+    if (!isVideo || !active) { return }
+
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key !== ' ' && event.key !== 'Spacebar') { return }
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('a[href], button, input, select, textarea')) { return }
+      event.preventDefault();
+      togglePlay();
+    };
+
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [isVideo, active, togglePlay]);
+
   // Read the playhead every frame, and only for the item actually on screen — the carousel keeps
   // the neighbours mounted, so gating on `display` is what stops three loops running at once.
   // `timeupdate` would be the cheaper source and is too coarse: it fires about four times a
   // second, which at this size is plainly a bar that steps rather than travels.
+  //
+  // Also gated on the video actually moving. A paused or scrubbed video's position is written by
+  // whoever moved it — `seekToRatio` — so a loop here would be sixty reads a second of a number
+  // that is not changing, and during a drag it would be a second writer racing the first.
   useEffect(() => {
-    if (!isVideo || !active) { return }
+    if (!isVideo || !active || !isPlaying || scrubbing) { return }
 
     let frame = 0;
     const tick = () => {
@@ -538,7 +728,7 @@ const LightboxImage: React.FC<LightboxImageProps> = ({
 
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [isVideo, active]);
+  }, [isVideo, active, isPlaying, scrubbing]);
 
   /**
    * Start and stop playback imperatively, because `autoPlay` and `preload` are read when the
@@ -668,25 +858,40 @@ const LightboxImage: React.FC<LightboxImageProps> = ({
   }
 
   useResizeObserver({ ref: containerRef as React.RefObject<HTMLDivElement>, onResize });
-  
+
+  /**
+   * Where this slide waits, and whether it is showing.
+   *
+   * In carousel mode neither applies: `scrollLeft` is what decides which item is on screen, every
+   * slide is laid out in a row, and offsetting or fading the ones either side would be fighting the
+   * scroller for the same job. Reduced motion keeps the crossfade — that is the part carrying
+   * *which* item is up — and drops only the travel.
+   */
+  const slideShift = isMobileNow || prefersReducedMotion ? 0 : relative * SLIDE_SHIFT_PX;
+  const showing = active || isMobileNow;
+
   return (
     <div
       className={styles.lightboxImage}
       // Reserves room below the media for the progress bar — see the rule in the stylesheet.
       data-video={isVideo}
-      style={{
-        visibility: display ? "visible" : "hidden",
-      }}
+      // In place of the `visibility: hidden` this used to carry. Visibility flips in one frame, so
+      // the slide being stepped away from vanished instead of leaving — the step read as the media
+      // blinking out and a new one arriving over the bare backdrop. The neighbours are animated to
+      // `opacity: 0` below instead, and this is what keeps them out of the accessibility tree the
+      // way visibility did. Everything focusable inside an inactive slide is already
+      // `tabIndex={-1}` (see the transport controls), so nothing is hidden and reachable.
+      aria-hidden={display ? undefined : true}
     >
       <motion.div
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.98 }}
-        transition={{
-          type: 'spring',
-          stiffness: 700,
-          damping: 50,
+        initial={{ opacity: 0, scale: 0.98, x: slideShift }}
+        animate={{
+          opacity: showing ? 1 : 0,
+          scale: showing ? 1 : 0.98,
+          x: slideShift,
         }}
+        exit={{ opacity: 0, scale: 0.98 }}
+        transition={SLIDE_TRANSITION}
         ref={containerRef}
         className={styles.lightboxInner}>
         <div
@@ -703,10 +908,28 @@ const LightboxImage: React.FC<LightboxImageProps> = ({
             height: containerAspectRatio > imageAspectRatio ? "100%" : "auto",
           }}
         >
-          {/* Click-anywhere-on-the-media shortcut, kept alongside the visible controls at the
-              viewport edges. `aria-hidden` and out of the tab order because those controls are the
-              named ones — two pairs of "Previous media" would just be read twice. */}
-          {prev && next && !isMobileNow ?
+          {/* A video takes the press for its own transport, so it gets no click-halves: pressing
+              the picture is how you pause the thing you are watching, and the two meanings cannot
+              share one surface. Stepping is still reachable from the control cluster's arrows and
+              from the arrow keys, neither of which this covers.
+              `tabIndex` follows `active` because in carousel mode every slide is laid out at once,
+              and the dialog's Tab trap enumerates the whole portal — without it, tabbing walked
+              through the transport of items that were not on screen. */}
+          {isVideo ?
+            <button
+              type="button"
+              className={styles.playToggle}
+              tabIndex={active ? 0 : -1}
+              aria-label={isPlaying ? "Pause video" : "Play video"}
+              onClick={togglePlay}>
+              <span className={styles.playBadge} data-playing={isPlaying} aria-hidden="true">
+                {isPlaying ? <PauseGlyph /> : <PlayGlyph />}
+              </span>
+            </button>
+          /* Click-anywhere-on-the-media shortcut, kept alongside the visible controls at the
+             viewport edges. `aria-hidden` and out of the tab order because those controls are the
+             named ones — two pairs of "Previous media" would just be read twice. */
+          : prev && next && !isMobileNow ?
             <div
               className={styles.navigation}
               aria-hidden="true">
@@ -723,14 +946,66 @@ const LightboxImage: React.FC<LightboxImageProps> = ({
               it covers is itself `alt=""` — announcing the wait for something that is not
               announced would be noise. */}
           {showSpinner && <span className={styles.spinner} aria-hidden="true" />}
-          {/* Playback position, sitting just under the media rather than over it — `top: 100%` on
-              a box that spans the wrap, so it is exactly the video's width without taking part in
-              the sizing arithmetic above. `data-video` is what lets it escape: `.imageWrap` clips
-              to round the media's corners, so for a video the clip moves onto the media itself and
-              the wrap is free to paint outside. */}
+          {/* Playback position, and the handle on it. It sits just under the media rather than
+              over it — `top: 100%` on a box that spans the wrap, so it is exactly the video's
+              width without taking part in the sizing arithmetic above. `data-video` is what lets
+              it escape: `.imageWrap` clips to round the media's corners, so for a video the clip
+              moves onto the media itself and the wrap is free to paint outside.
+
+              A real `role="slider"` rather than a decorative bar, which costs the keyboard
+              contract that goes with it: the arrows step the playhead here, where everywhere else
+              in the dialog they step through items. That collision is why the handler below
+              stops the event — the lightbox listens on `window`, and this element is beneath it,
+              so `stopPropagation` is what keeps one press from doing both.
+
+              Pointer capture is what makes the drag survive leaving the 24px band: without it a
+              scrub ends the moment the pointer strays above the bar, which at this height is most
+              of them. */}
           {isVideo && (
-            <div className={styles.videoProgress} aria-hidden="true">
-              <div className={styles.videoProgressValue} style={{ width: `${progress * 100}%` }} />
+            <div
+              className={styles.scrubber}
+              role="slider"
+              tabIndex={active ? 0 : -1}
+              aria-label="Playback position"
+              aria-valuemin={0}
+              aria-valuemax={Math.round(duration)}
+              aria-valuenow={Math.round(progress * duration)}
+              aria-valuetext={`${formatTime(progress * duration)} of ${formatTime(duration)}`}
+              data-scrubbing={scrubbing || undefined}
+              onPointerDown={event => {
+                if (event.pointerType === 'mouse' && event.button !== 0) { return }
+                event.currentTarget.setPointerCapture(event.pointerId);
+                setScrubbing(true);
+                seekToRatio(ratioFromPointer(event));
+              }}
+              onPointerMove={event => {
+                if (!scrubbing) { return }
+                seekToRatio(ratioFromPointer(event));
+              }}
+              onPointerUp={event => {
+                if (!scrubbing) { return }
+                event.currentTarget.releasePointerCapture(event.pointerId);
+                setScrubbing(false);
+              }}
+              onPointerCancel={() => setScrubbing(false)}
+              onKeyDown={event => {
+                const video = videoRef.current;
+                if (!video || !(video.duration > 0)) { return }
+
+                let target: number | null = null;
+                if (event.key === 'ArrowLeft') { target = video.currentTime - SEEK_STEP_SECONDS }
+                else if (event.key === 'ArrowRight') { target = video.currentTime + SEEK_STEP_SECONDS }
+                else if (event.key === 'Home') { target = 0 }
+                else if (event.key === 'End') { target = video.duration }
+                if (target === null) { return }
+
+                event.preventDefault();
+                event.stopPropagation();
+                seekToRatio(target / video.duration);
+              }}>
+              <div className={styles.videoProgress}>
+                <div className={styles.videoProgressValue} style={{ width: `${progress * 100}%` }} />
+              </div>
             </div>
           )}
         </div>

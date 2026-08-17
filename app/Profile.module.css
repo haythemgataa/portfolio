@@ -51,7 +51,7 @@
   border: 0;
   border-radius: 4px;
   background: none;
-  color: var(--grey3);
+  color: var(--foreground-tertiary);
   font: inherit;
   font-size: var(--secondary-type-size);
   line-height: 1;
@@ -61,7 +61,7 @@
 }
 
 .detailsToggle:hover {
-  color: var(--grey1);
+  color: var(--foreground-primary);
 }
 
 .detailsToggle:focus-visible {
@@ -162,7 +162,7 @@
 }
 
 .description {
-  color: var(--grey2);
+  color: var(--foreground-secondary);
   display: flex;
   row-gap: calc((var(--type-size) * var(--line-height)) / 2);
   flex-direction: column;
@@ -172,8 +172,10 @@
    a weight step there would reflow the paragraph around it — the words after it shuffle along
    the line and can drop to the next — where the same step on a heading only moves the heading's
    own trailing arrow. The heading is a line to itself; this is not. */
+/* Derived from the text — see the matching rule in About.module.css for why a fixed grey could
+   not serve both themes. */
 .description p a {
-  border-bottom: 1px solid var(--wash1);
+  border-bottom: 1px solid color-mix(in srgb, currentColor 22%, transparent);
 }
 
 /* The wipe is a travelling edge and the weight step reflows the text as it goes, so both are
@@ -186,7 +188,7 @@
 }
 
 .year {
-  color: var(--grey3);
+  color: var(--foreground-tertiary);
   font-variant-numeric: tabular-nums;
   position: relative;
   flex-shrink: 0;
@@ -280,7 +282,7 @@
 }
 
 .subheading {
-  color: var(--grey2);
+  color: var(--foreground-secondary);
 }
 
 .website {
@@ -288,13 +290,13 @@
   height: 24px;
   padding: 0px 10px;
   border-radius: 12px;
-  background-color: var(--wash2);
+  background-color: var(--background-muted);
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
   display: inline-flex;
   align-items: center;
-  color: var(--grey2);
+  color: var(--foreground-secondary);
   text-decoration: none;
   margin-top: 5px;
   box-sizing: border-box;
@@ -305,7 +307,7 @@
 }
 
 .website:hover {
-  background-color: var(--wash1);
+  background-color: var(--background-hover);
 }
 
 

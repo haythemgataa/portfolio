@@ -5,9 +5,28 @@ import About from "./About";
 import ProfileHeader from "./ProfileHeader";
 import SiteFooter from "./SiteFooter";
 import Tabs from "./Tabs";
+import ThemeSwitch from "./ThemeSwitch";
 import { loadProfileData } from "./lib/contentLoader";
 import { hasGalleryItems } from "./lib/galleryLoader";
 import { SITE_URL } from "./lib/site";
+import { THEME_STORAGE_KEY } from "./lib/theme";
+
+/**
+ * Whether this build gets the theme switch. Set from the git branch in `next.config.ts` — off on
+ * the production branch, on for preview deploys and local dev.
+ *
+ * `NEXT_PUBLIC_*` is inlined at build time, so this is a literal and both the button and the
+ * inline script below are dead code on production: **no markup, no script tag, and no
+ * `data-theme` ever set.** Measured on a `CF_PAGES_BRANCH=main` export — zero occurrences of
+ * either in `out/`.
+ *
+ * What it does *not* do is keep `ThemeSwitch.tsx` out of the client bundle. The import above is
+ * static, and Next registers every client component in its manifest whether or not a branch
+ * renders it, so the code still lands in a shared chunk. Verified rather than assumed. Fighting
+ * that is not worth it for a component this size, but the claim is worth stating accurately:
+ * the switch cannot *appear* on production, it is simply also not free.
+ */
+const THEME_SWITCH_ENABLED = process.env.NEXT_PUBLIC_THEME_SWITCH === "true";
 
 export async function generateMetadata(): Promise<Metadata> {
   const cv = await loadProfileData();
@@ -59,8 +78,24 @@ export default async function RootLayout({
     hasGalleryItems(),
   ]);
 
+  /* The theme script below writes `data-theme` onto `<html>` before React hydrates, which is the
+     entire point of it being inline and blocking — and it is also, unavoidably, a hydration
+     mismatch: the server sent no such attribute and React's own render produces none, so React
+     reports the DOM it found as wrong. The attribute is *deliberately* not part of the render,
+     because there is nothing to render it from on the server — the value lives in the visitor's
+     `localStorage` — so the warning has nothing to tell us and no way to be satisfied.
+     `suppressHydrationWarning` covers exactly one element's own attributes and text, not its
+     subtree, so nothing below is silenced.
+
+     Gated on the same flag as the script rather than set unconditionally: on the production
+     branch no script is emitted, nothing mutates this element, and a genuine `<html>` mismatch
+     there should still be reported. The suppression is kept as narrow as its cause.
+
+     A plain block comment rather than a JSX one, and that is not a style choice: a JSX comment is
+     an expression container, valid only among an element's children, so at the top of a
+     `return (` it does not parse. */
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning={THEME_SWITCH_ENABLED}>
       <head>
         {/* The stylesheet below is render-blocking and lives on a third origin, so the first
             paint waits on a DNS lookup, a TLS handshake, the CSS, and only then the font file
@@ -75,6 +110,27 @@ export default async function RootLayout({
         <link rel="preconnect" href="https://api.fontshare.com" />
         <link rel="preconnect" href="https://cdn.fontshare.com" crossOrigin="anonymous" />
         <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=switzer@1&display=swap" />
+        {/* Applies a stored theme before the first paint, so a forced dark never flashes light on
+            the way in. It has to be inline and here — in `<head>`, ahead of the body — because
+            anything deferred to React runs after the browser has already painted, which is what
+            makes the flash. Blocking is the point.
+
+            Only emitted off the production branch, alongside the button that writes the key. On
+            production there is no switch and nothing to restore, so no script tag is emitted at
+            all rather than shipping a no-op on every page load.
+
+            `try` because storage throws rather than returning null when it is denied. */}
+        {THEME_SWITCH_ENABLED && (
+          <script
+            // The site is a static export with no user content in this string — it is a constant
+            // written here, not interpolated from anything.
+            dangerouslySetInnerHTML={{
+              __html:
+                `try{var t=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});` +
+                `if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}`,
+            }}
+          />
+        )}
       </head>
       <body>
         <div className={styles.page}>
@@ -117,6 +173,10 @@ export default async function RootLayout({
             <SiteFooter location={cv.profile.locationSegments} />
           </div>
         </div>
+        {/* Outside `.page` because it is `fixed` and belongs to the session rather than the
+            document — inside the column it would be a child of a stacking context and could end
+            up under the tab bar. */}
+        {THEME_SWITCH_ENABLED && <ThemeSwitch />}
       </body>
     </html>
   );

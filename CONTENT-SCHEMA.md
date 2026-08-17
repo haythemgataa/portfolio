@@ -127,7 +127,7 @@ Three things to know:
 
 ### Muted runs in free text
 
-`{...}` sets that run in `--grey3`, the lightest of the three text greys — so a string can
+`{...}` sets that run in `--foreground-tertiary`, the lightest of the three text greys — so a string can
 lead with what matters and let the rest sit back. Two fields take it, `profile.byline` and
 `profile.location`:
 

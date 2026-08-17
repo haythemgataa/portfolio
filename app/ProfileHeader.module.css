@@ -28,14 +28,14 @@
 }
 
 .byline {
-  color: var(--grey2);
+  color: var(--foreground-secondary);
 }
 
-/* A `{...}` run in the byline — see `splitByline` in lib/contentTypes.ts. `--grey3` is the
+/* A `{...}` run in the byline — see `splitByline` in lib/contentTypes.ts. `--foreground-tertiary` is the
    lightest of the three text greys, and the same one the year column and the details toggle
    use, so the byline's second half sits at an established level rather than a new one. */
 .bylineMuted {
-  color: var(--grey3);
+  color: var(--foreground-tertiary);
 }
 
 .betaBadge {
@@ -45,18 +45,21 @@
   padding: 3px 6px;
   margin-left: 8px;
   border-radius: 6px;
-  background-color: var(--wash2);
-  color: var(--grey3);
+  background-color: var(--background-muted);
+  color: var(--foreground-tertiary);
   vertical-align: middle;
   letter-spacing: 0.02em;
 }
 
+/* The well the avatar sits in, showing while the image loads and through any alpha in it. A step
+   deeper than the surfaces on the page's own plane, for the same reason the thumbnail mat is:
+   this is a recess, not a raised surface. */
 .profilePhoto {
   width: 56px;
   height: 56px;
   border-radius: 50%;
   flex-shrink: 0;
-  background-color: var(--wash2);
+  background-color: var(--background-muted);
   overflow: hidden;
 }
 

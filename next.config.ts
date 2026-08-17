@@ -49,6 +49,11 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_CDN_IMAGES: String(
       Boolean(process.env.CF_PAGES) && getGitBranch() === PRODUCTION_BRANCH
     ),
+    // The theme switch is a working tool, not a site feature: it exists so both themes can be
+    // checked without touching OS settings. Off on the production branch, on everywhere else —
+    // preview deploys and local dev alike. Resolved at build time and inlined, so the button's
+    // markup is absent from the production export rather than merely hidden by it.
+    NEXT_PUBLIC_THEME_SWITCH: String(getGitBranch() !== PRODUCTION_BRANCH),
   },
 };
 

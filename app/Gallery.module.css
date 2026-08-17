@@ -13,7 +13,11 @@
   margin-bottom: 60px;
 }
 
+/* Declared on the row so that `.trigger` and `.frame` — nested inside it rather than siblings —
+   both resolve the same corner: the frame's radius, and the focus ring that traces it. */
 .row {
+  --frame-radius: 8px;
+
   display: flex;
   flex-direction: column;
 }
@@ -38,17 +42,29 @@
 .trigger:focus-visible {
   outline: 2px solid var(--blue);
   outline-offset: 3px;
-  border-radius: 8px;
+  border-radius: var(--frame-radius);
 }
 
 /* Reserves the item's height from its intrinsic aspect ratio so the page does not shift
-   as media loads during a long scroll. */
+   as media loads during a long scroll.
+
+   The media sits flush to the frame's edge — no rim — and the shadow is what lifts it off the
+   page: a half-pixel ring hugging the corner, and a soft drop below it. Two things about that:
+
+   - **The ring is a spread, not a blur**, so it reads as a crisp edge rather than a glow. It is
+     doing the job an outer hairline would, which is why the frame needs no border of its own.
+   - **`overflow: hidden` clips the media to the rounded corner, not this element's own shadow.**
+     A box-shadow paints outside the border box regardless of the element's overflow, and nothing
+     above it in the list clips either, so the drop is whole. */
 .frame {
   width: 100%;
   position: relative;
   overflow: hidden;
-  border-radius: 8px;
-  background-color: var(--wash2);
+  border-radius: var(--frame-radius);
+  background-color: var(--background-muted);
+  box-shadow:
+    0 0 0 0.5px rgba(2, 6, 23, 0.08),
+    0 2px 8px 0 rgba(2, 6, 23, 0.04);
 }
 
 .frame img,
@@ -89,11 +105,14 @@
   }
 }
 
+/* The media's own edge, drawn just inside it so a near-white screenshot does not run straight
+   into the page. With no rim, `inset: 0` is the frame's border box exactly, so `inherit` is again
+   the right radius — the hairline and the frame trace the same curve. */
 .frame::after {
   position: absolute;
   inset: 0;
   content: '';
-  border: 1px solid var(--transparentBorder);
+  border: 1px solid var(--border);
   border-radius: inherit;
   pointer-events: none;
 }
@@ -161,19 +180,19 @@
 .title {
   font-size: var(--type-size);
   line-height: var(--line-height);
-  color: var(--grey1);
+  color: var(--foreground-primary);
 }
 
 .caption {
   font-size: var(--type-size);
   line-height: var(--line-height);
-  color: var(--grey2);
+  color: var(--foreground-secondary);
 }
 
 .date {
   font-size: var(--secondary-type-size);
   line-height: var(--line-height);
-  color: var(--grey3);
+  color: var(--foreground-tertiary);
   margin-top: 4px;
 }
 
@@ -181,6 +200,6 @@
   margin-top: 36px;
   font-size: var(--type-size);
   line-height: var(--line-height);
-  color: var(--grey2);
+  color: var(--foreground-secondary);
 }
 

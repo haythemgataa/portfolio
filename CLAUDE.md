@@ -1155,6 +1155,40 @@ media pool had been served uncached, silently, since that migration. Extension r
 backstop and `.webm` was missing from them, which is the pattern to watch: a new media type needs
 adding in both places or it inherits no cache policy at all.
 
+**Every pool URL therefore carries a `?v=<hash>` content hash, built in `assetUrl()`** — the one
+place a `/media/` URL is constructed, so item media, posters, item icons, dark variants and the
+profile photo all get it from one line. A year of `immutable` means the filename *is* the cache
+key and nothing ever re-checks it, so re-cutting a clip in place published new bytes at a URL every
+cache had promised not to look at again. Observed exactly that on `dev.haythem.cv` after the Design
+Ruler re-cut: `Cf-Cache-Status: HIT`, `Age: 67532`, serving the previous encode and the previous
+posters — whose cached sizes matched the pre-commit bytes to the byte — while the origin had the new
+files all along. It is the mechanism `app/opengraph-image.png` already gets free from Next's file
+convention, which is why the fix was to copy that rather than to shorten the cache policy. Five
+things about it:
+
+- **The hash is derived from the bytes, never authored.** A number written into `media.json` by hand
+  can disagree with the file it describes, which is the whole failure being fixed; deriving it also
+  means the Studio needs no part in this, since the version follows from whatever it wrote.
+- **Not the mtime.** Git does not preserve mtimes, so every fresh clone and every CI checkout would
+  invent new URLs and discard a warm cache for bytes that never changed. A content hash is stable
+  across checkouts by construction.
+- **`/cdn-cgi/image/<options>/<source>` tolerates a query on its source**, which the whole design
+  rests on — every image is wrapped by `cloudflareImageUrl`, so a transform that rejected `?v=`
+  would 404 all of the site's imagery, and that endpoint exists only on Cloudflare's edge where
+  neither a local build nor `npm run check:cdn` would see it. Verified against production rather
+  than assumed: 200 with byte-identical output beside the unversioned request, correct pixel
+  dimensions back, and a different hash reported `MISS` — which is the busting itself, confirmed.
+- **A srcset entry survives it.** Those URLs already contain commas from the transform options, and
+  srcset is comma-separated; checked in the browser that a versioned candidate is still parsed whole
+  rather than split, and that `currentSrc` comes back as one intact URL.
+- **The already-poisoned entries need no purge.** The stale objects are cached under the
+  *unversioned* key, and the site now asks for a different one, so the first request misses and
+  fetches from origin. Purging is still the way to fix a URL that is already wrong in the wild;
+  this is what stops the next re-cut needing one.
+
+Reading the pool to hash it costs ~0.15s for 34 MB across 84 files, memoised per file per build
+process — which is the only reason deriving it at build time is affordable at all.
+
 The Fontshare stylesheet in `layout.tsx` is render-blocking and on a third origin, so the first
 paint waits on DNS, TLS, the CSS, and only then the font file it names — serial, because the
 font's URL is not known until the CSS arrives. Two `preconnect`s overlap the handshakes with the

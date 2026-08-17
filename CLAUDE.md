@@ -263,25 +263,57 @@ The schema and its rationale are documented in **`CONTENT-SCHEMA.md`**; the type
   not a missing detail but an asset that reverts to downloading megabytes to fill a thumbnail.
   Posters are pool files like any other, counted by `collectReferences()` exactly when their
   video is.
-- **Pool video is capped at 1920px wide, 30 fps, VP9 CRF 30, no audio track**, and neither cap
-  ever upscales — a 25 fps or sub-1920 source keeps what it has. Audio is stripped because every
-  `<video>` on the site — row, gallery and lightbox alike — is `muted`. Re-encoding changes the
-  file's real dimensions, so `media.json` has to be updated with them in the same pass.
+- **Pool video has no single resolution cap, and `media.json` is the only record of what each
+  file is.** A re-encode is 30 fps, VP9 CRF 30, no audio, and never upscales either axis. Audio is
+  stripped because every `<video>` on the site — row, gallery and lightbox alike — is `muted`.
+  Anything that changes a file's real dimensions means updating `media.json` in the same pass;
+  nothing measures video at build time.
 
-  The cap was 1080px at CRF 32 for one release, and the thing to understand before lowering it
-  again is **which of the two axes was actually costing the bytes**. The captures ran to
-  3840x2094 and, on three clips, 60-120 fps — for media never shown wider than the 540px column,
-  which is what made 1080px look free. It is not: the column is the *resting* size, and the
-  lightbox renders at `calc(100vw - 48px)`, so 1080px is upscaled well past native the moment a
-  clip is opened. On the Design Ruler screencasts that measured 0.946 luma SSIM against the
-  original — visible as softened UI text, which is exactly the content these clips exist to show.
+  Width is chosen per clip, not by rule — today 3456 (`design-ruler-*`), 2560
+  (`personal-website-framer`), 1920 (`instanovo-404-page`). What decides it is where the clip is
+  looked at, and the trap is that `calc(100vw - 48px)` is **CSS** pixels: on a Retina display a
+  1728px window is ~1680 CSS px and so ~3360 *device* pixels, where a 1920-wide file is upscaled
+  nearly 1.75x. That is why 1920 is not self-evidently enough, and why the two Design Ruler
+  screencasts — whose whole subject is fine UI text — are kept at native width.
 
-  The framerate was the cheap axis and the resolution was the expensive one. Dropping to 30 fps
-  alone pays for the full 1920px width: at CRF 30 every clip came back at **0.986-0.999 luma
-  SSIM while staying smaller than the original file it was cut from**. Going further to CRF 24
-  bought 0.994 -> 0.996 for another 1.7 MB on one clip, which is why 30 is the setting. Measure
-  SSIM against the original rather than eyeballing a thumbnail: at 540px every one of these
-  looks fine, and the loss only surfaces where the clip is opened.
+  The cap was 1080px at CRF 32 for one release, and the lesson from raising it is **which axis was
+  actually costing the bytes**. At 1080px the Design Ruler clips measured 0.946 luma SSIM against
+  their source, visible as softened UI text. Framerate is the cheap axis and resolution the
+  expensive one, which is what paid for 1920 at 30 fps (0.963-0.986 across the pool). Measure SSIM
+  with the encode upscaled back to the source's size, the way the lightbox shows it — at 540px
+  every one of these looks fine and the loss only surfaces where the clip is opened.
+
+  **Re-encoding is not automatically an improvement, and on one clip it is strictly a loss.**
+  `design-ruler-alignment-guides.webm` is the untouched ReplayKit capture: VP9, 3456x2234,
+  container-declared 120 fps but variable-rate — 912 real frames over 18.8s, so ~48 fps average
+  rather than the 2260 the declaration implies. Every re-encode of it came out **both larger and
+  worse**, because a quality target spends bits faithfully reproducing the source's own
+  compression artifacts:
+
+  | | frames | size | bits/frame |
+  |---|---|---|---|
+  | capture | 912 | 7.60 MB | 69.9 kbit |
+  | CRF 30, all frames | 912 | 10.94 MB | 100.6 kbit |
+  | CRF 30, 30 fps | 565 | 8.46 MB | 125.5 kbit |
+
+  At equal frame count CRF 30 costs +44% for fidelity the capture already had; dropping to 30 fps
+  gives back 23%, leaving +11% over doing nothing at all. Decimation also makes each surviving
+  frame *more* expensive (100.6 -> 125.5 kbit), because the residual against a predecessor further
+  away in time is larger — so frames removed never equals bytes saved.
+
+  That file is therefore **remuxed, not re-encoded** — `-c copy -map_metadata -1 -fflags +bitexact`
+  leaves the coded bitstream bit-identical (verify with matching `framemd5`) and only rewrites the
+  container. Two things follow:
+
+  - **The remux is not optional.** Captures arrive carrying
+    `COM.APPLE.QUICKTIME.AUTHOR=ReplayKitRecording` and siblings, and `public/media/` is served
+    publicly, so a straight copy publishes them. `bitexact` reduces the muxer's own tag to a bare
+    `encoder=Lavf`; Matroska requires a MuxingApp element, so that is the floor, not a leak.
+  - **`-c copy` cannot change the framerate**, which is why this one file keeps its VFR timing.
+    VP9 frames are inter-coded, so discarding any means decoding and re-encoding all of them:
+    there is no way to strip the metadata *and* cap the fps without paying for the re-encode. The
+    30 fps rule binds re-encodes; it does not bind a capture that is already smaller than every
+    re-encode of it.
 
   This is affordable because nothing fetches a video on page load — the CV row and the gallery
   both rest on a poster, and `Gallery.tsx` waits out `PLAY_DWELL_MS` before `play()` commits to

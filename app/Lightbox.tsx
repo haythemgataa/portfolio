@@ -6,6 +6,7 @@ import useResizeObserver from "use-resize-observer";
 import ReactDOM from 'react-dom';
 import isMobile, { useIsMobile } from './isMobile';
 import { useHasHover } from './useHasHover';
+import { usePrefersReducedMotion } from './usePrefersReducedMotion';
 import { cloudflareImageUrl } from './lib/cloudflareImage';
 import styles from './Lightbox.module.css';
 
@@ -54,6 +55,30 @@ const SPINNER_DELAY_MS = 300;
  * of the clip. Home/End cover the ends, which is what a slider's keyboard contract asks for.
  */
 const SEEK_STEP_SECONDS = 5;
+
+/**
+ * How far a slide sits from centre while it is not the one on screen, in px.
+ *
+ * The slide is what makes a step read as a step: with the media stacked in one grid cell and only
+ * the opacity moving, cycling through a set of similar screenshots looked like the same picture
+ * being redrawn. Small on purpose — it is a hint of travel behind the crossfade, not a carousel
+ * sweeping past. It is measured in px rather than a percentage because the media's own width varies
+ * with its aspect ratio, and a portrait item drifting further than a landscape one for the same
+ * step is exactly the inconsistency this is meant to smooth over.
+ */
+const SLIDE_SHIFT_PX = 24;
+
+/**
+ * The step's motion, and softer than the 700/50 spring the rest of this dialog's chrome uses.
+ *
+ * That one lands in about 150ms, which for a fade is right and for 24px of travel is over before it
+ * reads as movement at all.
+ */
+const SLIDE_TRANSITION = {
+  type: 'spring',
+  stiffness: 360,
+  damping: 34,
+} as const;
 
 /**
  * Where along the scrubber a pointer landed, 0 to 1.
@@ -361,6 +386,12 @@ const Lightbox: React.FC<LightboxProps> = ({
                 // tapped.
                 display={isVisible || isMobileNow}
                 active={isVisible}
+                // Which side of the current item this one is, which is all the slide needs to know:
+                // -1 parks it to the left, +1 to the right, 0 is centred and on screen. Derived
+                // from the index rather than from a stored direction, so the pair either side of a
+                // step move as one exchange — the outgoing slide leaves the way the incoming one
+                // came in, without anything having to remember which way the reader went.
+                relative={Math.sign(index - currentIndex)}
                 media={media}
               />
             )
@@ -408,7 +439,11 @@ const Lightbox: React.FC<LightboxProps> = ({
               aria-label="Previous media"
               className={`${styles.step} ${styles.stepPrev}`}
               onClick={() => prev()}>
-              <Chevron />
+              {/* The glyph is wrapped so the press has something to move that is not the button
+                  itself — see `.stepIcon`, which leans it in the direction of travel. */}
+              <span className={styles.stepIcon}>
+                <Chevron />
+              </span>
             </button>
           )}
           <div className={styles.dots}>
@@ -429,7 +464,9 @@ const Lightbox: React.FC<LightboxProps> = ({
               // has a rule (it mirrors the glyph).
               className={styles.step}
               onClick={() => next()}>
-              <Chevron />
+              <span className={styles.stepIcon}>
+                <Chevron />
+              </span>
             </button>
           )}
         </motion.div>
@@ -473,7 +510,15 @@ const Lightbox: React.FC<LightboxProps> = ({
           damping: 50,
         }}
         className={styles.close}
-        onClick={() => close()}/>
+        onClick={() => close()}>
+        {/* The cross, as two real elements rather than the button's pseudo-elements. That is what
+            lets the press compress it as one shape — see `.closeIcon`. `aria-hidden` because the
+            button's own label already says what it does. */}
+        <span className={styles.closeIcon} aria-hidden="true">
+          <span className={styles.closeBar} />
+          <span className={styles.closeBar} />
+        </span>
+      </motion.button>
     </div>
   , document.body);
 }
@@ -486,6 +531,8 @@ type LightboxImageProps = {
   display: boolean,
   /** The one slide actually on screen — the only one allowed to cost bytes. */
   active: boolean,
+  /** -1, 0 or +1: which side of the item on screen this one waits on. */
+  relative: number,
 }
 const LightboxImage: React.FC<LightboxImageProps> = ({
   media,
@@ -493,11 +540,13 @@ const LightboxImage: React.FC<LightboxImageProps> = ({
   next,
   display,
   active,
+  relative,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const isMobileNow = useIsMobile();
+  const prefersReducedMotion = usePrefersReducedMotion();
   const [containerAspectRatio, setContainerAspectRatio] = useState((window.innerWidth - 48) / (window.innerHeight - 96));
   const [progress, setProgress] = useState(0);
   /** Read off the element rather than tracked alongside it — see the subscription below. */
@@ -809,25 +858,40 @@ const LightboxImage: React.FC<LightboxImageProps> = ({
   }
 
   useResizeObserver({ ref: containerRef as React.RefObject<HTMLDivElement>, onResize });
-  
+
+  /**
+   * Where this slide waits, and whether it is showing.
+   *
+   * In carousel mode neither applies: `scrollLeft` is what decides which item is on screen, every
+   * slide is laid out in a row, and offsetting or fading the ones either side would be fighting the
+   * scroller for the same job. Reduced motion keeps the crossfade — that is the part carrying
+   * *which* item is up — and drops only the travel.
+   */
+  const slideShift = isMobileNow || prefersReducedMotion ? 0 : relative * SLIDE_SHIFT_PX;
+  const showing = active || isMobileNow;
+
   return (
     <div
       className={styles.lightboxImage}
       // Reserves room below the media for the progress bar — see the rule in the stylesheet.
       data-video={isVideo}
-      style={{
-        visibility: display ? "visible" : "hidden",
-      }}
+      // In place of the `visibility: hidden` this used to carry. Visibility flips in one frame, so
+      // the slide being stepped away from vanished instead of leaving — the step read as the media
+      // blinking out and a new one arriving over the bare backdrop. The neighbours are animated to
+      // `opacity: 0` below instead, and this is what keeps them out of the accessibility tree the
+      // way visibility did. Everything focusable inside an inactive slide is already
+      // `tabIndex={-1}` (see the transport controls), so nothing is hidden and reachable.
+      aria-hidden={display ? undefined : true}
     >
       <motion.div
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.98 }}
-        transition={{
-          type: 'spring',
-          stiffness: 700,
-          damping: 50,
+        initial={{ opacity: 0, scale: 0.98, x: slideShift }}
+        animate={{
+          opacity: showing ? 1 : 0,
+          scale: showing ? 1 : 0.98,
+          x: slideShift,
         }}
+        exit={{ opacity: 0, scale: 0.98 }}
+        transition={SLIDE_TRANSITION}
         ref={containerRef}
         className={styles.lightboxInner}>
         <div

@@ -194,7 +194,17 @@
   background-color: rgba(0, 0, 0, 0.55);
   color: #fff;
   pointer-events: none;
-  transition: opacity 160ms ease;
+  transition:
+    opacity 160ms ease,
+    transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* The same press the chevrons and the close cross answer with, on the one other button in here.
+   The whole media is the button, so there is nothing else about it that could acknowledge a
+   press — and on the frame where it starts playing the badge is fading out anyway, which the
+   compression reads as part of. */
+.playToggle:active .playBadge {
+  transform: scale(0.9);
 }
 
 /* While it is playing the badge is gone, and stays gone under a pointer: the motion is the
@@ -321,16 +331,32 @@
   column-gap: 6px;
 }
 
+/* The pager now reads as one full dot among smaller quiet ones, so the size carries the state as
+   well as the opacity did alone. Three things about it:
+
+   - **The box stays 8px in every state.** The dots are a flex row with a fixed 6px gap, so
+     animating `width`/`height` would move every dot after the one that changed — and on a step,
+     that is two of them changing at once. A `transform` scales the paint and leaves the layout
+     alone, which also keeps it off the main thread.
+   - **The inactive opacity went 0.1 -> 0.15.** At 5px a dot at 10% of the foreground is very
+     nearly not there; the shrink and the fade would otherwise compound into invisibility.
+   - Both properties are on the same transition, so the dot that grows and the dot that shrinks
+     are one exchange rather than two effects arriving at different times. */
 .pagerDot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background-color: var(--foreground-primary);
-  opacity: 0.1;
+  opacity: 0.15;
+  transform: scale(0.625);
+  transition:
+    transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 260ms ease;
 }
 
 .pagerDot[data-active="true"] {
   opacity: 0.5;
+  transform: scale(1);
 }
 
 .navigation {
@@ -405,23 +431,53 @@
   outline-offset: 2px;
 }
 
+/* The press is answered by the glyph, not by the button.
+   `:active` rather than a framer gesture, and that is the cheaper half of a real choice: a
+   transition covers both directions, so the icon eases *into* the pressed state and back out of it
+   on release, with no state to hold and nothing to keep in sync. The button's own fill is already
+   doing hover; giving it a scale too would leave nothing for the press to distinguish itself with.
+   The nudge is 2px in the direction the control travels, so the chevron leans the way it is about
+   to take you. `.stepPrev` needs its own rule because the mirroring below is on the `svg` inside
+   this span, not on the span — composing the two on one element would mean writing the rotation
+   into every state. */
+.stepIcon {
+  display: flex;
+  /* The button owns the press; a span laid over its middle would otherwise take it. */
+  pointer-events: none;
+  transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.step:active .stepIcon {
+  transform: translateX(2px) scale(0.86);
+}
+
+.stepPrev:active .stepIcon {
+  transform: translateX(-2px) scale(0.86);
+}
+
 .stepPrev svg {
   transform: rotate(180deg);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .step,
-  .close {
+  .close,
+  .stepIcon,
+  .closeIcon,
+  .pagerDot {
     transition: none;
   }
 }
 
+/* 28px, the same box as `.step`, and `50%` rather than a radius large enough to round it by
+   accident. These are the dialog's two kinds of chrome button and they sit on the same backdrop
+   wearing the same two tokens, so a 4px difference read as a mistake rather than as a hierarchy. */
 .close {
   position: absolute;
   z-index: 1;
-  width: 24px;
-  height: 24px;
-  border-radius: 16px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
   border: none;
   /* Same token as `.step`, for the same reason and so the two cannot drift: both sit directly on
      the backdrop, which is `--background-primary` and therefore the gallery route's muted ground. */
@@ -443,24 +499,41 @@
   color: var(--foreground-primary);
 }
 
-.close::after,
-.close::before {
-  content: "";
+/* The cross is two real spans inside a wrapper, where it used to be the button's `::before` and
+   `::after`. Pseudo-elements cannot be moved as a unit — each carries its own rotation, so pressing
+   the button would have meant writing the press into both transforms and keeping them agreeing.
+   With a wrapper, the press is one declaration on one element and the bars are left alone.
+   They stack in a single grid cell rather than being absolutely positioned, so `place-items:
+   center` is what centres them and there is no translate for the rotation to compose with. */
+.closeIcon {
   position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Compresses on press, where the chevrons lean. A cross has no direction to lean in — it is the
+   same shape from every side — so scale is the only move it can make that still reads as itself. */
+.close:active .closeIcon {
+  transform: scale(0.82);
+}
+
+.closeBar {
+  grid-area: 1 / 1;
   width: 2px;
-  height: 11px;
-  background-color: currentColor;
-  left: 50%;
-  top: 50%;
+  height: 12px;
   border-radius: 1px;
+  background-color: currentColor;
 }
 
-.close::after {
-  transform: translate(-50%, -50%) rotate(-45deg);
+.closeBar:first-of-type {
+  transform: rotate(45deg);
 }
 
-.close::before {
-  transform: translate(-50%, -50%) rotate(45deg);
+.closeBar:last-of-type {
+  transform: rotate(-45deg);
 }
 
 .lightbox[data-mobile="true"] .carouselScroll {

@@ -845,6 +845,18 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
     margin disappeared into the list's 60px and left the gallery 16px tighter than the CV, whose
     section padding cannot collapse. `Gallery.module.css` gives its list a matching 60px bottom
     margin for the same reason.
+  - **The gap *below* it is split across two files, and `.column`'s half is deliberately not
+    symmetric.** The footer's own `padding-bottom: 60px` is reserved room rather than air: the
+    cursor is absolutely positioned, so it adds nothing to the page's height and reaches within a
+    pixel of that padding's edge. `.column` used to match its top padding underneath, which put
+    72px of genuine emptiness below the lowest thing on the page — 132px in total against 72px
+    above the avatar. Its `padding-bottom` is 24px now, so the total is 84px and ~23px of that is
+    clear below the cursor's lowest frame. It cannot go much lower: below ~588px wide the top
+    clamp is already at its 24px floor, and that is where the cursor's reserve is thinnest — the
+    footer's 60px plus whatever is left here has to cover the ~61px the cursor hangs below its
+    line, or the end of the document cuts it off, which is the bug the 60px was added to fix.
+    Measured after the change: 23.1px clear at 873px wide, 13.1px at 375px (the footer stacks
+    there, so the cursor starts lower), nothing clipped on either route.
 - Lightbox uses React Portal to render to `document.body`
 - **The lightbox requests a resized image, and used to request the original.** `LightboxImage`
   rendered `src={media.url}` and never imported `cloudflareImageUrl`, so opening one downloaded
@@ -895,7 +907,47 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
   on the same backdrop, plus the same `--foreground-secondary` → `--foreground-primary` glyph
   move — it used to sit a step lighter at `--foreground-tertiary`, which read as two weights of the
   same control rather than one set. Its bars paint with `currentColor`, so the `color` on the
-  button drives both of them and the hover with one declaration.
+  button drives both of them and the hover with one declaration. **It is also the steps' 28px box**,
+  at `border-radius: 50%`: it was 24px at a 16px radius, and a 4px difference between two controls
+  wearing identical tokens on the same backdrop read as a mistake rather than as a hierarchy.
+- **The pager's active dot is a full 8px and the rest are 5px**, so the size carries the state
+  alongside the opacity — 25 identical marks with one of them slightly darker did not. Three things:
+  - **The 8px *box* is constant; only a `transform: scale()` changes.** The dots are a flex row with
+    a fixed gap, so animating `width`/`height` would shift every dot after the one that changed, and
+    a step changes two of them at once. Verified: the pitch stays 14px in every state.
+  - **The inactive opacity went 0.1 → 0.15.** A 5px dot at 10% of the foreground is very nearly not
+    there; the shrink and the fade would otherwise compound.
+  - Scale and opacity ride one transition, so the dot growing and the dot shrinking are a single
+    exchange rather than two effects landing at different times.
+- **Every button in the lightbox answers a press by animating its icon, not itself.** `:active` with
+  a transition on the icon, rather than a framer gesture: it covers both directions — the glyph eases
+  into the pressed state and back out on release — with no state to hold. The button's fill is
+  already spent on hover, so the press needed something else to move. The chevrons lean 2px in the
+  direction they travel (`.stepPrev` needs its own rule: the 180° mirror is on the `svg` *inside*
+  `.stepIcon`, so composing both on one element would mean writing the rotation into every state);
+  the close cross and the play badge can only compress, having no direction to lean in.
+  Two things are load-bearing: the icon wrappers are `pointer-events: none`, or a span over the
+  button's middle swallows the click; and **the close cross is two real spans now, not the button's
+  `::before`/`::after`** — pseudo-elements cannot be moved as a unit, since each carries its own
+  rotation. They stack in one grid cell under `place-items: center`, so there is no translate for
+  those rotations to compose with.
+- **Stepping slides the media as well as crossfading it**, `SLIDE_SHIFT_PX` (24) either side of
+  centre, off a softer spring than the chrome's 700/50 — which lands in ~150ms, over before 24px of
+  travel reads as movement. Three things:
+  - **Direction is derived, not remembered.** Each slide gets `relative` = `Math.sign(index -
+    currentIndex)`, so the outgoing item leaves the way the incoming one came in and nothing has to
+    store which way the reader went.
+  - **It is skipped in carousel mode**, where `scrollLeft` decides what is on screen and offsetting
+    or fading the neighbours would fight the scroller for the same job. Under
+    `prefers-reduced-motion` the crossfade stays — that is what says *which* item is up — and only
+    the travel goes.
+  - **`.lightboxImage` lost its `visibility: hidden` for `aria-hidden`.** Visibility flips in one
+    frame, so the slide being stepped away from vanished instead of leaving, and the step read as
+    the media blinking out and a new one arriving over bare backdrop. The neighbours animate to
+    `opacity: 0` instead, and `aria-hidden` is what keeps them out of the accessibility tree the way
+    visibility did — safe only because everything focusable inside an inactive slide is already
+    `tabIndex={-1}`. Bytes are unaffected: `autoPlay`, `preload` and `loading` were always gated on
+    `active`, never on visibility.
 - **A video in the lightbox shows its position in a bar below the media**, at `top: 100%` on a box
   spanning `.imageWrap` — so it is exactly the media's width and takes no part in the aspect-ratio
   arithmetic that sizes the wrap. `.imageWrap` normally clips (that is what rounds the media's

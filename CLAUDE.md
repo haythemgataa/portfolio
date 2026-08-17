@@ -347,24 +347,30 @@ The `/gallery` tab is a vertical list — one item per row at the same 540px col
 the CV — with captions below each item. It has its own content pipeline, independent of
 the CV sections:
 
-The page sits on a slightly muted ground rather than the CV's paper white
-(`--galleryBackground`, `#f3f4f6` light / `#111` dark). It is applied by swapping
-`--backgroundColor` itself, on `body:has([data-page="gallery"])` in `globals.css`, and that
-indirection is the point: the tab bar's stuck background and the fade hanging below it are
-both derived from `--backgroundColor` and are rendered by the *root layout* as siblings of
-the page, so a variable set inside the gallery would never reach them and they would keep
-painting the CV's white against the gallery's grey. `body` is the nearest common ancestor.
-The zero-alpha twin (`--galleryBackgroundFade`) has to be authored alongside it, since the
-fade interpolates through the background hue rather than through transparent black.
+**Both routes sit on the same ground.** The gallery used to swap `--background-primary` and
+`--background-muted` on `body:has([data-page="gallery"])`, so its page took the wash and its raised
+surfaces took white. That swap is gone, and with it the `--ground-*` plumbing it needed (the two
+tokens could not trade values directly — a custom property referring to another that refers back to
+it resolves to nothing) and the wrapper div in `gallery/page.tsx` that carried the attribute.
 
-Two things follow from the ground differing per route. `body` transitions `background-color` over
-`--ground-fade`, so clicking a tab cross-fades the page instead of snapping — the transition
-fires because the *computed* value of `background-color` changes when the variable is swapped on
-`body` itself, not because a custom property is animating. And the unselected pills come from
-`--tabInactiveBackground`, which the gallery overrides to white: `--wash2` is only a couple of
-values off the gallery ground, so there the pills stopped reading as raised. They cross-fade on
-the same duration, so the bar and the page change as one surface. The dark theme keeps its wash
-there — `#2c2c2c` on `#111` already has the separation the light theme was buying.
+`body` still transitions `background-color` over `--ground-fade`, which now only does visible work
+when the theme switch changes the ground rather than when a tab is clicked.
+
+**Each item is lifted off the page by a shadow rather than framed by a border**
+(`0 0 0 .5px rgba(2,6,23,.08), 0 2px 8px 0 rgba(2,6,23,.04)`). The media sits flush to the frame's
+edge. Two things about it:
+
+- **The first layer is a spread, not a blur**, so it reads as a crisp outer edge rather than a
+  glow — it does the job an outer hairline would, which is why the frame carries no border of its
+  own. `.frame::after`'s inner hairline stays, and with no border in play `inset: 0` is the border
+  box exactly, so `border-radius: inherit` is again correct.
+- **`overflow: hidden` on `.frame` clips the media, not the shadow.** A box-shadow paints outside
+  the border box regardless of the element's own overflow, and nothing above it in the list clips
+  either.
+
+The shadow is a light-theme treatment and effectively disappears in dark: its ring resolves to
+1.02:1 against that ground, against 1.19:1 on white. The inner hairline — which is `--border`, so
+it flips to white at 8% — is what carries the edge there.
 
 - `content/gallery.json` — an **ordered** `items` array; array order is display order.
 - `app/lib/galleryLoader.ts` — resolves entries to `GalleryItem`s, typed in
@@ -448,10 +454,13 @@ Tailwind-based and Radix Tabs switches panels within one document rather than na
 
 There is no track surface left: the track is transparent and each tab is its own fully
 rounded pill carrying the wash and hairline the track used to. The selection is a pill that
-**travels** between them — black on the light theme, white on the dark one
-(`--tabActiveBackground` / `--tabActiveForeground`), so in both cases it inverts the wash the
-unselected pills carry rather than reading as a hole in the bar. The way it is built is the
-point:
+**travels** between them — near-black on the light theme, near-white on the dark one. It is
+filled with `--foreground-primary` and labelled in `--background-primary`, which is what "inverts
+the ground it sits on" means literally: the pill is the page's ink and its label the page's
+ground, so it cannot drift from either and on the gallery route the label follows that route's
+ground for nothing. It had two tokens of its own (`#000`/`#fff` and the reverse) and they are
+gone; the pill moved by ΔE 0.178 in light and 0.051 in dark, which is below what reads as a
+change. The way it is built is the point:
 
 - `.pillLayer` holds one `.pillCell` per tab, on the same grid as the tabs themselves. Three
   nested boxes, each with exactly one job: `.pillCell` is the static mask, fixed in the shape
@@ -491,7 +500,7 @@ point:
   `.pillTravel` — the box it must resolve against — and not on the window.
 - `.pillFill::after` reflects the page glow onto the pill, drawn with the same
   `--glow-sweep` at the same `--glow-fraction` scale — both in `globals.css` precisely so the
-  reflection cannot drift from the glow. Its strength is `--tabReflectionOpacity` rather than a
+  reflection cannot drift from the glow. Its strength is `--tab-reflection-opacity` rather than a
   literal, because the same sweep that reads as a highlight on black reads as a colour cast on
   the dark theme's white pill, so that one is dialled back. It is fixed in the bar's coordinates rather than the
   pill's, so the pill travels *through* it the way a reflection of something stationary
@@ -518,7 +527,7 @@ The bar's full-bleed background is transparent until it is actually stuck. At re
 content to hide, and staying transparent is what lets `.topGradient` and `.dotTexture` run
 behind it instead of being cut by a full-width band. The track inside is transparent in both
 states; what paints there are the tab pills. Its stuck background comes from
-`--backgroundColor`, which is what makes it follow the gallery's muted ground automatically.
+`--background-primary`, which is what makes it follow the gallery's muted ground automatically.
 
 The fade is a sibling of the bar rather than the bar's own `::after`, and that matters: the
 CV's sticky section headers park inside the fade's band and have to paint over it, which a
@@ -562,7 +571,7 @@ Three things it depends on:
     52px`, and adjacent sibling margins collapse, so one declared here would simply be shadowed
     by the larger of the two — the gap above the teaser is About's, and it is the same gap the
     gallery's first row gets on the other route.
-  - **The frame's fill and hairline are `--tabInactiveBackground` and `--transparentBorder`** —
+  - **The frame's fill and hairline are `--background-muted` and `--border`** —
     the unselected pill's and the thumbnails' own tokens, not literals — so the three surfaces
     cannot drift and the dark theme needs no second rule.
   - Tiles lock a 4:3 border box whatever the media's own shape is and fill it with
@@ -704,9 +713,9 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
   its own (clamped) ratio. The white rim is on **both** — it began as the mat's outer edge, but
   it reads just as well unmatted and it is what gives the hover shadow an edge to lift. In the dark
   theme (`prefers-color-scheme: dark`) it is still there at rest but wears
-  `--backgroundColor` instead, so it reads as a margin of ground held around the image rather than
-  as a light edge — `--thumbnailFrame` on every thumbnail at once is the loudest thing on a dark
-  page, which is why it was already dimmed there — and takes `--thumbnailFrame` on hover. That
+  `--background-primary` instead, so it reads as a margin of ground held around the image rather than
+  as a light edge — a light rim on every thumbnail at once is the loudest thing on a dark
+  page, which is why it was already dimmed there — and takes `--background-hover` on hover. That
   colour change *is* the dark hover state, because the lift's shadow is dark on a dark page and
   barely registers, where in the light theme it carries the hover on its own. It was previously
   hidden outright at rest, which left the image sitting straight on the ground with nothing between
@@ -858,23 +867,68 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
   happened but the button never saw its own hover or focus. The halves are `aria-hidden` and out of
   the tab order — the visible pair carries the accessible names, or a screen reader announces
   "Previous media" twice.
+  **The steps take `--background-muted`** — the same token the tab bar's unselected pills wear, so
+  the two read as one family of raised controls against the `--background-primary` backdrop. They
+  hover to `--background-hover` like everything else. `.close` takes the same pair, since it sits
+  on the same backdrop, plus the same `--foreground-secondary` → `--foreground-primary` glyph
+  move — it used to sit a step lighter at `--foreground-tertiary`, which read as two weights of the
+  same control rather than one set. Its bars paint with `currentColor`, so the `color` on the
+  button drives both of them and the hover with one declaration.
 - **A video in the lightbox shows its position in a bar below the media**, at `top: 100%` on a box
   spanning `.imageWrap` — so it is exactly the media's width and takes no part in the aspect-ratio
   arithmetic that sizes the wrap. `.imageWrap` normally clips (that is what rounds the media's
   corners), so `data-video` lifts the clip and moves the radius onto the media itself, the same
   trade the `floating` treatment makes. `.lightboxImage[data-video]` also grows its bottom padding
-  to 80px, and that is what keeps the bar clear of the control cluster: `containerRef` measures
+  to 88px, and that is what keeps the bar clear of the control cluster: `containerRef` measures
   `.lightboxInner` *inside* that padding, so the media shrinks to fit rather than the bar being
   pushed down into the controls. Only height-constrained media needs it — a 1:1 video reaches the
   bottom padding where a landscape one leaves slack — but reserving it for both keeps the bar the
-  same distance from the media either way. The playhead is read in a `requestAnimationFrame` loop
-  gated on `active`, since the carousel keeps the neighbours mounted and would otherwise run three
-  loops at once.
+  same distance from the media either way. Measured at 1400x600, where the media is
+  height-constrained: 14px between the bar and the cluster. The playhead is read in a
+  `requestAnimationFrame` loop gated on `active` — the carousel keeps the neighbours mounted and
+  would otherwise run three loops at once — and on the video actually *moving*, since a paused or
+  scrubbed video's position is written by whoever moved it.
+- **That bar is the scrubber, and the media itself is the play/pause button.** Both were added
+  after the fact; six things about them are load-bearing:
+  - **A video gets no click-halves.** An image's `.navigation` pair steps through the set on a
+    press anywhere over the picture, and pressing a video means pausing it — the two cannot share
+    one surface. `.playToggle` replaces them, covering the same box. Stepping stays reachable from
+    the control cluster's arrows and from the arrow keys, neither of which it covers, and the
+    backdrop still closes because the toggle only spans the media.
+  - **The transport badge is hidden while playing and shown while paused**, the inverse of a
+    thumbnail's play badge and for the same reason: the motion is the signal, so a dark disc
+    parked mid-picture is only in the way. **Hover does not bring it back** — the whole surface
+    is the button, so there is nothing hovering would disambiguate, and a disc appearing the
+    moment the mouse crosses the clip is exactly the interruption hiding it was avoiding. Focus
+    does, and that is not an inconsistency: a keyboard user gets the ring around the media and
+    otherwise nothing saying what pressing it would do. Literal black-and-white, not theme tokens
+    — it sits on arbitrary media.
+  - **`isPlaying` and `duration` are read off the element, never tracked beside it.** Playback
+    stops for reasons this component never asked for — an autoplay refusal, a step to another
+    item, a media key — so a flag set wherever `pause()` happens to be called goes stale, and it
+    is the button's accessible name. Both are read once up front *and* subscribed to, the same
+    check-before-you-subscribe shape as `loaded`: duration does not exist at mount and may land
+    before a listener is live.
+  - **The scrubber is a real `role="slider"`, which collides with the dialog's arrow keys.** The
+    lightbox listens for ArrowLeft/Right on `window` to step through items; a focused slider owns
+    those keys for seeking. The element is beneath `window` in the bubble path, so its handler's
+    `stopPropagation` is what stops one press doing both. Verified: ArrowRight on the slider moves
+    the playhead 5s and leaves the pager dot alone; on `body` it still steps items.
+  - **The hit band is 24px around a 5px bar, and exactly as wide.** A 5px drag target is a 5px
+    drag target. `ratioFromPointer` measures against the band, not the bar, which is only correct
+    because the two share a width — horizontal padding on `.scrubber` would silently skew every
+    press. Pointer capture is what lets a drag survive leaving the band, which at this height is
+    most drags. `touch-action: none` is required: the carousel scrolls horizontally on an
+    ancestor, and a scrub is a horizontal drag.
+  - **Everything transport-related is `tabIndex={active ? 0 : -1}`.** In carousel mode every slide
+    is laid out at once and the dialog's Tab trap enumerates the whole portal, so without it
+    tabbing walked through the controls of items that were not on screen.
 - **`display` and `active` are two different questions, and `LightboxImage` takes both.** `display`
   is layout — in carousel mode (`data-mobile`) every slide has to be laid out and painted, because
   scrolling between them is how you navigate. `active` is "this is the slide on screen", and it is
   what gates everything that costs bytes: `autoPlay`, `preload`, `loading`, the rAF playhead loop,
-  the spinner. They were one flag, and the flag was `isVisible || isMobileNow` — so on any
+  the spinner. It also gates the window-level Space listener, so exactly one of the mounted slides
+  answers a keypress rather than all of them at once. They were one flag, and the flag was `isVisible || isMobileNow` — so on any
   touch-capable device (`'ontouchstart' in window`, which a touchscreen laptop satisfies as much as
   a phone) opening the lightbox marked *every* entry active: every video autoplaying at
   `preload="auto"`, every image `eager` at full viewport width, for the one item that was tapped.
@@ -920,6 +974,92 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
 - Font: **Switzer**, loaded as a third-party stylesheet from `api.fontshare.com` via a `<link>` in
   `layout.tsx` (not `next/font`), with `--default-font` in `globals.css` pointing at it
 - No UI component library — all custom components
+
+#### The palette
+
+**Seven colour tokens, and adding an eighth should feel expensive.** The set was 19 names carrying
+duplicate and near-duplicate values — `#ffffff` alone answered to four of them — and the audit
+that cut it is worth knowing about before adding anything back.
+
+| Token | Light | Dark | What it is |
+|---|---|---|---|
+| `--background-primary` | `#fff` | `#191b1f` | The page, on both routes |
+| `--background-muted` | `#f3f4f6` | `#2b2e34` | Every surface on it: pills at rest, the gallery frame, the thumbnail mat, the avatar well, the scrollbar and scrubber tracks, the lightbox controls |
+| `--foreground-primary` | `#111827` | `#e9ebef` | The name, section titles, a hovered icon — and the selected tab's fill |
+| `--foreground-secondary` | `#4b5563` | `#b4bac4` | Most running text and iconography |
+| `--foreground-tertiary` | `#9499a3` | `#868d99` | Dates, quiet text, the scrollbar thumb |
+| `--blue` | `#0788f5` | — | Links and every focus ring |
+| `--backdrop`, `--red`, `--green` | | | Studio only; these ship nowhere |
+
+Plus two values derived from `--overlay-ink` (`#000` light, `#fff` dark), which is not a palette
+colour so much as the direction "away from the ground":
+
+| Derived | Value | What it is |
+|---|---|---|
+| `--border` | the overlay ink at `--overlay-strength` | Every hairline |
+| `--background-hover` | `--background-muted` with the same overlay laid over it | Every hover: tab pills, the `.website` pill, the lightbox steppers and close, the dark theme's thumbnail rim |
+
+`--overlay-strength` is **6% in light and 8% in dark**, and the asymmetry is the point: black over a
+near-white surface bites harder than white over a near-black one, so matching the numbers makes
+light heavy-handed and dark absent. It is a number, which is the one thing `light-dark()` cannot
+carry, so it is the only value besides `--tab-reflection-opacity` that still needs the
+`[data-theme]` rules. Resolved: `#f3f4f6 → #e4e5e7` in light, `#2b2e34 → #3c3f44` in dark.
+
+**The thumbnail mat does not change on hover.** It holds `--background-muted` throughout: the mat
+sits *behind* the print, so darkening it moved a colour the pointer is not pointing at, and against
+a photo with any transparency it read as the image changing rather than the frame lifting. The lift
+and its shadow are the hover in light; the rim is, in dark.
+
+Five rules that keep it at seven:
+
+- **Every themed value is one `light-dark()`, and there is no `prefers-color-scheme` block left
+  in the codebase.** The pair sits on one line, so a value cannot be updated in light and
+  forgotten in dark, and switching theme becomes a matter of setting `color-scheme` — which is
+  all `:root[data-theme]` does. Each token declares its light value first as a bare fallback, the
+  same shape as the `overflow-x: clip` and `.fade` fallbacks. Note that Lightning CSS *polyfills*
+  `light-dark()` into a pair of toggle variables; it emits flips for `prefers-color-scheme` **and**
+  for any rule that sets `color-scheme`, which is why the switch drives it correctly. Verified in
+  the built CSS rather than assumed.
+- **Solid colours are tinted, alpha overlays are neutral.** The ramp carries a slight blue bias so
+  it reads as chosen against the `#f3f4f6` wash — lightness is held where it was, tertiary at
+  2.86:1 on white against the old `#999`'s 2.85:1 — but `--border` and `--dot-color` are pure
+  black or white. A tinted alpha over arbitrary media casts a colour on it; a neutral one only
+  darkens or lightens.
+- **A colour that follows the ground is not a token.** The selected pill's fill and label, the
+  unselected pill, and the thumbnail's rim were all tokens with their own dark entries; each now
+  resolves through `--background-primary` / `--foreground-primary` / `--background-muted` /
+  `--background-hover`.
+- **Judge closeness perceptually, not by contrast ratio.** A ratio knows nothing about hue and
+  reports `--blue` against `--red` as 1.01:1. Rank candidates by OKLab ΔE and use contrast only
+  between two neutrals, where it is the better measure at the dark end.
+- **A rule drawn on text derives from the text.** Prose link underlines are
+  `color-mix(in srgb, currentColor 22%, transparent)` rather than a grey. The fixed pair they
+  replaced was ~11% of the text in light and ~21% in dark, so no single value could have matched
+  both — and the light half was too faint to read as an underline.
+
+**Both routes now sit on the same ground.** The gallery used to swap `--background-primary` and
+`--background-muted` on `body:has([data-page="gallery"])`; that swap is gone, along with the
+`--ground-*` plumbing it needed and the wrapper div that carried the attribute.
+
+**The theme switch (`ThemeSwitch.tsx`) is a working tool, not a site feature.** It writes
+`data-theme` onto `<html>` and nothing else — every themed value resolves through `color-scheme`,
+so one attribute repaints the site. Four things about it:
+
+- It renders only off the production branch, via `NEXT_PUBLIC_THEME_SWITCH` in `next.config.ts`.
+  A `CF_PAGES_BRANCH=main` export contains no markup, no script tag and no `data-theme` — measured.
+  It does **not** keep the component out of the client bundle: the layout's `import` is static and
+  Next registers every client component in its manifest regardless of which branch renders it.
+- An inline script in `<head>` applies the stored theme before first paint. It has to be inline
+  and blocking; anything deferred to React runs after the browser has painted, which is the flash.
+- The stored mode is read with `useSyncExternalStore`, not copied into state from an effect —
+  `localStorage` is the store, and `set-state-in-effect` is an error in this repo's lint config.
+- "System" removes the attribute rather than setting `data-theme="system"`, since `:root`'s
+  `color-scheme: light dark` already means exactly that.
+
+Shadows are the remaining gap: seven black alphas across four shadows, all hardcoded, none
+adapting to the dark theme. The media scrims (`rgba(0,0,0,.55)` play badge, spinner, progress
+scrim) are deliberately literal — they sit on arbitrary screenshots and video frames and cannot
+borrow the page's foreground and stay legible.
 
 ### Key Dependencies
 

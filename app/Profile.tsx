@@ -189,7 +189,7 @@ const ProfileItem: React.FC<ProfileItemProps> = ({
   let title;
   if (item.url) {
     title = <>
-      <a href={item.url} target="_blank">{heading}</a><span className={styles.linkArrow}>&#xfeff;<Arrow12 fill="var(--grey1)"/></span>
+      <a href={item.url} target="_blank">{heading}</a><span className={styles.linkArrow}>&#xfeff;<Arrow12 fill="var(--foreground-primary)"/></span>
     </>
   } else {
     title = heading

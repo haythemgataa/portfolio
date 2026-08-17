@@ -102,7 +102,7 @@
    Attachments.tsx, which also derives the frame's width and the resize request from them. */
 .media {
   border-radius: 10px;
-  border: var(--thumb-border) solid var(--thumbnailFrame);
+  border: var(--thumb-border) solid var(--background-primary);
   overflow: hidden;
   position: relative;
   cursor: pointer;
@@ -120,9 +120,11 @@
 }
 
 /* The wash is the mat itself, so it stays matted-only: on an unmatted thumbnail the image
-   covers the whole box and any fill would only show through its alpha. */
+   covers the whole box and any fill would only show through its alpha. It rests on
+   `--background-muted`, the same plane as the pills and frames elsewhere; the deeper step is a
+   hover state and lives in the `hover: hover` block below. */
 .media[data-framed="true"] {
-  background-color: var(--wash2);
+  background-color: var(--background-muted);
 }
 
 /* The image's box. Matted, the component sets its width and height to the image's own
@@ -289,7 +291,7 @@
   position: absolute;
   inset: 0;
   content: '';
-  border: 1px solid var(--transparentBorder);
+  border: 1px solid var(--border);
   border-radius: calc(10px - var(--thumb-border));
   z-index: 10;
   pointer-events: none;
@@ -314,7 +316,11 @@
   .media {
     /* One shorthand for all three, because a second `transition` declaration anywhere else on
        `.media` would replace the whole thing and silently drop the others. `border-color` is here
-       for the dark theme's hover-revealed rim below. */
+       for the dark theme's hover-revealed rim below.
+       No `background-color`: the mat holds `--background-muted` through the hover. It sits
+       *behind* the print, so darkening it moved a colour the pointer is not pointing at, and
+       against a photo with any transparency it read as the image changing rather than the frame
+       lifting. The lift and its shadow are the hover in light; the rim is, in dark. */
     transition:
       transform 200ms cubic-bezier(0.2, 0.7, 0.3, 1),
       box-shadow 200ms ease,
@@ -366,11 +372,11 @@
   padding: 0;
   transform: translateY(-50%);
   appearance: none;
-  border: 1px solid var(--transparentBorder);
+  border: 1px solid var(--border);
   border-radius: 50%;
-  background-color: var(--backgroundColor);
+  background-color: var(--background-primary);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
-  color: var(--grey2);
+  color: var(--foreground-secondary);
   cursor: pointer;
   opacity: 0;
   transition:
@@ -379,7 +385,7 @@
 }
 
 .edgeArrow:hover {
-  color: var(--grey1);
+  color: var(--foreground-primary);
 }
 
 .edgeArrow:focus-visible {
@@ -422,34 +428,29 @@
   }
 }
 
-/* On the dark ground both edges are present at rest, as in the light theme — what changes is what
-   the outer one is *made of*. At rest it takes the page's own colour, so it reads as a margin of
-   ground held around the image rather than as a light edge: `--thumbnailFrame` on every thumbnail
-   at once is the loudest thing on a dark page, which is the reason it is already dimmed here.
-   On hover it becomes that light rim, and that colour change is the hover state. It has to be:
-   the lift's shadow is dark on a dark page and barely registers, where in the light theme it does
-   the work on its own. The *width* never changes, only the colour, because both branches of the
-   width calculation and the hairline's radius are measured against it.
-   `--backgroundColor` rather than a literal, so it follows the ground it is imitating — including
-   the gallery route's, where that variable is swapped on `body`.
-   Only the *hover* half is scoped to pointers, and the split matters: the rest colour is the dark
-   theme's treatment of the rim, not a state waiting to be revealed, so a touch device gets it too.
-   It was briefly the whole block that was gated, back when rest meant no rim at all and a phone
-   would otherwise have had nothing — with a ground-coloured rim there is nothing to withhold, and
-   gating it just left touch showing the light theme's white edge. `:hover` stays behind the gate
-   because on touch it sticks after a tap, which would leave a thumbnail lit behind the lightbox
-   it just opened.
+/* The rim's *rest* colour needs no rule of its own any more: `.media` above already sets it to
+   `--background-primary`, which is white on the light theme and the page's own near-black on the
+   dark one. That is exactly the treatment each wants — a printed mat edge in light, and in dark a
+   margin of ground held around the image rather than a light edge, since a white rim on every
+   thumbnail at once is the loudest thing on a dark page. One declaration, both themes, because the
+   token already carries the difference.
+
+   What *is* theme-specific is the hover. In light the lift's shadow does the work on its own and
+   the rim stays put; in dark that shadow is dark-on-dark and barely registers, so the rim lighting
+   up is the hover state. `light-dark()` says exactly that: keep the rest colour, or go to the
+   hover step. The *width* never changes, only the colour, because both branches of the width
+   calculation and the hairline's radius are measured against it.
+
+   Gated on `hover: hover` because on touch `:hover` sticks after a tap, which would leave a
+   thumbnail lit behind the lightbox it just opened. Only the hover is gated — the rest colour is a
+   treatment rather than a state waiting to be revealed, so a touch device gets it too.
+
    The inner hairline is left alone in both themes: it is the edge between the rim and the image,
    and the rim needs an inside whichever colour it is wearing. */
-@media (prefers-color-scheme: dark) {
-  .media {
-    border-color: var(--backgroundColor);
-  }
-
-  @media (hover: hover) {
-    .media:hover {
-      border-color: var(--thumbnailFrame);
-    }
+@media (hover: hover) {
+  .media:hover {
+    border-color: var(--background-primary);
+    border-color: light-dark(var(--background-primary), var(--background-hover));
   }
 }
 

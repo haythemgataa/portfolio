@@ -36,7 +36,7 @@
 }
 
 .sticky[data-stuck="true"] {
-  background-color: var(--backgroundColor);
+  background-color: var(--background-primary);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -81,18 +81,18 @@
   left: calc(50% - 50vw);
   right: calc(50% - 50vw);
   height: 72px;
-  background: linear-gradient(to bottom, var(--backgroundColor), var(--backgroundColorFade));
+  background: linear-gradient(to bottom, var(--background-primary), var(--background-primary-fade));
   background: linear-gradient(
     to bottom,
-    var(--backgroundColor) 0%,
-    color-mix(in srgb, var(--backgroundColor) 97%, transparent) 12%,
-    color-mix(in srgb, var(--backgroundColor) 91%, transparent) 25%,
-    color-mix(in srgb, var(--backgroundColor) 81%, transparent) 37%,
-    color-mix(in srgb, var(--backgroundColor) 67%, transparent) 50%,
-    color-mix(in srgb, var(--backgroundColor) 50%, transparent) 62%,
-    color-mix(in srgb, var(--backgroundColor) 32%, transparent) 75%,
-    color-mix(in srgb, var(--backgroundColor) 15%, transparent) 87%,
-    var(--backgroundColorFade) 100%
+    var(--background-primary) 0%,
+    color-mix(in srgb, var(--background-primary) 97%, transparent) 12%,
+    color-mix(in srgb, var(--background-primary) 91%, transparent) 25%,
+    color-mix(in srgb, var(--background-primary) 81%, transparent) 37%,
+    color-mix(in srgb, var(--background-primary) 67%, transparent) 50%,
+    color-mix(in srgb, var(--background-primary) 50%, transparent) 62%,
+    color-mix(in srgb, var(--background-primary) 32%, transparent) 75%,
+    color-mix(in srgb, var(--background-primary) 15%, transparent) 87%,
+    var(--background-primary-fade) 100%
   );
   opacity: 0;
   transition: opacity 160ms ease;
@@ -130,11 +130,11 @@
   width: 100%;
   height: var(--tab-bar-height);
   background-color: transparent;
-  color: var(--grey2);
+  color: var(--foreground-secondary);
 }
 
 /* Each tab is its own fully rounded pill wearing what used to be the track's surface: the
-   `--tabInactiveBackground` fill and the same hairline the media thumbnails carry, so the bar
+   `--background-muted` fill and the same hairline the media thumbnails carry, so the bar
    still reads as part of that set. That fill differs per route — see the token in globals.css —
    so it cross-fades on the same `--ground-fade` as the page behind it, and the two read as one
    surface changing rather than the pills snapping ahead of the page.
@@ -148,9 +148,9 @@
   justify-content: center;
   height: 100%;
   padding: 4px 8px;
-  border: 1px solid var(--transparentBorder);
+  border: 1px solid var(--border);
   border-radius: 999px;
-  background-color: var(--tabInactiveBackground);
+  background-color: var(--background-muted);
   transition:
     background-color var(--ground-fade) ease,
     color 150ms ease;
@@ -171,10 +171,22 @@
   touch-action: manipulation;
 }
 
-/* The transition lives on `.tab` rather than here, because declaring one in this rule would
-   replace the whole shorthand while hovered and drop the background cross-fade with it. */
+/* The unselected pill deepens a step and its label goes to full ink. The fill was missing and the
+   label tint alone was doing nothing visible — it moves `--foreground-secondary` to
+   `--foreground-primary` under a pointer that is already on the word.
+
+   The transition is restated here rather than inherited, and it must keep listing
+   `background-color`: a shorthand in this rule replaces `.tab`'s wholesale, so naming only
+   `color` is what previously dropped the route cross-fade. Restating both re-times rather than
+   drops — 150ms in, and `.tab`'s `--ground-fade` on the way out, since this selector stops
+   matching the moment the pointer leaves. The active tab never matches it, so the pill's own
+   cross-fade is untouched. */
 .tab:hover:not([data-active="true"]) {
-  color: var(--grey1);
+  background-color: var(--background-hover);
+  color: var(--foreground-primary);
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
 }
 
 /* The focus ring survives the pill on top of it: `outline-offset` puts it entirely outside
@@ -291,7 +303,7 @@
 .pillFill {
   position: absolute;
   inset: 0;
-  background-color: var(--tabActiveBackground);
+  background-color: var(--foreground-primary);
 }
 
 /* The glow overhead, reflected on the pill.
@@ -311,7 +323,7 @@
    has left the top of the page there is no glow overhead for it to be reflecting, so a pill
    that kept its highlight while parked over scrolling content would be reflecting nothing.
 
-   Strength comes from `--tabReflectionOpacity` rather than a literal, because the two themes
+   Strength comes from `--tab-reflection-opacity` rather than a literal, because the two themes
    need different numbers for the same effect: the same sweep that reads as a highlight on
    black reads as a colour cast on the dark theme's white pill, so that one is dialled back. */
 .pillFill::after {
@@ -321,7 +333,7 @@
   background-image: var(--glow-sweep);
   background-size: calc(100% / var(--glow-fraction)) 100%;
   background-position: center;
-  opacity: var(--tabReflectionOpacity);
+  opacity: var(--tab-reflection-opacity);
   transition: opacity 160ms ease;
 
   --reflect-down: linear-gradient(180deg,
@@ -351,7 +363,7 @@
   font-weight: var(--weight-base);
   line-height: 1;
   white-space: nowrap;
-  color: var(--tabActiveForeground);
+  color: var(--background-primary);
 }
 
 .sticky[data-stuck="true"] .pillFill::after {

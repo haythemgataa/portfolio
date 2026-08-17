@@ -16,9 +16,9 @@
   grid-template-columns: 1fr 1fr;
   gap: 4px;
   padding: 8px;
-  border: 1px solid var(--transparentBorder);
+  border: 1px solid var(--border);
   border-radius: 12px;
-  background-color: var(--tabInactiveBackground);
+  background-color: var(--background-muted);
 }
 
 /* Every tile is the same shape whatever its media is, so the four read as a set. The ratio is
@@ -27,7 +27,7 @@
 .tile {
   position: relative;
   aspect-ratio: 4 / 3;
-  border: 1px solid var(--transparentBorder);
+  border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
   box-sizing: border-box;
@@ -71,7 +71,7 @@
 .more {
   display: inline-block;
   margin-top: 16px;
-  color: var(--grey1);
+  color: var(--foreground-primary);
   text-decoration: none;
   background-image: linear-gradient(currentColor, currentColor);
   background-repeat: no-repeat;

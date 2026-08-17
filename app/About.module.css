@@ -11,12 +11,17 @@
 }
 
 .description {
-  color: var(--grey2);
+  color: var(--foreground-secondary);
   display: flex;
   flex-direction: column;
   row-gap: calc((var(--type-size) * var(--line-height)) / 2);
 }
 
+/* Derived from the text rather than from a fixed grey, so the rule tracks whatever the link is
+   set in and stays proportionate on both themes. The pair it replaced was not symmetric — the
+   old `--wash-1` sat at about 11% of the text in light and 21% in dark, so no single fixed value
+   could match both. 22% matches the dark weight and roughly doubles the light one, which is the
+   half that was too faint to read as an underline. One number, both themes. */
 .description p a {
-  border-bottom: 1px solid var(--wash1);
+  border-bottom: 1px solid color-mix(in srgb, currentColor 22%, transparent);
 }

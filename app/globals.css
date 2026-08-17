@@ -17,29 +17,99 @@
      and collapse the pairing — so that trade is not the byte-saving it looks like from here. */
   --weight-base: 350;
   --weight-emphasis: 550;
-  --emoji-font: "color-emoji";
   --default-font: "Switzer", sans-serif;
-  --backgroundColor: #fff;
-  --inputBackgroundColor: #f2f2f2;
-  --primaryBorderColor: #e5e5e5;
-  --secondaryBorderColor: #f2f2f2;
-  --backdrop: rgba(0, 0, 0, .3);
-  --transparentBorder: rgba(0, 0, 0, .05);
-  --grey1: #111;
-  --grey2: #555;
-  --grey3: #999;
-  --green: #32bd64;
-  --orange: orange;
-  --red: #f04b4b;
+
+  /* ── Themes ───────────────────────────────────────────────────────────────
+     Every themed value is one `light-dark()` declaration rather than a light
+     value here and a dark one in a `prefers-color-scheme` block. That is worth
+     the modern-CSS dependency for two reasons: the pair sits on one line, so a
+     value cannot be updated in light and forgotten in dark; and switching theme
+     becomes a matter of setting `color-scheme`, which is what `[data-theme]`
+     below does. There is no `prefers-color-scheme` block left in the codebase.
+
+     `color-scheme: light dark` is what makes `light-dark()` follow the OS, and
+     it also hands the UA the right scrollbars and form controls.
+
+     Each token declares its light value first as a bare fallback. A browser
+     without `light-dark()` drops the second declaration and renders the light
+     theme — the same shape as the `overflow-x: clip` and `.fade` fallbacks. */
+  color-scheme: light dark;
+
+  /* ── Surfaces ─────────────────────────────────────────────────────────────
+     `primary` is the page. `muted` is every surface that has to read as
+     distinct on it: pills at rest, the gallery frame, the thumbnail mat, the
+     avatar well, the scrollbar and scrubber tracks, the lightbox controls.
+     The fade twin is the ground at zero alpha, spelled out rather than derived,
+     so gradients fading the page out interpolate through the ground's own hue
+     instead of through transparent black. */
+  --background-primary: #fff;
+  --background-primary: light-dark(#fff, #191b1f);
+  --background-primary-fade: rgba(255, 255, 255, 0);
+  --background-primary-fade: light-dark(rgba(255, 255, 255, 0), rgba(25, 27, 31, 0));
+  --background-muted: #f3f4f6;
+  --background-muted: light-dark(#f3f4f6, #2b2e34);
+
+  /* Black on light, white on dark: the ink an *overlay* is made of, as opposed
+     to the ink text is set in. Both the hairline and the hover step below are
+     the same overlay at the same strength, which is the whole reason each is
+     named once — neither should be able to drift from the other. */
+  --overlay-ink: #000;
+  --overlay-ink: light-dark(#000, #fff);
+
+  /* How strong that overlay is. 6% here and 8% on the dark theme, because they
+     are not symmetric in practice: black over a near-white surface bites harder
+     than white over a near-black one, so matching the numbers makes light look
+     heavy-handed and dark look absent.
+     It is a *number*, which is the one thing `light-dark()` cannot carry — so
+     unlike every other themed value it needs the `[data-theme]` rules further
+     down, alongside `--tab-reflection-opacity` for the same reason. */
+  --overlay-strength: 6%;
+
+  /* Every hairline on the site. The overlay ink at that strength, so it is pure
+     black or pure white rather than a tinted grey: it is drawn over media as
+     often as over the page, and a neutral overlay is the one that holds on both. */
+  --border: rgba(0, 0, 0, .06);
+  --border: color-mix(in srgb, var(--overlay-ink) var(--overlay-strength), transparent);
+
+  /* The hover step: the muted surface with that same overlay laid over it.
+     `color-mix` against an opaque base rather than a real overlay element,
+     because the result is a solid colour and so transitions cleanly, while a
+     `background-image` overlay would snap — and a percentage of black over
+     `--background-muted` is arithmetically the overlay anyway. It lightens on
+     the dark theme for free, since the overlay ink has flipped. */
+  --background-hover: color-mix(in srgb, var(--overlay-ink) var(--overlay-strength), var(--background-muted));
+
+  /* ── Ink ──────────────────────────────────────────────────────────────────
+     Primary is the name, the section titles, and an icon under the pointer; it
+     is also what the selected tab pill is filled with, since that pill is the
+     page's ink and its label the page's ground. Secondary carries most running
+     text and iconography. Tertiary is dates and anything deliberately quiet.
+
+     The ramp carries a slight blue bias rather than sitting on pure grey, which
+     is what makes it read as chosen: the wash is `#f3f4f6`, and neutral text on
+     a cool surface goes subtly warm by comparison. Lightness is held where it
+     was — tertiary is 2.86:1 on white against the old `#999`'s 2.85:1, and the
+     dark ramp moves by OKLab ΔE 0.011–0.025 — so it is a tint, not a
+     re-levelling, and no contrast regressed.
+
+     Note the split with the overlays above: *solid* colours are tinted, *alpha*
+     overlays are pure black or white. A tinted alpha over arbitrary media casts
+     a colour on it; a neutral one only darkens or lightens. */
+  --foreground-primary: #111827;
+  --foreground-primary: light-dark(#111827, #e9ebef);
+  --foreground-secondary: #4b5563;
+  --foreground-secondary: light-dark(#4b5563, #b4bac4);
+  --foreground-tertiary: #9499a3;
+  --foreground-tertiary: light-dark(#9499a3, #868d99);
+
+  /* Accent and semantics. The blue is links and every focus ring; red and green
+     are the Studio's destructive and success states and ship nowhere. All three
+     hold on both grounds, so none of them needs a `light-dark()`. */
   --blue: #0788f5;
-  --selectionColor: rgba(109, 175, 255, .5);
-  --content-padding: 72px;
-  --badge-color: #f04b4b;
-  --sidebar-width: min(330px, calc(100vw - 48px));
-  --compressed-sidebar-width: 60px;
-  --marketingBackground: #fafafa;
-  --wash1: #e5e5e5;
-  --wash2: #f2f2f2;
+  --red: #f04b4b;
+  --green: #32bd64;
+  --backdrop: rgba(0, 0, 0, .3);
+  --backdrop: light-dark(rgba(0, 0, 0, .3), rgba(0, 0, 0, .5));
   /* The tab bar's own geometry, kept here because two other things are measured against
      it: the fade that hangs below it, and `--sticky-top` — the offset every sticky section
      header parks at. Hardcoding 68px in three files would let them drift apart silently. */
@@ -49,23 +119,18 @@
      sticky wrapper, so `--sticky-top` — where section headers park — is the sum of the three. */
   --tab-bar-gap-top: 16px;
   --tab-bar-gap-bottom: 8px;
-  /* The selected tab inverts the ground it sits on: black on the light theme, white on the
-     dark one, so in both cases it is the opposite of the wash the unselected pills carry
-     rather than a hole in the bar. The label takes the opposing value.
-     --tabReflectionOpacity is how strongly the page glow shows on that pill; a hue sweep
-     reads much hotter over white than over black, so the dark theme dials it back. */
-  --tabActiveBackground: #000;
-  --tabActiveForeground: #fff;
-  --tabReflectionOpacity: 0.26;
-  /* The unselected pills' fill. A token rather than `--wash2` directly because the gallery
-     overrides it: on that route's muted ground the wash is nearly the same colour as the page
-     and the pills stop reading as raised, so they take white instead. */
-  --tabInactiveBackground: var(--wash2);
-  /* The thumbnail's outer border — a white mat edge, like a printed photo. */
-  --thumbnailFrame: #fff;
-  /* Dot texture at the top of the page. Low enough to sit under the glow without muddying
-     it — at 6% it is legible as grain, not as a grid. */
+  /* How strongly the page glow shows on the selected tab's pill. A hue sweep reads much hotter
+     over white than over black, so the dark theme dials it back. The pill's own colours are no
+     longer tokens of their own: it is filled with the page's ink and labelled in the page's
+     ground, which is what "inverts the ground it sits on" actually means — and on the gallery
+     route the label follows that route's ground for free. */
+  --tab-reflection-opacity: 0.26;
+  /* Dot texture at the top of the page. Low enough to sit under the glow without muddying it —
+     at 6% it is legible as grain, not as a grid. Neutral rather than tinted, like the other two
+     overlays, and deliberately not folded into `--border`: it is 6% against the hairline's 10%,
+     and matching them would make the grid half again as strong. */
   --dot-color: rgba(0, 0, 0, 0.06);
+  --dot-color: light-dark(rgba(0, 0, 0, 0.06), rgba(255, 255, 255, 0.07));
   /* The top-of-page glow's hue sweep and the share of its box the colour spans, up here
      because two things draw with them: the glow itself (`.topGradientBand`) and its
      reflection on the selected tab's black pill. Same sweep at the same scale in both, so
@@ -84,81 +149,40 @@
   );
   /* Overridden per route in layout.tsx: 0 when the tab bar is not rendered at all. */
   --sticky-top: calc(var(--tab-bar-height) + var(--tab-bar-gap-top) + var(--tab-bar-gap-bottom));
-  /* Fully transparent --backgroundColor, for gradients that fade the page out. Spelled as
-     an explicit zero-alpha colour rather than the `transparent` keyword so the midpoints
-     interpolate through the background hue instead of through transparent black. */
-  --backgroundColorFade: rgba(255, 255, 255, 0);
-  /* The gallery's ground: a touch muted rather than the CV's paper white, so a column of
-     images reads as mounted on a surface instead of floating on nothing. Applied by
-     swapping --backgroundColor on the gallery route (see `body:has(...)` below), which is
-     what carries it into everything derived from it — the tab bar's stuck background and
-     the fade hanging beneath it — rather than leaving those matching the wrong colour.
-     The Fade twin has to be authored alongside it: it is the same colour at zero alpha,
-     and the two cannot be computed from one another without color-mix in every consumer. */
-  --galleryBackground: #f3f4f6;
-  --galleryBackgroundFade: rgba(243, 244, 246, 0);
-  /* White, so the unselected pill lifts off the muted ground instead of dissolving into it —
-     on this route the wash and the page are only a couple of values apart. */
-  --galleryTabInactive: #fff;
   /* How long the ground takes to cross-fade when a tab is clicked. Shared by the page
      background and the unselected pills, so the whole surface changes as one thing rather than
      the pills snapping while the page eases. */
   --ground-fade: 320ms;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* The whole dark family stepped down from where it was (#222 ground, #383838 wash): the
-       page sat close enough to mid-grey that the glow at the top and the thumbnail mats had
-       little room to read as lighter than it. Kept as a family rather than a single value so
-       the washes and borders stay in the same relation to the ground as before. */
-    --backgroundColor: #1a1a1a;
-    --inputBackgroundColor: #2a2a2a;
-    --inputBackgroundActiveColor: #383838;
-    --primaryBorderColor: #2b2b2b;
-    --secondaryBorderColor: #2b2b2b;
-    --backdrop: rgba(0, 0, 0, .5);
-    --transparentBorder: hsla(0, 0%, 100%, .1);
-    --grey1: #eee;
-    --grey2: #bbb;
-    --grey3: #888;
-    --selectionColor: rgba(109, 175, 255, .5);
-    --marketingBackground: #141414;
-    --wash1: #464646;
-    --wash2: #2c2c2c;
-    --backgroundColorFade: rgba(26, 26, 26, 0);
-    /* Darker than the CV's ground, matching the light theme's direction of travel: the
-       gallery is a shade off the page either way. */
-    --galleryBackground: #111;
-    --galleryBackgroundFade: rgba(17, 17, 17, 0);
-    /* The dark theme needs no change here: the light theme's gallery pill goes white because
-       `--wash2` had almost vanished into `#f9fafb`, and on this ground `#2c2c2c` against
-       `#141414` already has the separation that move was buying. Kept as an explicit
-       declaration so the override below reads the same in both themes. */
-    --galleryTabInactive: var(--wash2);
-    --dot-color: rgba(255, 255, 255, 0.07);
-    /* Dimmed rather than the light theme's pure white: at full strength a 2px white edge on
-       every thumbnail is the loudest thing on a dark page. Still the same idea — a light rim
-       lifting the frame off the ground. */
-    --thumbnailFrame: rgba(255, 255, 255, 0.16);
-    /* Inverted with the ground — see the light theme's note. --grey1 is near-white here, so
-       the label cannot come from it; the pill needs the page's *darkest* value on it. */
-    --tabActiveBackground: #fff;
-    --tabActiveForeground: #111;
-    --tabReflectionOpacity: 0.18;
-  }
+/* The explicit theme override, and the only thing the switch touches.
+   `light-dark()` resolves against the used `color-scheme`, so forcing that value is enough to
+   repaint every token above — there is no second palette to keep in step, which is the whole
+   reason the tokens are written that way. Absent `data-theme`, `:root`'s `light dark` leaves
+   the choice to the OS.
+   Set by ThemeSwitch.tsx, which only renders off the production branch. Nothing else in the
+   codebase reads `prefers-color-scheme`. */
+:root[data-theme="light"] {
+  color-scheme: light;
 }
 
-/* The gallery route's ground.
-   Declared on `body` via `:has()` rather than on the gallery's own wrapper, because the two
-   other things that must match this colour — the tab bar's background once stuck, and the
-   fade hanging below it — are rendered by the root layout as *siblings* of the page, so a
-   variable set inside the page would never reach them. `body` is the nearest element that
-   is an ancestor of both, and it is also where the page background itself is painted. */
-body:has([data-page="gallery"]) {
-  --backgroundColor: var(--galleryBackground);
-  --backgroundColorFade: var(--galleryBackgroundFade);
-  --tabInactiveBackground: var(--galleryTabInactive);
+/* The two themed values `light-dark()` cannot carry, because both are numbers rather than
+   colours. The glow sweep reads much hotter over the dark theme's white pill than over the light
+   theme's black one, so the reflection is dialled back; and the overlay is stronger here because
+   white over a near-black surface bites less than black over a near-white one.
+   Duplicated across the two rules below rather than factored out — CSS has no way to share a
+   declaration block, and a third indirection to avoid four lines would cost more than it saves. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --tab-reflection-opacity: 0.18;
+  --overlay-strength: 8%;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --tab-reflection-opacity: 0.18;
+    --overlay-strength: 8%;
+  }
 }
 
 * {
@@ -180,18 +204,17 @@ body {
 }
 
 body {
-  background-color: var(--backgroundColor);
-  /* The two routes sit on different grounds, so clicking a tab changes this value. Without the
-     transition it snapped, which was the one part of the switch that still read as a jump once
-     the pill itself was travelling smoothly. It works because `--backgroundColor` is swapped on
-     *this* element (see the gallery rule above): the custom property is not what animates —
-     `background-color`'s computed value changes, and that is transitionable. */
+  background-color: var(--background-primary);
+  /* Kept for the theme switch, which is now the only thing that changes this value — both routes
+     sit on the same ground, so switching tabs no longer touches it. It works because the custom
+     property is not what animates: `background-color`'s computed value changes when the theme
+     does, and that is transitionable. */
   transition: background-color var(--ground-fade) ease;
   font-family: var(--default-font), sans-serif;
   font-size: var(--type-size);
   font-weight: var(--weight-base);
   line-height: var(--line-height);
-  color: var(--grey1);
+  color: var(--foreground-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -205,12 +228,6 @@ body {
 a {
   color: inherit;
   text-decoration: none;
-}
-
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
 }
 
 

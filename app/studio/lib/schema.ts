@@ -21,6 +21,12 @@ export interface FieldDef {
    * picker: a name that cannot be typed cannot be mistyped.
    */
   iconInsert?: boolean;
+  /**
+   * Comma-separated in the form, `string[]` in the JSON. The input holds the author's raw text
+   * while it is focused — splitting on every keystroke would swallow the comma that starts the
+   * next entry, and the trailing space after it — and re-tidies from the saved array on blur.
+   */
+  list?: boolean;
 }
 
 /** Pinned to the top of the page. */
@@ -96,6 +102,14 @@ export const GALLERY_FIELDS: FieldDef[] = [
     hint: 'Shown beneath the item. Also used as the image alt text.',
   },
   { key: 'date', label: 'Date', type: 'text', placeholder: '2026 — or "March 2026"' },
+  {
+    key: 'tags',
+    label: 'Tags',
+    type: 'text',
+    list: true,
+    placeholder: 'DeepPCB, Animation',
+    hint: 'Comma-separated. Joined to the date by middots — "2026 · DeepPCB · UI". Blanks and repeats are dropped, and clearing the field removes the key rather than leaving an empty list.',
+  },
 ];
 
 /** Editable facts about a pooled asset, shared by both tabs. */

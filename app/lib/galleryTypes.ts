@@ -20,6 +20,15 @@ export type GalleryEntry = {
   caption?: string;
   /** Free-form date label shown with the caption, e.g. "2026" or "March 2026". */
   date?: string;
+  /**
+   * Free-text labels joined to the date by middots. Optional and *omitted* when empty
+   * rather than written as `[]`, the same rule every other optional field follows.
+   *
+   * The loader normalises this — blanks dropped, repeats collapsed — so nothing downstream
+   * has to. They are display only: no filtering, no routing, and no pool reference, so
+   * unlike a heading's `[icon.webp]` token they need no reference counting.
+   */
+  tags?: string[];
 };
 
 export type GalleryFile = {
@@ -37,6 +46,8 @@ export type GalleryItem = {
   title: string | null;
   caption: string | null;
   date: string | null;
+  /** Normalised and always present — `[]` when the entry has none, so callers can map it. */
+  tags: string[];
   posterUrl: string | null;
   /** From media.json, for the opened view. See `MediaAsset.floating`. */
   floating: boolean;

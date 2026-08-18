@@ -585,6 +585,36 @@ export function reorderGallery(gallery: GalleryFile, order: string[]): GalleryFi
 }
 
 /**
+ * `tags` is the one list field the gallery form writes, and an empty list has to become an
+ * *absent* key rather than `"tags": []` — optional fields are omitted, never written empty
+ * (CONTENT-SCHEMA.md). That is the same normalisation `removeMediaRef` does for `media`, and
+ * it is done here rather than in `mergePatch` for the same reason: `mergePatch` deletes on
+ * `''`/`null`/`undefined`, and teaching it about empty arrays would change the contract for
+ * every caller to fix one field.
+ *
+ * Blanks and repeats are dropped on the way in too, so the file cannot record them however the
+ * patch was assembled. The loader normalises again on read, which is not redundant — it is what
+ * covers a hand edit that never went through the Studio.
+ */
+function normalizeGalleryPatch(patch: Record<string, unknown>): Record<string, unknown> {
+  if (!('tags' in patch)) return patch;
+
+  const raw = patch.tags;
+  const tags = Array.isArray(raw)
+    ? [
+        ...new Set(
+          raw
+            .filter((tag): tag is string => typeof tag === 'string')
+            .map((tag) => tag.trim())
+            .filter(Boolean)
+        ),
+      ]
+    : [];
+
+  return { ...patch, tags: tags.length ? tags : undefined };
+}
+
+/**
  * Add an entry pointing at an asset already in the pool. Ids are derived from
  * the filename but stay authored afterwards, so reordering never changes them.
  */
@@ -611,7 +641,7 @@ export function createGalleryEntry(
 
   const entry = mergePatch(
     { id, file } as unknown as Record<string, unknown>,
-    data,
+    normalizeGalleryPatch(data),
     ['id', 'file']
   ) as unknown as GalleryEntry;
 
@@ -624,12 +654,13 @@ export function updateGalleryEntry(
   patch: Record<string, unknown>
 ): GalleryFile {
   findEntry(gallery, id);
+  const normalized = normalizeGalleryPatch(patch);
   return {
     ...gallery,
     items: galleryItems(gallery).map((e) =>
       e.id !== id
         ? e
-        : (mergePatch(e as unknown as Record<string, unknown>, patch, [
+        : (mergePatch(e as unknown as Record<string, unknown>, normalized, [
             'id',
             'file',
           ]) as unknown as GalleryEntry)

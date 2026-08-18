@@ -337,7 +337,42 @@ export default function Studio({
     [queueMutate]
   );
 
-  const saveField = (key: string, value: string) => {
+  /**
+   * A `list` field is comma-separated text in the form and a `string[]` in the JSON.
+   *
+   * The split has to be forgiving mid-edit: "DeepPCB, " is a real intermediate state, and the
+   * server drops blanks and repeats again on write, so nothing here needs to be strict.
+   */
+  const splitList = (text: string): string[] => [
+    ...new Set(
+      text
+        .split(',')
+        .map((part) => part.trim())
+        .filter(Boolean)
+    ),
+  ];
+
+  const joinList = (value: unknown): string =>
+    Array.isArray(value) ? value.filter((v) => typeof v === 'string').join(', ') : '';
+
+  /**
+   * The raw text of the list field being typed into, keyed by target and field.
+   *
+   * Needed because the input is controlled off the *parsed* array: without a draft, typing the
+   * comma in "DeepPCB, Animation" would parse to ["DeepPCB"], render back as "DeepPCB", and eat
+   * the comma the instant it was typed — a second tag could never be entered. Blur clears the
+   * draft so the field re-tidies from what was actually saved.
+   *
+   * Keyed rather than bare so that switching entries cannot show the previous one's text, which
+   * would otherwise depend on blur landing before the re-render. A function rather than a value
+   * computed in the JSX: an IIFE there reads to `react-hooks/refs` as a nested component, which
+   * turns handing `iconFieldRef` to the sibling input into a render-time ref access.
+   */
+  const [listDraft, setListDraft] = useState<{ key: string; text: string } | null>(null);
+  const listDraftKey = (fieldKey: string) =>
+    `${selection.kind}:${activeItem?.id ?? 'profile'}:${fieldKey}`;
+
+  const saveField = (key: string, value: string | string[]) => {
     if (selection.kind === 'profile') {
       queueSave(`profile.update::${key}`, 'profile.update', { data: { [key]: value } }, (draft) => {
         (draft.profile as Record<string, unknown>)[key] = value;
@@ -1111,6 +1146,23 @@ export default function Studio({
                           placeholder={field.placeholder}
                           value={String(editorTarget[field.key] ?? '')}
                           onChange={(e) => saveField(field.key, e.target.value)}
+                        />
+                      ) : field.list ? (
+                        // Comma-separated in the form, `string[]` on disk.
+                        <input
+                          className={styles.input}
+                          type="text"
+                          placeholder={field.placeholder}
+                          value={
+                            listDraft?.key === listDraftKey(field.key)
+                              ? listDraft.text
+                              : joinList(editorTarget[field.key])
+                          }
+                          onChange={(e) => {
+                            setListDraft({ key: listDraftKey(field.key), text: e.target.value });
+                            saveField(field.key, splitList(e.target.value));
+                          }}
+                          onBlur={() => setListDraft(null)}
                         />
                       ) : (
                         <input

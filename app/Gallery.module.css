@@ -189,11 +189,53 @@
   color: var(--foreground-secondary);
 }
 
-.date {
+/* The date and its tags read as one quiet metadata line — "2026 · DeepPCB · UI".
+   
+   Deliberately **inline flow, not flex**. This was a flex row while the tags were pills, which
+   they needed: a pill is a box, and boxes need aligning. Text does not — inline layout puts
+   everything on a shared baseline for free, wraps at the spaces, and needs no `gap`. The flex
+   version also measured 3px taller than the text it contained, because a flex item that is
+   itself a flex container (`.tags`) contributes a synthesized baseline rather than its text's,
+   so the date and the tags did not quite sit on the same line.
+
+   The type and colour are set once here and inherited by the date and every tag, which is what
+   makes the line read as one run of metadata rather than two weights competing.
+   `--tag-separator` is likewise declared once and used by both middot rules, so they cannot
+   drift apart. */
+.byline {
+  margin-top: 4px;
+  --tag-separator: color-mix(in srgb, var(--foreground-tertiary) 40%, transparent);
   font-size: var(--secondary-type-size);
   line-height: var(--line-height);
   color: var(--foreground-tertiary);
-  margin-top: 4px;
+}
+
+.tags {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Tags are free text and several are two words ("Icon Design", "Design System"), so each wraps
+   as a unit rather than mid-tag. */
+.tag {
+  display: inline;
+  white-space: nowrap;
+}
+
+/* The middots: one before the tag list, one before each tag after the first.
+   
+   `:not(:first-child)` is the whole edge case, and it is why neither the component nor a second
+   rule has to know about it: the leading dot appears only when something precedes the tags, so
+   an entry with tags and no date opens on its first tag instead of a stray separator. The
+   margins sit on the dot itself rather than on the text either side, so the spacing is stated in
+   one place per dot. */
+.tags:not(:first-child)::before,
+.tag:not(:first-child)::before {
+  content: "·";
+  margin: 0 5px;
+  color: var(--tag-separator);
 }
 
 .empty {

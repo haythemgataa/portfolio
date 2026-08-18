@@ -398,6 +398,33 @@ it flips to white at 8% — is what carries the edge there.
 - `app/lib/galleryLoader.ts` — resolves entries to `GalleryItem`s, typed in
   `app/lib/galleryTypes.ts`. Entries reference the shared pool; dimensions come from
   `media.json` via `app/lib/mediaRegistry.ts`, which both loaders share.
+- **`tags` are display-only, joined to the date by middots** — `2026 · DeepPCB · UI`. Blanks,
+  repeats and stray whitespace are stripped twice: in the Studio on write, so the file cannot
+  record them, and in `galleryLoader` on read, which is what covers a hand edit that never went
+  through the Studio. That is also what makes `GalleryItem.tags` a plain `string[]` the component
+  maps over without re-checking, and what makes the tag safe as a React key. Emptying the field
+  removes the key rather than writing `"tags": []`, normalised to `undefined` at the call site
+  exactly as `removeMediaRef` does for `media` — `mergePatch` deletes on `''`/`null`/`undefined`,
+  and teaching it about empty arrays would change the contract for every caller to fix one field.
+- **That line is inline flow, not flex, and it was flex once.** Flex was right while the tags were
+  filled pills, because a pill is a box and boxes need aligning; text does not. Inline layout puts
+  the date and every tag on one baseline for free, wraps at the spaces, and needs no `gap`. The
+  flex version measured 3px taller than its own text — a flex item that is itself a flex container
+  contributes a *synthesized* baseline rather than its text's, so `align-items: baseline` did not
+  actually put the date and the tags on the same line. Two consequences: `.date` no longer needs a
+  class of its own (type and colour are inherited from `.byline`, so the line cannot drift into two
+  weights), but the `<span>` around the date **must stay**, because the leading middot is
+  `.tags:not(:first-child)::before` and the date's presence is what decides whether it is drawn —
+  which is also why an entry with tags and no date needs no branch in the component.
+- **Dropping the pills also dropped a whole class of bug**, worth remembering before reaching for
+  one again. A short pill needs `line-height: 1`, which puts this font's 15px ascent + descent
+  inside a 12px content box, leaving the cap height off-centre in a way no round padding fixes.
+  Worse, it is easy to measure *backwards*: `Range.getBoundingClientRect()` returns the **font**
+  box, which already has the negative half-leading folded in, not the line box — treat it as the
+  line box and add half-leading again and the computed baseline lands 1.5px high, which argues for
+  nudging the text down when it in fact needs nudging up. That mistake shipped a padding that
+  dropped the descender of a "p" through the pill's bottom edge. Measure a baseline with a
+  zero-size `display: inline-block; vertical-align: baseline` probe, whose top *is* the baseline.
 - Each entry carries a **required, authored `id`**. It used to be derived from the array index
   (`${index}-${entry.file}`), which meant every id changed whenever the gallery was reordered.
 - `width`/`height` are **required**, not measured. This retires a live footgun: `sharp` cannot

@@ -67,11 +67,34 @@ const Gallery: React.FC<GalleryProps> = ({ items }) => {
                 openable.some(o => o.id === item.id) ? () => setOpenId(item.id) : undefined
               }
             />
-            {(item.title || item.caption || item.date) && (
+            {(item.title || item.caption || item.date || item.tags.length > 0) && (
               <div className={styles.meta}>
                 {item.title && <div className={styles.title}>{item.title}</div>}
                 {item.caption && <div className={styles.caption}>{item.caption}</div>}
-                {item.date && <div className={styles.date}>{item.date}</div>}
+                {(item.date || item.tags.length > 0) && (
+                  <div className={styles.byline}>
+                    {/* The span carries no class of its own — type and colour are inherited
+                        from `.byline`, so the whole line reads as one run. It still has to
+                        exist: the middot before the tags is `.tags:not(:first-child)`, so the
+                        date's presence is exactly what decides whether that separator is
+                        drawn. */}
+                    {item.date && <span>{item.date}</span>}
+                    {item.tags.length > 0 && (
+                      // `role="list"` for the same reason as `.list` above — `list-style: none`
+                      // takes the semantics away in WebKit. The middots are drawn by CSS off
+                      // `:not(:first-child)`, so an entry with tags and no date needs no branch
+                      // here.
+                      <ul role="list" className={styles.tags}>
+                        {item.tags.map(tag => (
+                          // Safe as a key: the loader has already deduped them.
+                          <li key={tag} className={styles.tag}>
+                            {tag}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </li>

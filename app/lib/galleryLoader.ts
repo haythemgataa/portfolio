@@ -8,6 +8,32 @@ import { loadMediaRegistry, resolveAsset } from './mediaRegistry';
 const MANIFEST_PATH = join('content', 'gallery.json');
 const POOL_DIR = join('public', 'media');
 
+/**
+ * Tags are hand-authorable free text, so the array can arrive with blank strings, repeats, or
+ * — from a bad edit — not be an array at all. Normalising here is what lets `GalleryItem.tags`
+ * be a plain `string[]` that the component maps over without re-checking anything, and what
+ * makes the rendered tag safe to use as a React key.
+ *
+ * A `Set` both dedupes and preserves authored order. A malformed value warns and renders
+ * nothing rather than failing the build — the same call the loader already makes for a missing
+ * file, since one bad label is not worth blocking a deploy over.
+ */
+function resolveTags(raw: unknown, id: string): string[] {
+  if (raw === undefined) return [];
+  if (!Array.isArray(raw)) {
+    console.warn(`gallery.json: "${id}" has a non-array "tags", ignoring it`);
+    return [];
+  }
+
+  const tags = new Set<string>();
+  for (const tag of raw) {
+    if (typeof tag !== 'string') continue;
+    const trimmed = tag.trim();
+    if (trimmed) tags.add(trimmed);
+  }
+  return [...tags];
+}
+
 function resolveEntry(
   entry: GalleryEntry,
   index: number,
@@ -34,6 +60,7 @@ function resolveEntry(
     title: entry.title ?? null,
     caption: entry.caption ?? null,
     date: entry.date ?? null,
+    tags: resolveTags(entry.tags, entry.id),
     posterUrl: media.posterUrl,
     floating: media.floating,
   };

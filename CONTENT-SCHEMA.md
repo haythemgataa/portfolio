@@ -373,7 +373,8 @@ writing a second copy, which is what stops the duplication recurring.
       "file": "kairouan-mosque-portrait.webp",
       "title": "Poster series",
       "caption": "Print work for We Are Kairouan.",
-      "date": "2025"
+      "date": "2025",
+      "tags": ["Print", "Branding"]
     }
   ]
 }
@@ -388,6 +389,22 @@ presentation — which asset, in what order, with what caption:
   file is skipped with a build warning rather than failing the build.
 - `title`, `caption` and `date` are optional. `caption` doubles as the image alt
   text; `date` is a free-form label (`"2025"`, `"March 2026"`).
+- `tags` is an optional array of free-text labels, joined to the date by middots
+  as one quiet metadata line — `2026 · DeepPCB · UI`. Display only — nothing
+  filters or links on them, and they name no pool file, so unlike a heading's
+  `[icon.webp]` token they need no reference counting.
+
+  Blanks and repeats are dropped and whitespace is trimmed, in **two** places
+  that are not redundant: the Studio normalises on write so the file cannot
+  record them, and `galleryLoader` normalises on read so a hand edit that never
+  went through the Studio is covered too. A non-array `tags` warns and renders
+  nothing rather than failing the build, the same call the loader makes for a
+  missing file.
+
+  Emptying the field **removes the key** rather than writing `"tags": []` — the
+  same rule every optional field follows, done the same way `removeMediaRef`
+  does it for `media` (normalise to `undefined` at the call site rather than
+  teaching `mergePatch` about empty arrays).
 - Dimensions live in `media.json`, never here. They are required there, not
   measured — `sharp` cannot measure video, so an undeclared video used to fall
   back silently to 16:9 and shift the layout.

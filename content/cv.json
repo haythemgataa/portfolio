@@ -4,7 +4,7 @@
     "displayName": "Haythem Gataa",
     "byline": "Product Designer {& Engineer}",
     "location": "Tunisia {(GMT+1)}",
-    "about": "I'm a Product Designer with 6+ years of experience blending creativity with an engineering background to deliver mindful, full-cycle user experiences, from business to design to dev. I'm a perfectionist at heart, obsessed with micro-interactions, animations, and the art of design. My work has impressed teams at Tesla and NASA.",
+    "about": "I’m a Product Designer with 6+ years of experience blending creativity with an engineering background to deliver mindful, full-cycle user experiences, from business to design to dev. I’m a perfectionist at heart, obsessed with micro-interactions, animations, and the art of design. My work has impressed teams at Tesla and NASA.",
     "photo": "profile.webp",
     "galleryPreview": [
       "invoices-page.webp",
@@ -338,7 +338,7 @@
         "url": "https://dribbble.com/haythemgataa"
       },
       {
-        "id": "contact-row",
+        "id": "contact-github",
         "platform": "GitHub",
         "handle": "haythemgataa",
         "url": "https://github.com/haythemgataa"

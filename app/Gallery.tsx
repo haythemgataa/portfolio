@@ -5,6 +5,7 @@ import { AnimatePresence } from "framer-motion";
 import type { GalleryItem } from "./lib/galleryTypes";
 import { usePrefersReducedMotion } from "./usePrefersReducedMotion";
 import { cloudflareImageUrl } from "./lib/cloudflareImage";
+import { DateIcon, TagIcon } from "./TagIcon";
 import Lightbox from "./Lightbox";
 import styles from "./Gallery.module.css";
 
@@ -31,18 +32,85 @@ const Gallery: React.FC<GalleryProps> = ({ items }) => {
   // media query: it changes shape one commit after mount, and a stored index would then be
   // pointing at whatever moved into that slot.
   const [openId, setOpenId] = useState<string | null>(null);
+  // One tag at a time, `null` for the whole list. Component state rather than a `?tag=` search
+  // param: this is a static export, so the prerendered HTML cannot know the tag, and seeding
+  // state from `location.search` on mount is exactly the hydration mismatch the theme script
+  // already has to be forgiven for. A shareable filtered URL is not worth a second one.
+  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+  const filterRef = useRef<HTMLDivElement>(null);
+  // Set by the click, read by the effect below. Without it that effect scrolls on mount, since
+  // it cannot otherwise tell the first render from a filter change.
+  const scrollOnFilter = useRef(false);
   const reduceMotion = usePrefersReducedMotion();
+
+  const visible = useMemo(
+    () => (activeTag === null ? items : items.filter(item => item.tags.includes(activeTag))),
+    [items, activeTag]
+  );
+
+  // Filtering usually shortens the list under a reader who is somewhere down it, which leaves
+  // them in blank space below the last surviving row. Jumping to the top of the list is the
+  // only position that means anything after the set changes.
+  //
+  // Instant, not smooth, and not gated on reduced motion: a long eased scroll over a list whose
+  // contents changed mid-flight is worse than the jump.
+  //
+  // Measured off `.list` and never off `.filter`, and driven by `scrollTo` rather than
+  // `scrollIntoView`, because the filter bar is sticky. Once it is pinned its rect reports the
+  // pinned position rather than its place in the document — so `scrollIntoView` on it does
+  // nothing at all: the element is already exactly where it is asking to be. That looked like
+  // the scroll silently failing.
+  //
+  // The clearance is everything between the top of the viewport and where the first row should
+  // land: the tab bar (`.list`'s `scroll-margin-top`, which is `--sticky-top`), the gap below
+  // whichever bar is above it (`.list`'s own margin, which `.filter + .list` already varies),
+  // and the filter bar itself when there is one. All three are read rather than restated, so
+  // none of them can drift from the stylesheet.
+  useEffect(() => {
+    if (!scrollOnFilter.current) { return }
+    scrollOnFilter.current = false;
+
+    const list = listRef.current;
+    if (!list) { return }
+
+    const style = getComputedStyle(list);
+    const clearance =
+      parseFloat(style.scrollMarginTop) +
+      parseFloat(style.marginTop) +
+      (filterRef.current?.getBoundingClientRect().height ?? 0);
+
+    window.scrollTo({
+      top: Math.max(0, window.scrollY + list.getBoundingClientRect().top - clearance),
+    });
+  }, [activeTag]);
+
+  // Clicking the active tag again clears it, so the same control both applies and lifts the
+  // filter — which is what makes every row's copy of it a way back out.
+  const toggleTag = (tag: string) => {
+    scrollOnFilter.current = true;
+    setActiveTag(current => (current === tag ? null : tag));
+  };
+
+  const clearTag = () => {
+    scrollOnFilter.current = true;
+    setActiveTag(null);
+  };
 
   // Images and videos both open. The exception is a video under reduced motion, which is
   // showing native controls — wrapping those in a button means every press on the scrubber
   // also opens the lightbox, so there the video stays where it is and the controls win.
   //
   // The lightbox arrow-keys through whatever array it is given, so that array has to be
-  // exactly the openable subset; indices into `items` would step onto something with no
+  // exactly the openable subset; indices into `visible` would step onto something with no
   // opened form.
+  //
+  // Built from `visible` rather than `items` for the same reason: while a filter is on, an
+  // arrow key that stepped into a filtered-out row would be moving to something the reader
+  // cannot see on the page behind the backdrop.
   const openable = useMemo(
-    () => (reduceMotion ? items.filter(item => item.type === "image") : items),
-    [items, reduceMotion]
+    () => (reduceMotion ? visible.filter(item => item.type === "image") : visible),
+    [visible, reduceMotion]
   );
 
   const openIndex = openId === null ? -1 : openable.findIndex(o => o.id === openId);
@@ -55,10 +123,39 @@ const Gallery: React.FC<GalleryProps> = ({ items }) => {
 
   return (
     <>
+      {/* Always rendered, never conditional, because a live region has to be in the document
+          *before* the text it announces changes — mounting one along with the filter bar
+          announces nothing the first time. It carries the whole sentence rather than just the
+          count, since "14 of 30" on its own says nothing about what changed. */}
+      <p className={styles.srOnly} role="status" aria-live="polite">
+        {activeTag === null
+          ? `Showing all ${items.length} items.`
+          : `Showing ${visible.length} of ${items.length} items tagged ${activeTag}.`}
+      </p>
+
+      {/* The way back to the whole list. Every visible row also carries the active tag, and
+          pressing it again clears the filter, but that is not something a reader can be
+          expected to guess — this is the affordance that says so out loud. Visible only while
+          a filter is on: at rest there is nothing to clear and nothing to count. */}
+      {activeTag !== null && (
+        <div className={styles.filter} ref={filterRef}>
+          <span className={styles.filterTag}>
+            <TagIcon tag={activeTag} className={styles.metaIcon} />
+            {activeTag}
+          </span>
+          <span className={styles.filterCount}>
+            {visible.length} of {items.length}
+          </span>
+          <button type="button" className={styles.clear} onClick={clearTag}>
+            Clear
+          </button>
+        </div>
+      )}
+
       {/* `role="list"` restores what `list-style: none` takes away in WebKit — see the note on
           `.list`. Redundant everywhere else and harmless there. */}
-      <ul role="list" className={styles.list}>
-        {items.map((item, index) => (
+      <ul role="list" className={styles.list} ref={listRef}>
+        {visible.map((item, index) => (
           <li key={item.id} className={styles.row}>
             <GalleryMedia
               item={item}
@@ -73,12 +170,17 @@ const Gallery: React.FC<GalleryProps> = ({ items }) => {
                 {item.caption && <div className={styles.caption}>{item.caption}</div>}
                 {(item.date || item.tags.length > 0) && (
                   <div className={styles.byline}>
-                    {/* The span carries no class of its own — type and colour are inherited
-                        from `.byline`, so the whole line reads as one run. It still has to
-                        exist: the middot before the tags is `.tags:not(:first-child)`, so the
-                        date's presence is exactly what decides whether that separator is
-                        drawn. */}
-                    {item.date && <span>{item.date}</span>}
+                    {/* The span still has to exist: the middot before the tags is
+                        `.tags:not(:first-child)`, so the date's presence is exactly what decides
+                        whether that separator is drawn. `.date` sets layout only — the mark and
+                        the year are one nowrap unit — and deliberately no type or colour, which
+                        stay inherited from `.byline` so the line cannot drift into two weights. */}
+                    {item.date && (
+                      <span className={styles.date}>
+                        <DateIcon className={styles.metaIcon} />
+                        {item.date}
+                      </span>
+                    )}
                     {item.tags.length > 0 && (
                       // `role="list"` for the same reason as `.list` above — `list-style: none`
                       // takes the semantics away in WebKit. The middots are drawn by CSS off
@@ -88,7 +190,20 @@ const Gallery: React.FC<GalleryProps> = ({ items }) => {
                         {item.tags.map(tag => (
                           // Safe as a key: the loader has already deduped them.
                           <li key={tag} className={styles.tag}>
-                            {tag}
+                            {/* A toggle, so `aria-pressed` rather than a renaming label — the
+                                accessible name is the tag itself and there is nothing else for
+                                it to say. The same tag appears on every row that carries it and
+                                all of those copies read as pressed at once, which is correct:
+                                each one is the same filter. */}
+                            <button
+                              type="button"
+                              className={styles.tagButton}
+                              aria-pressed={tag === activeTag}
+                              onClick={() => toggleTag(tag)}
+                            >
+                              <TagIcon tag={tag} className={styles.metaIcon} />
+                              {tag}
+                            </button>
                           </li>
                         ))}
                       </ul>

@@ -191,10 +191,15 @@
   color: var(--foreground-primary);
 }
 
+/* A caption is a paragraph in every way that matters to wrapping — a sentence or two of prose
+   under the media — and is a `<div>` only because it renders as plain text rather than through
+   `RichText` (see the note in Gallery.tsx). So it takes by hand the `text-wrap: pretty` that
+   globals.css gives a real `<p>`; the title above it is a title, and is deliberately left out. */
 .caption {
   font-size: var(--type-size);
   line-height: var(--line-height);
   color: var(--foreground-secondary);
+  text-wrap: pretty;
 }
 
 /* The date and its tags read as one quiet metadata line — "2026 · DeepPCB · UI".

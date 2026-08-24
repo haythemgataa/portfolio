@@ -1364,6 +1364,18 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
 - Font: **Switzer**, loaded as a third-party stylesheet from `api.fontshare.com` via a `<link>` in
   `layout.tsx` (not `next/font`), with `--default-font` in `globals.css` pointing at it
 - No UI component library — all custom components
+- **Every paragraph of running prose is `text-wrap: pretty`**, declared once on `p` in
+  `globals.css` rather than per surface — `RichText` emits classless `<p>`s, so the element is the
+  only handle that covers About, the CV's descriptions and a case study's whole body at once (the
+  Studio's canvas reuses `RichText` and so gets it too). Two prose blocks are paragraphs without
+  being `<p>` and carry it by hand: a gallery `.caption`, which is a `<div>` only because it
+  renders as plain text, and `.description ul li`, because a *tight* markdown list arrives as bare
+  `<li>` text where a loose one arrives wrapped in a `<p>` — and which one an author gets follows
+  from a blank line they cannot see in the rendered page. Titles, the byline and the gallery's
+  metadata line are deliberately left out: they are labels, not paragraphs. Measured both ways:
+  it does real work (4–5 CV paragraphs end on a longer last line at 917px/480px) and it costs no
+  height — every paragraph, list item, section and header measures identically with the rule and
+  with it neutralised, at 917/600/480/375px on both routes, with no paragraph changing line count.
 
 #### The palette
 

@@ -2,7 +2,7 @@ import { createHash } from 'crypto';
 import { promises as fs, readFileSync } from 'fs';
 import { join } from 'path';
 import type { MediaAsset, MediaRegistry, ResolvedMedia } from './contentTypes';
-import { inferMediaType } from './contentTypes';
+import { resolveMedia } from './resolveContent';
 
 /**
  * content/media.json is the single description of every file in the
@@ -106,43 +106,18 @@ export function assetUrl(file: string): string {
 }
 
 /**
- * Turn a filename reference into something a component can render. Returns null
- * — with a build warning naming the referrer — rather than throwing, so one bad
- * reference cannot fail the whole export.
+ * Turn a filename reference into something a component can render, with the URL carrying the
+ * file's content hash.
+ *
+ * The logic itself lives in `resolveContent.ts`, which touches no filesystem — this binds it to
+ * `assetUrl`, the half that does. The Studio binds the same function to a plain `/media/` URL so
+ * its canvas resolves content the identical way without reading the pool. See the note at the
+ * top of that module.
  */
 export function resolveAsset(
   file: string,
   assets: Record<string, MediaAsset>,
   referrer: string
 ): ResolvedMedia | null {
-  const asset = assets[file];
-  if (!asset) {
-    console.warn(`${referrer}: "${file}" is not in content/media.json, skipping`);
-    return null;
-  }
-
-  const type = asset.type ?? inferMediaType(file);
-  if (!type) {
-    console.warn(`${referrer}: cannot determine media type for "${file}", skipping`);
-    return null;
-  }
-  if (!asset.width || !asset.height) {
-    // Without dimensions the aspect-ratio box collapses and the layout shifts.
-    console.warn(`media.json: "${file}" is missing width/height, skipping`);
-    return null;
-  }
-
-  return {
-    type,
-    url: assetUrl(file),
-    width: asset.width,
-    height: asset.height,
-    posterUrl: asset.poster ? assetUrl(asset.poster) : null,
-    // Omitted means matted — see MediaAsset.framed. Only an explicit false opts out, so
-    // every asset authored before the flag keeps the treatment it had.
-    framed: asset.framed !== false,
-    // The mirror of the above: omitted means *not* floating, so only an explicit true opts
-    // in. See MediaAsset.floating.
-    floating: asset.floating === true,
-  };
+  return resolveMedia(file, assets, assetUrl, referrer);
 }

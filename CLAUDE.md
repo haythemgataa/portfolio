@@ -398,24 +398,102 @@ it flips to white at 8% — is what carries the edge there.
 - `app/lib/galleryLoader.ts` — resolves entries to `GalleryItem`s, typed in
   `app/lib/galleryTypes.ts`. Entries reference the shared pool; dimensions come from
   `media.json` via `app/lib/mediaRegistry.ts`, which both loaders share.
-- **`tags` are display-only, joined to the date by middots** — `2026 · DeepPCB · UI`. Blanks,
-  repeats and stray whitespace are stripped twice: in the Studio on write, so the file cannot
-  record them, and in `galleryLoader` on read, which is what covers a hand edit that never went
-  through the Studio. That is also what makes `GalleryItem.tags` a plain `string[]` the component
-  maps over without re-checking, and what makes the tag safe as a React key. Emptying the field
-  removes the key rather than writing `"tags": []`, normalised to `undefined` at the call site
-  exactly as `removeMediaRef` does for `media` — `mergePatch` deletes on `''`/`null`/`undefined`,
-  and teaching it about empty arrays would change the contract for every caller to fix one field.
+- **`tags` are filters, joined to the date by middots** — `2026 · DeepPCB · UI`, each with a mark
+  of its own. Blanks, repeats and stray whitespace are stripped twice: in the Studio on write, so
+  the file cannot record them, and in `galleryLoader` on read, which is what covers a hand edit
+  that never went through the Studio. That is also what makes `GalleryItem.tags` a plain `string[]`
+  the component maps over without re-checking, and what makes the tag safe as a React key.
+  Emptying the field removes the key rather than writing `"tags": []`, normalised to `undefined`
+  at the call site exactly as `removeMediaRef` does for `media` — `mergePatch` deletes on
+  `''`/`null`/`undefined`, and teaching it about empty arrays would change the contract for every
+  caller to fix one field.
+
+  That normalising used to be tidiness and is now correctness: **a tag is the filter key**, so two
+  entries agreeing on a tag is precisely what puts them in one filtered set, and a trailing space
+  would split a tag in two without changing how either copy looks.
+- **Clicking a tag filters the list to it; clicking it again clears.** One tag at a time, held in
+  `Gallery`'s own state rather than in a `?tag=` search param — this is a static export, so the
+  prerendered HTML cannot know the tag, and seeding state from `location.search` at mount is
+  exactly the hydration mismatch the theme script already has to be forgiven for. The cost is that
+  a filtered view is not linkable, which is the trade taken deliberately. Five things follow:
+  - **`openable` is built from the filtered list, not from `items`.** The lightbox arrow-keys
+    through whatever array it is handed, so stepping would otherwise walk into rows that are not
+    on the page behind the backdrop.
+  - **The filter bar is sticky at `--sticky-top` with `z-index: 15`** — the CV's section-title
+    slot exactly, between the tab bar's fade (12) and the bar itself (20). It has to be: it lands
+    inside the fade's 72px band, which washes out anything at that height, and painting over the
+    fade is how the section titles already solve that. Pushing it below the band instead would open
+    a 128px hole above the list. It carries no background for the same reason those titles do not.
+  - **It is a section header, so it takes `.sectionHeader`'s whole box** — the same
+    `6px 0 calc((var(--type-size) * var(--line-height)) / 2)` padding and 16px column gap, restated
+    from those tokens rather than from their resolved pixels. Sharing the sticky offset is what
+    makes this matter: with no padding of its own the bar's label baseline sat **12.4px** above a
+    section title's, which read as the bar being tucked up against the tabs while the CV's headers
+    were not. And `.filterTag` takes the `h2` treatment from `.profileSection h2` — `--type-size`,
+    `--weight-emphasis`, `-0.02em` — because the active tag *is* the title of the list beneath it;
+    at the byline's 12px it read as a caption and left the bar half a header tall. Verified with
+    one measurement method across both routes: baseline 22.5px from the box top and height 39.6px,
+    identical on each.
+  - **`.filter + .list` is 12px, not 24px**, because the bar now contributes
+    `.sectionHeader`'s 11.2px bottom padding — the two together land within a pixel of the 24px
+    that was there before the padding arrived.
+  - **The mark in the bar needs no `vertical-align`, and adding one does nothing.** This is the
+    trap: `.metaIcon`'s -3px is tuned to 12px text, the bar's label is 14px, so the arithmetic
+    invites a ~-2px override. `.filterTag` is a flex container, so the mark is a flex item and
+    `align-items: center` places it — confirmed by setting an absurd value and measuring no
+    movement at all. Centring the 14px box in the 22.4px line box happens to land the ink 0.45px
+    off the cap's optical centre, so there is nothing to tune. Note the matching hazard when
+    *measuring* in there: a zero-size baseline probe inside `align-items: center` reports the
+    line's centre, not its baseline, which is off by half the line box and looks like a real
+    misalignment. Measure from the text's font box instead.
+  - **Clear is the CV's Show/Hide Details control, restyled to match it exactly** (verified
+    property by property against the live element, not by eye). Consistency is the smaller half
+    of the reason: the note beside `.detailsToggle` explains that it stays quiet *because* it
+    sits in a sticky header, where a filled pill parked under the tab bar for the length of a
+    section competes with the label beside it. This bar is sticky, in the same slot, with a label
+    beside it. It was a `--background-muted` pill first, which is exactly what that argument
+    rules out. The declarations are duplicated rather than shared, the same trade `.srOnly`
+    makes — so if the CV's toggle changes, this has to follow by hand.
+  - **The jump back to the top is `scrollTo`, never `scrollIntoView`** — and that is a consequence
+    of the bar being sticky. A pinned sticky element's rect reports the *pinned* position, so
+    `scrollIntoView` on it sees something already exactly where it asked to be and does nothing at
+    all, which reads as the scroll silently failing. The clearance is measured off `.list` instead:
+    its `scroll-margin-top` (the tab bar), its `margin-top` (which `.filter + .list` already
+    varies), and the bar's own height. All three are read from the DOM rather than restated in JS.
+  - **The scroll happens at all** because filtering shortens the list under a reader who is
+    somewhere down it, leaving them in blank space past the last surviving row.
+  - **Pressed and hover must not resolve to the same colour.** Hover takes one step off the line's
+    resting tertiary; pressed goes the whole way to `--foreground-primary`, so an active filter is
+    legible without the pointer anywhere near it. They were briefly both `--foreground-secondary`,
+    which made an active tag indistinguishable from one under the cursor.
+- **The tag marks are inlined in `app/TagIcon.tsx`, not files.** The `Arrow12.tsx` rule: each is a
+  single monochrome path, and `currentColor` only sees the page's colour when the SVG is part of
+  the document, so a file would have meant a `-dark` sibling or a filter plus a request apiece.
+  They are chrome, so `public/media/` would be the wrong home regardless — that pool is
+  reference-counted, and anything in it with no content record reads as an orphan. `TAG_PATHS`'s
+  keys **are** the vocabulary: an unlisted tag still filters, it just renders unadorned, which is
+  what a newly hand-authored label should look like until a mark is drawn for it. The date's mark
+  is deliberately *not* in that record — it is not a tag and filters nothing. `.metaIcon`'s
+  `vertical-align: -3px` is half the 14px box less half the measured 8.3px cap height; verified at
+  0.15px off the text's optical centre, so changing the size means revisiting it.
 - **That line is inline flow, not flex, and it was flex once.** Flex was right while the tags were
   filled pills, because a pill is a box and boxes need aligning; text does not. Inline layout puts
   the date and every tag on one baseline for free, wraps at the spaces, and needs no `gap`. The
   flex version measured 3px taller than its own text — a flex item that is itself a flex container
   contributes a *synthesized* baseline rather than its text's, so `align-items: baseline` did not
-  actually put the date and the tags on the same line. Two consequences: `.date` no longer needs a
-  class of its own (type and colour are inherited from `.byline`, so the line cannot drift into two
-  weights), but the `<span>` around the date **must stay**, because the leading middot is
-  `.tags:not(:first-child)::before` and the date's presence is what decides whether it is drawn —
-  which is also why an entry with tags and no date needs no branch in the component.
+  actually put the date and the tags on the same line. Two consequences: the `<span>` around the
+  date **must stay**, because the leading middot is `.tags:not(:first-child)::before` and the
+  date's presence is what decides whether it is drawn — which is also why an entry with tags and
+  no date needs no branch in the component; and `.date` carries **layout only**. It has a class
+  again now that a mark travels with it (`white-space: nowrap`, so the line never wraps between a
+  mark and what it labels), but still no type or colour — those stay inherited from `.byline`, or
+  the line drifts into two weights.
+
+  The marks cost this line nothing, which was worth checking rather than assuming: a 14px box in
+  12px text at `line-height: 1.6` sits inside the 19.2px line box, measured identical with the
+  marks, without them, and with the tag buttons laid out `inline-block` instead of `inline`. So
+  `.tagButton { display: inline }` is the smaller change rather than the fix for a bug — a UA
+  button is `inline-block`, and `inline` is simply what leaves the byline's flow untouched.
 - **Dropping the pills also dropped a whole class of bug**, worth remembering before reaching for
   one again. A short pill needs `line-height: 1`, which puts this font's 15px ascent + descent
   inside a 12px content box, leaving the cap height off-centre in a way no round padding fixes.

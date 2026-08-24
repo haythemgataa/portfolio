@@ -25,8 +25,14 @@ export type GalleryEntry = {
    * rather than written as `[]`, the same rule every other optional field follows.
    *
    * The loader normalises this — blanks dropped, repeats collapsed — so nothing downstream
-   * has to. They are display only: no filtering, no routing, and no pool reference, so
-   * unlike a heading's `[icon.webp]` token they need no reference counting.
+   * has to. That normalising now carries more weight than it used to: a tag is a *filter key*
+   * as well as a label, so two entries agreeing on a tag is what puts them in the same filtered
+   * set, and a stray space would silently split one tag into two.
+   *
+   * Still no routing and no pool reference, so unlike a heading's `[icon.webp]` token they need
+   * no reference counting. The mark drawn beside one is keyed off the same string — see
+   * `TAG_PATHS` in `app/TagIcon.tsx`, which is the closed vocabulary a tag has to match to get
+   * one. An unlisted tag filters exactly the same; it just renders without a mark.
    */
   tags?: string[];
 };
@@ -46,7 +52,10 @@ export type GalleryItem = {
   title: string | null;
   caption: string | null;
   date: string | null;
-  /** Normalised and always present — `[]` when the entry has none, so callers can map it. */
+  /**
+   * Normalised and always present — `[]` when the entry has none, so callers can map it.
+   * Also what `Gallery` filters on, matched exactly.
+   */
   tags: string[];
   posterUrl: string | null;
   /** From media.json, for the opened view. See `MediaAsset.floating`. */

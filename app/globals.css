@@ -228,6 +228,36 @@ body {
   }
 }
 
+/* Every paragraph of running prose, declared in one place on the element itself rather than per
+   surface. `RichText` renders most of them — About, the CV's item descriptions, a case study's
+   whole body — and it emits plain `<p>`s with no class to hang this on, so a per-surface rule
+   would mean naming each prose container and remembering the next one. The Studio's canvas
+   reuses `RichText`, so it inherits the same treatment and its fidelity claim holds for free.
+
+   `pretty` is about the *last* line: rather than letting a paragraph end in one short word it
+   pulls a word back off the line above. That is the failure this text is most prone to — a CV
+   description is set at 14px in a ~420px box (the 540px column less the year gutter), narrow
+   enough that a stray final word is common and reads as a mistake.
+
+   Measured rather than assumed, because both halves of that are worth knowing. It does real
+   work: at 917px and at 480px, 4 and 5 of the CV's paragraphs respectively end on a longer last
+   line than they did — the gallery's captions happen not to, which is what a treatment rather
+   than a fix looks like. And it is constrained not to add a line: across both routes at 917,
+   600, 480 and 375px, every paragraph, list item, section and header measured identical in
+   height with the rule and with it neutralised, and no paragraph changed line count. So nothing
+   downstream of a paragraph's height moves — the sticky bar's resting position included.
+
+   An unsupported value is simply dropped, so a browser without it keeps `auto` and there is no
+   fallback to write — the same shape as the `overflow-x: clip` and `light-dark()` fallbacks,
+   minus the first declaration, because the fallback *is* the initial value.
+
+   Note this is the shorthand, which also sets `text-wrap-mode: wrap`. Nothing is at risk: every
+   rule on the site that wants `nowrap` sets it through a class, and a class outranks an element
+   selector. */
+p {
+  text-wrap: pretty;
+}
+
 a {
   color: inherit;
   text-decoration: none;

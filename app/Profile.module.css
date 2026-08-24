@@ -324,8 +324,14 @@
   padding-left: 0px;
 }
 
+/* `text-wrap` here as well as on `p` in globals.css, and the pair is not redundant. A markdown
+   list whose items are separated by blank lines is *loose*, and each item's text arrives wrapped
+   in a `<p>`; a tight list arrives as bare `<li>` text. Which of the two an author gets follows
+   from a blank line they cannot see in the rendered page, so both have to carry the treatment or
+   the bullets in one section wrap differently from the bullets in the next. */
 .description ul li {
   padding: 4px 0px;
+  text-wrap: pretty;
 }
 
 @media (max-width: 480px) {

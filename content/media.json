@@ -88,6 +88,10 @@
       "height": 720,
       "poster": "deeppcb-loading-animation-poster.webp"
     },
+    "deeppcb-stickers.webp": {
+      "width": 1360,
+      "height": 1200
+    },
     "design-ruler-alignment-guides-poster.webp": {
       "width": 1600,
       "height": 1004
@@ -97,6 +101,10 @@
       "height": 2160,
       "framed": false,
       "poster": "design-ruler-alignment-guides-poster.webp"
+    },
+    "design-ruler-icons.webp": {
+      "width": 2500,
+      "height": 1500
     },
     "design-ruler-measure-poster.webp": {
       "width": 1600,
@@ -239,6 +247,10 @@
       "height": 1016,
       "floating": true
     },
+    "lexit-logo.webp": {
+      "width": 1920,
+      "height": 1080
+    },
     "main-screen.webp": {
       "width": 2560,
       "height": 1440
@@ -257,6 +269,10 @@
       "width": 2000,
       "height": 1500,
       "framed": false
+    },
+    "pcb-icons.webp": {
+      "width": 2000,
+      "height": 1500
     },
     "pcb-layout-editing-poster.webp": {
       "width": 1600,

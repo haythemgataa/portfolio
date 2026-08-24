@@ -183,11 +183,24 @@ type AttachmentsProps = {
    * from its own index, because every item renders its own.
    */
   priority?: boolean,
+  /**
+   * Overrides what pressing a thumbnail does. Absent — every case on the site — a press opens
+   * the lightbox, which is the row's whole purpose.
+   *
+   * It exists for the Studio, whose canvas renders this exact row so that what an author sees
+   * is what the page shows. There a press means "edit this asset's facts", not "look at it
+   * bigger", and the alternative to one optional prop was a second thumbnail renderer carrying
+   * a copy of this file's geometry — the frame arithmetic, the mat, the fades, the drag. A copy
+   * of that is a copy that drifts, and it would drift in the direction that matters most: the
+   * editor would stop showing what the site renders.
+   */
+  onSelect?: (index: number) => void,
 };
 const Attachments: React.FC<AttachmentsProps> = ({
   attachments,
   label,
   priority = false,
+  onSelect,
 }) => {
   const [lightboxState, setLightboxState] = useState({
     open: false,
@@ -290,6 +303,8 @@ const Attachments: React.FC<AttachmentsProps> = ({
   useResizeObserver({ ref: innerRef as React.RefObject<HTMLDivElement>, onResize });
 
   let lightbox;
+  // Never mounted while `onSelect` is driving the presses — nothing can open it, so the state
+  // it reads can only be the stale `false` it started at.
   if (lightboxState.open === true) {
     lightbox = <Lightbox
         attachments={attachments}
@@ -321,10 +336,12 @@ const Attachments: React.FC<AttachmentsProps> = ({
             {attachments.map((media, index) => {
               return (
                 <Attachment
-                  onClick={() => setLightboxState({
-                    open: true,
-                    startingIndex: index,
-                  })}
+                  onClick={() => onSelect
+                    ? onSelect(index)
+                    : setLightboxState({
+                        open: true,
+                        startingIndex: index,
+                      })}
                   media={media}
                   key={media.url}
                   height={THUMBNAIL_HEIGHT}

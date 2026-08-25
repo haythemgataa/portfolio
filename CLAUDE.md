@@ -10,8 +10,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run check:cdn` — Assert the Cloudflare image gate emits `/cdn-cgi/image/` URLs for
   production builds and none outside them. Runs two builds; not part of `npm run build`.
 
-`scripts/` holds only `clean-export.mjs`, which `npm run build` runs. The one-shot migrations that
+`scripts/` holds `clean-export.mjs` and `fetch-font.mjs`, both of which `npm run build` runs
+(the second via `prebuild`, and also on `postinstall` and `predev`). The one-shot migrations that
 produced the current content model are gone — see git history if you need them.
+
+- `npm run fetch:font` — download `app/fonts/Switzer-Variable.woff2` if it is missing or does not
+  match the pinned hash. Normally there is no reason to run it by hand; it is wired to the three
+  lifecycle hooks above so a fresh checkout, an install and a build all get the file.
 
 No test framework is configured.
 
@@ -1361,8 +1366,9 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
 
 - **CSS Modules** for component-scoped styles (`.module.css` files)
 - **CSS custom properties** in `globals.css` for theming (light/dark via `prefers-color-scheme`)
-- Font: **Switzer**, loaded as a third-party stylesheet from `api.fontshare.com` via a `<link>` in
-  `layout.tsx` (not `next/font`), with `--default-font` in `globals.css` pointing at it
+- Font: **Switzer**, self-hosted through `next/font/local` in `layout.tsx` from
+  `app/fonts/Switzer-Variable.woff2` (one 42 KB variable file, 100-900), with `--default-font` in
+  `globals.css` pointing at the `--font-switzer` variable it emits
 - No UI component library — all custom components
 - **Every paragraph of running prose is `text-wrap: pretty`**, declared once on `p` in
   `globals.css` rather than per surface — `RichText` emits classless `<p>`s, so the element is the
@@ -1527,12 +1533,58 @@ things about it:
 Reading the pool to hash it costs ~0.15s for 34 MB across 84 files, memoised per file per build
 process — which is the only reason deriving it at build time is affordable at all.
 
-The Fontshare stylesheet in `layout.tsx` is render-blocking and on a third origin, so the first
-paint waits on DNS, TLS, the CSS, and only then the font file it names — serial, because the
-font's URL is not known until the CSS arrives. Two `preconnect`s overlap the handshakes with the
-rest of the document, and both hosts are needed: the CSS comes from `api.fontshare.com` and the
-woff2 from `cdn.fontshare.com`. The second carries `crossOrigin` because the font fetch is
-anonymous — without it the browser opens a second connection and the warmed one is wasted.
+**The font is self-hosted through `next/font/local`, and it used to come from Fontshare.** That
+arrangement put a strictly serial chain in front of the first paint: DNS and TLS to
+`api.fontshare.com`, a render-blocking stylesheet, and only then the woff2 — from a *second*
+origin, `cdn.fontshare.com`, whose URL is not known until that CSS has arrived. Two `preconnect`s
+overlapped the handshakes and that was the ceiling; the chain itself is what self-hosting removes.
+The file now ships under `/_next/static/media/` with a content hash in its name, which
+`public/_headers` already caches `immutable` for a year, and Next emits a `<link rel="preload">`
+for it. Measured on the export: zero third-party hosts requested.
+
+**`adjustFontFallback` is off, and that is the opposite of the obvious setting.** Because
+`line-height` is an explicit 1.6, line *boxes* never move with the font — so the only shift this
+page can suffer is a change in advance width rewrapping a paragraph and pushing everything below
+it down one 22.4px line. Left on, Next synthesises an Arial-backed fallback at
+`size-adjust: 101.38%`, derived from the OS/2 `xAvgCharWidth` ratio: an average over a fixed
+character set rather than over real text. Against this page's own prose the ideal is 99.98% at the
+font's default weight and **99.38% at the 350 the body copy is actually set in**, so the applied
+value overshoots ~2%. Swapping through it moved 551 elements and grew the document 22px —
+*worse* than no adjustment at all. Plain Arial moves **one** element by 1.2px and does not change
+the document's height; test faces at 99.38% and 99.7% measured identically to it, so no constant is
+carried. Nothing is given up where Arial is absent, since the synthesised face is itself
+`src: local(Arial)` and fails there the same way.
+
+The lesson generalises past this font: **a derived metric-match is a guess about the text, and this
+site's off-grid weights are exactly where that guess misses.** Re-measure it rather than trusting
+it if `--weight-base` changes.
+
+**The woff2 is fetched at build time and is not in git**, which is a licensing constraint rather
+than a size one. The ITF Free Font License permits — and recommends — self-hosting and serving the
+file from your own origin, so the deployed site is unaffected by any of this. What §02 forbids is
+making the Font Software available through a "repository" or "publicly accessible servers", and a
+public repo with the binary committed is exactly that. `scripts/fetch-font.mjs` therefore pulls it
+per checkout, and `.gitignore` covers `app/fonts/*.woff2`; `LICENSE.txt` and `README.md` beside it
+stay committed, since a licence document is not the Font Software.
+
+Four things about that script are deliberate:
+
+- **The woff2's URL is read out of the Fontshare stylesheet, never hardcoded.** That hashed CDN
+  path is Fontshare's to rotate, and a pinned one would break on the day it does — silently, if
+  the failure were tolerated.
+- **The bytes are pinned by SHA-256**, so an upstream re-cut fails loudly instead of shipping
+  different metrics. That matters more here than it looks: `adjustFontFallback` is off *because*
+  the fallback was measured against these exact bytes, so a changed file is a reason to re-measure
+  rather than to carry on.
+- **A matching local file short-circuits before any network call**, which is what keeps offline
+  development working after the first install.
+- **`postinstall` passes `--optional` and the build hooks do not.** A transient network blip
+  should not fail `npm install`, but it must fail a build — a site built without the font is not
+  a site worth deploying. Verified by running both against a deliberately wrong pin: strict exits
+  1, optional warns and exits 0.
+
+The trade is that a Fontshare outage can now fail a deploy. That is strictly the better place for
+the dependency than where it used to be, which was in front of every visitor's first paint.
 
 `app/lib/cloudflareImage.ts` builds Cloudflare Image Resizing URLs (`/cdn-cgi/image/...`) for
 both `Attachments.tsx` and `Gallery.tsx`. That endpoint only exists on Cloudflare's edge, so it

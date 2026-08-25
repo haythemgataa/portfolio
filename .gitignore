@@ -12,3 +12,8 @@ out
 
 # OS cruft
 .DS_Store
+
+# Fetched by scripts/fetch-font.mjs at install/build time. The ITF Free Font License permits
+# self-hosting but not distribution through a public repository, so the binary stays out of git —
+# app/fonts/LICENSE.txt and README.md are committed, the font itself is not.
+app/fonts/*.woff2

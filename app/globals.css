@@ -4,20 +4,27 @@
   --line-height: 1.6;
   /* The site uses exactly two weights, and they are declared here rather than as literals at
      each use so the pairing can be judged as a pair. Switzer is loaded as a variable font
-     (`switzer@1`, one 43 KB file spanning 100-900), so the choice costs nothing to change and
-     no value here needs adding to the font request. Base is every word of running text, plus
-     the tab labels; the emphasis is reserved for the name, the section titles and the beta
+     (one 43 KB file spanning 100-900), so the choice costs nothing to change and no value here
+     needs declaring anywhere. Base is every word of running text, plus the tab labels; the
+     emphasis is reserved for the name, the section titles and the beta
      badge — so the weight marks the page's landmarks rather than its navigation, and the tabs
      sit at the same weight as the prose they switch between. Keep the gap at two steps or
      more — at 400/500 the difference read as a rendering artefact rather than intent.
 
      Both values are off the 100s grid, which only works *because* the font is variable: the
-     axis is continuous, so 350 and 550 are real interpolated instances. Swapping the request
-     for static cuts (`switzer@400,500`) would silently snap them to the nearest shipped weight
-     and collapse the pairing — so that trade is not the byte-saving it looks like from here. */
+     axis is continuous, so 350 and 550 are real interpolated instances. Shipping a static cut
+     instead would silently snap them to the nearest weight in the file and collapse the pairing
+     — so that trade is not the byte-saving it looks like from here. The variable axis is what
+     `weight: "100 900"` in `layout.tsx` declares; the two have to agree. */
   --weight-base: 350;
   --weight-emphasis: 550;
-  --default-font: "Switzer", sans-serif;
+  /* `--font-switzer` is emitted by `next/font/local` in `layout.tsx` and carries two families,
+     not one: the real face followed by plain Arial, which measured as the closest match for
+     Switzer's advance widths and is what keeps the `display: swap` handover from rewrapping a
+     paragraph. Naming the face directly here would drop it, so this stays a `var()`. The generic
+     behind both is declared once, on `body` below, rather than at each of the three layers that
+     could carry it. */
+  --default-font: var(--font-switzer);
 
   /* ── Themes ───────────────────────────────────────────────────────────────
      Every themed value is one `light-dark()` declaration rather than a light

@@ -1,8 +1,14 @@
+<div align="center">
+  <picture>
+   <img width="2400" alt="opengraph-image" src="https://github.com/user-attachments/assets/4e6e2e2a-f7b7-416c-b8eb-0a8ec1f4e162" />
+  </picture>
+  
 # haythem.cv
+  **My personal CV and portfolio site - [See it live](https://haythem.cv)**
+  
+</div>
 
-My personal CV and portfolio site — [haythem.cv](https://haythem.cv).
-
-The layout and interaction design started as a rebuild of [Read.cv](https://read.cv). What
+The layout and interaction design started as a rebuild of Read.cv. What
 it is now differs in three substantial ways:
 
 - **Restructured data.** Content is three JSON files plus one flat, shared media pool

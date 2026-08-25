@@ -33,6 +33,20 @@ const STUDIO_ENABLED = process.env.NODE_ENV === "development";
 
 const nextConfig: NextConfig = {
   output: STUDIO_ENABLED ? undefined : 'export',
+  experimental: {
+    // Turns on `app/global-not-found.tsx`, which is what lets the 404 page step outside the root
+    // layout. It has to: `app/not-found.tsx` renders as the layout's `children`, and the header,
+    // tab bar, About and footer around it leave 286px of clear space on a 1280x800 window and
+    // 134px at 375px wide — measured — which a full-viewport 404 does not fit into.
+    //
+    // Experimental, and deliberately taken anyway: it is the only convention that bypasses the
+    // layout (Next's own production checklist recommends the file), and a break would surface as
+    // a failed build rather than as a bad page. Verified against `output: 'export'` on this repo
+    // — it emits `out/404.html` with none of the layout's chrome. Note that per the comment above,
+    // `output: 'export'` is applied to production builds only, so `npm run build` is where that
+    // check actually happens.
+    globalNotFound: true,
+  },
   pageExtensions: STUDIO_ENABLED
     ? ["studio.tsx", "studio.ts", "tsx", "ts", "jsx", "js"]
     : ["tsx", "ts", "jsx", "js"],

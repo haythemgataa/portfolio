@@ -365,8 +365,10 @@
    Every measurement is expressed against these two so the geometry stays adjustable from one
    place. `--handle-inset` is where the maths lives: an absolutely positioned child resolves
    against the *padding* box, which sits inside the box's 1px border, so reaching a given depth
-   past the visible edge means counting that border. At 8px square and 3px deep the handle's
-   outer edge lands 5px outside the border and 3px of it covers the corner. */
+   past the visible edge means counting that border. At 8px square and 4px deep the handle's
+   outer edge lands 4px outside the border and 4px of it covers the corner.
+   (This read "3px deep … 5px outside" until it was measured: the depth below has shipped at 4px
+   since it was written, so the prose described a value the file never had.) */
 .date {
   --handle-size: 8px;
   --handle-depth: 4px;
@@ -376,8 +378,14 @@
 
      It sits *on the baseline*, zero offset: the letters rest on it and a descender crosses it,
      which is how Figma marks a text layer's baseline rather than how typography draws an
-     underline. At 14px Switzer the baseline is 17.5px below the box's top and its inner bottom
-     edge is at 23.4px, which puts the rule's top there at 5px up.
+     underline. At 14px Switzer the baseline is 17.0px below the box's top and its inner bottom
+     edge is at 23.39px, which puts the rule's top there at 5.39px up — so the 5px below sits it
+     0.39px under the baseline, which is invisible and not worth changing.
+     (This read "17.5px" until it was measured with a zero-size inline-block probe. The half pixel
+     does not matter here, but the ratio it implies does: it back-solves to an ascent-minus-descent
+     of ~0.75 where Switzer's `hhea` says 0.73, and anyone extrapolating the wrong figure to
+     display size lands the rule several pixels low. `NotFound.module.css` derives its own offset
+     from 0.73 for exactly that reason.)
 
      Dropping it to clear the "g" was the wrong read: it left the rule detached from every
      letter that does not descend, and would have looked stranded outright in a month with no

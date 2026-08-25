@@ -1,0 +1,58 @@
+# Content licence
+
+The MIT licence in `LICENSE` covers the **code** in this repository. It does not
+cover the personal content the code exists to present.
+
+## Not covered by the MIT licence
+
+The following are © 2025-2026 Haythem Gataa, all rights reserved:
+
+- **Written content** — the CV prose, headings, descriptions, bylines, gallery
+  captions and any case studies. In practice: the authored strings in
+  `content/cv.json` and `content/gallery.json`, and every file in
+  `content/case-studies/` once any exist.
+- **Images and video** — everything in `public/media/` (`.webp`, `.webm`,
+  `.svg`), including the profile photograph, screenshots, screen recordings and
+  third-party logos.
+- **Site artwork** — `app/opengraph-image.png` and `app/favicon.ico`.
+
+Some of the logos and product screenshots in `public/media/` are the property of
+their respective owners and appear here as a record of work. They are not mine to
+sublicense, which is a second and independent reason none of the above is offered
+under the MIT terms.
+
+`content/media.json` is a special case: it holds only measured facts about the
+files (dimensions, poster pairings, treatment flags), so the *file* is MIT like
+the rest of the code, while the assets it describes are not.
+
+## What you may do
+
+- Read, fork, study and reuse the **code** under the MIT terms.
+- Quote short excerpts of the writing with attribution, as normal.
+
+## What you may not do
+
+- Republish, redistribute or reuse the writing, photographs or video, in whole or
+  in substantial part, including as training data.
+- Deploy this site, or a derivative of it, still carrying my content or identity.
+
+If you build on the code, replace `content/` and `public/media/` with your own
+material first. The site reads both from disk at build time, so a fresh
+`content/cv.json`, an empty `content/gallery.json` and an emptied pool is all it
+takes — no code changes required.
+
+## Third-party
+
+The Switzer typeface is © Indian Type Foundry, used under the ITF Free Font
+License. Its terms are in `app/fonts/LICENSE.txt`. The binary is deliberately not
+committed — that licence permits self-hosting but not redistribution through a
+public repository — so `scripts/fetch-font.mjs` downloads it per checkout.
+
+The layout and interaction design started as a rebuild of Read.cv. That lineage is
+acknowledged, not licensed; nothing here grants any rights in their design or
+brand.
+
+## Questions
+
+Ask. Permission for anything beyond the above is usually easy to get:
+gataa.haythem@gmail.com

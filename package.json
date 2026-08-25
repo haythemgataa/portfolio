@@ -4,7 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev -H 127.0.0.1",
+    "predev": "node scripts/fetch-font.mjs",
     "build": "next build && node scripts/clean-export.mjs",
+    "prebuild": "node scripts/fetch-font.mjs",
+    "postinstall": "node scripts/fetch-font.mjs --optional",
+    "fetch:font": "node scripts/fetch-font.mjs",
     "check:cdn": "node scripts/check-cdn-gate.mjs",
     "start": "next start",
     "lint": "eslint ."

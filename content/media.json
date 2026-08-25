@@ -63,7 +63,8 @@
     },
     "code-camping.webp": {
       "width": 1080,
-      "height": 677
+      "height": 677,
+      "framed": false
     },
     "conference-talk-poster.webp": {
       "width": 852,
@@ -255,11 +256,6 @@
       "width": 2560,
       "height": 1440
     },
-    "mentor-nations.webp": {
-      "width": 1802,
-      "height": 1130,
-      "framed": false
-    },
     "mouch-shih-campaign-mockups.webp": {
       "width": 1110,
       "height": 948,
@@ -395,10 +391,6 @@
     "wearemoon-logo.svg": {
       "width": 80,
       "height": 80
-    },
-    "workshop-room.webp": {
-      "width": 661,
-      "height": 512
     }
   }
 }

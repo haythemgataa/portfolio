@@ -19,42 +19,221 @@ No test framework is configured.
 
 ### Content Studio (`localhost:3000/studio`)
 
-A dev-only editor for all three content files — reorder/add/rename/delete sections and items,
-edit profile, item and contact fields, manage media, and edit the gallery. Every mutation is a
-read-modify-write; `git checkout -- content public/media` is the undo.
+A dev-only editor for all three content files. **It is the site, made editable.** The canvas
+renders the real CV and gallery — importing the site's own CSS modules and, where it can, the
+site's own components — and every string a visitor can read is edited by clicking it where it
+sits. Every mutation is a read-modify-write; `git checkout -- content public/media` is the undo.
 
-The left pane mirrors the document's shape: **Profile** pinned top, the orderable **sections**,
-**Contact** pinned bottom, and **Gallery** as a peer tab rather than a CV section. Selecting any
-pooled asset — a gallery entry's file, or a clicked CV thumbnail — opens an editor for its
-`media.json` entry, which is how a video's real dimensions get recorded (`sharp` cannot measure
-video, so uploads land on a 1600x900 placeholder).
+It replaced a three-pane form editor (regions → rows → fields). The forms are gone because a
+form cannot answer the question actually being asked while writing a CV, which is *how does this
+look on the page*. What the forms could answer, and the canvas cannot, is now the whole of the
+inspector's job — see below.
 
-**No native dialogs.** Every confirmation and every name prompt is an in-app dialog
-(`AskDialog` in `Studio.tsx`), and that is a fix rather than a preference. Chrome offers a
-"Prevent this page from creating additional dialogs" checkbox once a page has produced a few in
-a row, and the Studio produced one for every add, rename and delete — easy to tick without
-meaning to. From then on `confirm()` and `prompt()` return immediately with nothing shown, so
-every one of those buttons became a silent no-op: clicking `×` did nothing at all, for the rest
-of the page's life, with no error and no way to tell it from a broken button. Some embedded
-webviews no-op dialogs the same way. Both halves had to go — the confirmations are the ones that
-failed dangerously, and the prompts are what got the checkbox ticked.
+**Measured against the live site rather than eyeballed**, which is the only way this claim stays
+true: at 917px the column, header, tab bar, About margins, section padding, year gutter, title
+box and section-header height (39.59375px) match `/` exactly, and the gallery's list height
+matches `/gallery` to 0.01px across every entry.
 
-Two guards make whole-file rewrites safe, and both are load-bearing:
+#### The split: canvas or inspector
+
+Anything a visitor can read is edited on the canvas. Anything else is a fact about the document
+rather than a thing on it, and gets a panel: a link's *target* (the page shows only an arrow),
+an asset's intrinsic dimensions, its poster frame, the `framed`/`floating` flags, a section's
+machine-facing `key`, and the orphan report.
+
+The rule is worth keeping: **a field that appears in both places is a field with two truths on
+screen at once**, and the one not being looked at is the one that will surprise you.
+
+The inspector floats *over* the canvas rather than sitting beside it as a flex sibling. That is
+not decoration — the site's full-bleed constructions (the tab bar's sticky wrapper, its fade, the
+dot texture) are all `calc(50% - 50vw)` measured from the centred column, so a canvas narrower
+than the viewport lands every one of them off-centre. Giving the canvas the whole width is what
+lets those files be reused untouched.
+
+#### `Editable`, and why it is not `contentEditable`
+
+A heading is not plain text: it carries `[filename]` tokens resolved into `<img>`s, `{braces}`
+resolved into muted spans, a link arrow. What is displayed and what is stored are different
+strings, and there is no honest way back from an `<img>` to the token that produced it. So the
+resting render is swapped for a control rather than being made editable in place — which also
+means the resting state can be arbitrarily rich while the editor is always the raw authored
+string.
+
+Four things about it are load-bearing:
+
+- **Nothing an affordance draws may move a glyph.** Hover tints are backgrounds and box-shadows
+  on inline boxes (which fragment per line, like a text highlight), selection rings are
+  absolutely positioned pseudo-elements, toolbars are absolute. So the canvas at rest measures
+  identically to the page and revealing a control never reflows what you were about to click.
+- **The caret lands where you clicked.** That is most of what separates editing on the page from
+  a form beside the page. Where the rendered text equals the stored string the offset transfers
+  directly; where it does not — a heading with a token, a byline with braces, a markdown
+  description — the *clicked text node* is found in the stored string and the offset taken from
+  there, because every one of those transformations only adds or removes markup around runs of
+  prose that survive verbatim. A run that appears twice is ambiguous and bails to the end, since
+  guessing puts the caret somewhere the author did not point.
+- **`font: inherit` does not carry `letter-spacing`**, which the name and the section titles both
+  set. Without it a heading visibly loosens the moment it is clicked.
+- **The draft is local while editing**, and there is deliberately *no* sync adopting an outside
+  change into an open field. An open field belongs to whoever is typing in it; the server's
+  stale-write guard is what protects the document, not a race between two values.
+
+Empty fields are handled two ways, and the split is deliberate. The year and the heading have
+boxes either way, so their placeholder is faded with **opacity** — the one reveal that cannot
+move anything, which keeps an empty slot clickable at rest. The subheading and description are
+omitted entirely by the site, so they are conditionally rendered on selection; an always-present
+empty `.details` would leave a phantom 11.2px gap under every item, because
+`.subheading ~ .details .detailsInner` carries a top padding.
+
+#### What the canvas restates, and what it reuses
+
+Reused outright: `Attachments` (the whole thumbnail row — the frame arithmetic, the mat, the
+fades, the drag), `GalleryPreview`, `RichText`, `LastUpdated`, `TagIcon`, `Arrow12`, and every
+relevant `.module.css`.
+
+`Attachments` took **one optional prop, `onSelect`**, which overrides its press from "open the
+lightbox" to "edit this asset". The alternative was a second thumbnail renderer carrying a copy
+of that file's geometry, and a copy of that is a copy that drifts — in the direction that matters
+most, where the editor stops showing what the site renders. Note that it maps the press back to a
+*filename* paired with its resolved media, never a bare index: unresolvable references are
+dropped from the row, so an index would name the wrong file the moment one reference broke.
+
+Restated (markup only; classes are the site's): the tab bar, because the site's tabs are `<Link>`s
+to real routes and here they switch documents without unmounting the editor; the header, About and
+footer, because `layout.tsx` is a server component reading from disk and so renders what is
+*saved* rather than what is being typed; and the gallery rows, whose video behaviour is
+deliberately not reproduced — the intersection observer and dwell timer exist to stop a *reader*
+downloading clips they scrolled past, and in an editor they become a page of videos starting and
+stopping while you try to type.
+
+Three fidelity traps found by measurement, each invisible in code review:
+
+- **`.canvas` needs `isolation: isolate`.** The page glow and dot texture are drawn by `.column`
+  at `z-index: -1`/`-2`. A negative layer paints in the nearest ancestor *stacking context*, and
+  neither `.column` nor `.canvas` was one — so both escaped to `.studio` and painted at step 2 of
+  its order, while `.canvas`, being positioned and opaque, painted over them at step 8. The
+  canvas simply had no glow, which is the one thing above the fold.
+- **`.node` needs it too, and it costs something.** The selection ring is a `z-index: -1`
+  pseudo-element, so without isolation it escaped the same way and drew nothing at all. Isolating
+  fixes that but also confines `.tools` (z-index 16), which then paints *under* the tab bar's
+  fade (`Tabs.module.css`, z-index 12) — a positioned sibling in `.canvas`'s stack. Under a stuck
+  bar that fade starts fully opaque over 72px, so a hovered toolbar in that band was erased while
+  staying clickable. A node is therefore lifted to `z-index: 13` only while its toolbar is shown
+  (`:has(> .tools)`), which clears the fade and stays below the section header (15) and the bar
+  (20).
+- **Ring rules are ordered so the drop state comes last.** `.dropzone::before` and
+  `.node::before` both declare `border: 1px solid transparent` — a *shorthand*, which resets
+  `border-color` and `border-style`. `.dropping::before` has identical specificity, so it only
+  wins by being later in the file. Declared after it, `.dropzone::before` silently erased the
+  drop ring while leaving its background tint, which on the gallery is hidden behind the rows
+  themselves.
+
+  Verifying any of this in a pane that does not paint needs `transition: none` first — and the
+  selector must be `*, *::before, *::after`, since `*` does not match pseudo-elements. Without
+  it these rules read as broken: the computed colour is frozen at the transition's start value.
+- **A `<button>` does not inherit the page font.** `.tab` sets a size, a weight and a line height
+  but no family; on the site's `<a>` that inherits Switzer, on the canvas's `<button>` it fell
+  back to Arial — while the `.pillLabel` twins, being plain spans, stayed Switzer, so the
+  typeface swapped mid-travel as the pill crossed them.
+- **`data-stuck` must follow a sentinel**, not be pinned true. Pinned, the fade below the bar
+  washed out the top of About at rest and the pill's glow reflection was off while the glow was
+  still on screen. The observer's `root` is the canvas, because the canvas is the scroller.
+
+Gallery captions render as **plain text**, matching `Gallery.tsx` — passing them through
+`RichText` showed bold and links on the canvas that the published page prints as literal
+asterisks and brackets, which is the one failure an edit-in-place editor must not have.
+
+#### Structural editing
+
+Sections, items, contact rows and gallery entries all carry a hover toolbar (grip, ↑, ↓, ×) and
+reorder by drag or by arrow. Creating is inline and empty: a new item is created with no fields
+and selected, so its ghost slots appear and you type into the page. **Creating a section is the
+one exception that asks for text up front**, because a section's `key` is derived from that first
+label and is machine-facing and permanent, where the label itself stays free to rename.
+
+Two write-path details that are easy to get wrong:
+
+- **`contact.create` is sent `data: {}`, and the empty object is the point.** `createContactItem`
+  seeds `{ id, platform: '', handle: '' }` and merge-patches the payload over it — and
+  `mergePatch` *deletes* a key whose patch value is `''`. Passing the two empty strings
+  explicitly stripped both required fields and wrote a bare `{ "id": … }`.
+- **An emptied list field is sent as `null`, never `[]` and never `undefined`.** `mergePatch`
+  deletes on `''`/`null`/`undefined` and has no case for an empty array, so `[]` is written
+  verbatim — a committed diff line the schema says should be an absent key, and one nothing in the
+  UI could then remove. This binds `tags` and `galleryPreview`; teaching `mergePatch` about empty
+  arrays would change the contract for every caller to fix two fields.
+
+  **`null` and not `undefined` is the whole mechanism, and getting it wrong looks like it works.**
+  The payload is serialised with `JSON.stringify`, which *drops* keys whose value is `undefined` —
+  so an `undefined` never reaches the server as a key at all, `mergePatch` is handed `{}`, and the
+  field is left exactly as it was. It reads as a removal that silently does nothing. Verified by
+  POSTing `{"tags": null}` at the live route and confirming the key is gone from the file.
+
+#### The pool picker
+
+Choosing a file is a grid of thumbnails with a filter, not a `<select>` of filenames. The pool is
+89 files, several differing only by a `-poster` or `-dark` suffix, and a filename is a poor
+description of a picture. Videos show their poster frame, since that is the frame the site shows
+at rest. Files already used here are dimmed but still pickable — the same file in two places is
+the whole point of a shared pool.
+
+**`keepFocus` is the difference between the heading-icon insert working and being dead code.** An
+`[filename]` token is positional, and the only thing that knows the caret is the open inline
+field. Autofocusing the picker's filter box blurred that field, which committed it, unmounted the
+`<input>` and cleared its registration — so the token could only ever be appended. Both halves are
+needed: the picker skips its autofocus, and the sheet cancels the mousedown that would otherwise
+focus a tile before its click fires. The caller's button cancels its own mousedown for the same
+reason.
+
+Two smaller consequences of the same mechanism. The field registers its insert callback in a ref
+shared through context, and the cleanup **only clears the slot if it still holds its own
+callback** — clicking straight from one field into another opens the second before the first
+blurs, so an unconditional clear would deregister the successor. And the caret is restored by a
+`useLayoutEffect` with no dependency array that re-applies until the field's value catches up,
+because writing a controlled input's `value` puts the caret at the end and this insert triggers
+several commits; a single `requestAnimationFrame` fixed it and the next render moved it back.
+
+#### Guards
+
+**No native dialogs.** Every confirmation is an in-app dialog (`AskDialog` in `Overlays.tsx`), and
+that is a fix rather than a preference. Chrome offers a "Prevent this page from creating
+additional dialogs" checkbox once a page has produced a few in a row, and the old Studio produced
+one for every add, rename and delete — easy to tick without meaning to. From then on `confirm()`
+and `prompt()` return immediately with nothing shown, so every one of those buttons became a
+silent no-op, for the rest of the page's life, with no error and no way to tell it from a broken
+button. Some embedded webviews no-op dialogs the same way. Editing on the canvas has since
+retired the *prompts* — a new item is named in place — but the confirmations remain, and they are
+the half that failed dangerously.
+
+`Escape` is scoped in one place rather than per field: the window handler that clears the
+selection ignores the key when a dialog or picker is open, and when the event's target is an
+`INPUT`/`TEXTAREA`/`SELECT`. Without it, Escape-as-"I'm done with this field" also unmounted the
+inspector panel being typed into, and Escape-to-dismiss-a-dialog silently threw away the
+selection the dialog was about.
+
+Three guards make whole-file rewrites safe, and all three are load-bearing:
 
 - **Atomic write** — `cv.json.tmp` then `fs.rename`, so no reader sees a partial file.
-- **Stale-write rejection** — the UI sends the content hash it loaded and the route
-  refuses a mismatch with a 409. The hash covers all three content files, so a change to
-  any of them invalidates a pending edit. Without it, a tab left open would silently revert
-  the whole CV on its next keystroke. It is **required**, not optional: `writeDoc` used to
-  test `if (expectedHash && …)`, so omitting the field skipped the check altogether and the
-  guard only bound callers who volunteered for it. Uploads go through it too — the
-  `FormData` is assembled inside the `run()` callback rather than before it, because a form
-  built once freezes the hash and a replay after the resync would re-send the stale one.
+- **Stale-write rejection** — the UI sends the content hash it loaded and the route refuses a
+  mismatch with a 409. The hash covers all three content files, so a change to any of them
+  invalidates a pending edit. Without it, a tab left open would silently revert the whole CV on
+  its next keystroke. It is **required**, not optional: `writeDoc` used to test
+  `if (expectedHash && …)`, so omitting the field skipped the check altogether and the guard only
+  bound callers who volunteered for it. Uploads go through it too — the `FormData` is assembled
+  inside the `run()` callback rather than before it, because a form built once freezes the hash
+  and a replay after the resync would re-send the stale one. Verified live: changing `content/`
+  with `git checkout` underneath an open tab made its next write 409 rather than clobber the file.
 - **Selective writes** — only files whose serialization actually changed are rewritten, so a
   CV-only edit leaves `gallery.json` untouched and out of the diff.
 
-`Studio.module.css` positions the tool `fixed; inset: 0` because `/studio` sits under
-the site's root layout and would otherwise render below `ProfileHeader` and the tab bar.
+Field edits are debounced with **one pending timer per field**, keyed by op+target+field. A single
+shared timer was silently lossy: each payload carries only the field it belongs to and the server
+merge-patches it, so the cancelled timeout was the sole carrier of that value. They deliberately
+do *not* go through `run()`'s stale-hash replay — their payload is a whole value, and replaying it
+could overwrite a change this tab never saw.
+
+`Studio.module.css` positions the tool `fixed; inset: 0` because `/studio` sits under the site's
+root layout and would otherwise render below `ProfileHeader` and the tab bar.
 
 It exists only in `npm run dev`, enforced two ways in `next.config.ts`:
 
@@ -192,6 +371,21 @@ plus a request for one path.
 `content/` sits outside `public/` deliberately: it is compiler input, not a static asset.
 Keeping it in `public/` shipped 27 never-requested JSON files to the CDN and made the whole
 CV fetchable at `/content/.../item.json`. Media has to stay under `public/`.
+
+**Resolution — authored JSON to what components render — lives once, in `app/lib/resolveContent.ts`,
+and that module touches no filesystem.** Two callers need the same logic and only one of them can
+read disk: `contentLoader` and `galleryLoader` run at build time and resolve a pool filename to a
+URL carrying its content hash, which means reading the bytes; the Studio's canvas renders the same
+content in the browser, from a document that is not on disk yet at all, against a plain
+`/media/<file>`. So the URL function is *injected* and everything else — which files exist, what a
+heading's `[token]` becomes, what a missing dimension means, how tags are normalised — is decided
+in one place. A second copy in the Studio would drift, and it would drift silently, in the one
+direction that matters: the editor showing something the built site does not.
+
+`mediaRegistry.resolveAsset` is that function bound to `assetUrl`; nothing else changed. Verified
+rather than assumed: built the pre-refactor tree in a worktree and diffed the exports — identical
+rendered text, identical `/media/` URLs including every `?v=` hash (64 on `/`, 38 on `/gallery`),
+identical `description`/`og:*`/`twitter:*`, identical sitemap.
 
 The schema and its rationale are documented in **`CONTENT-SCHEMA.md`**; the types are in
 `app/lib/contentTypes.ts`. Key rules:
@@ -398,24 +592,102 @@ it flips to white at 8% — is what carries the edge there.
 - `app/lib/galleryLoader.ts` — resolves entries to `GalleryItem`s, typed in
   `app/lib/galleryTypes.ts`. Entries reference the shared pool; dimensions come from
   `media.json` via `app/lib/mediaRegistry.ts`, which both loaders share.
-- **`tags` are display-only, joined to the date by middots** — `2026 · DeepPCB · UI`. Blanks,
-  repeats and stray whitespace are stripped twice: in the Studio on write, so the file cannot
-  record them, and in `galleryLoader` on read, which is what covers a hand edit that never went
-  through the Studio. That is also what makes `GalleryItem.tags` a plain `string[]` the component
-  maps over without re-checking, and what makes the tag safe as a React key. Emptying the field
-  removes the key rather than writing `"tags": []`, normalised to `undefined` at the call site
-  exactly as `removeMediaRef` does for `media` — `mergePatch` deletes on `''`/`null`/`undefined`,
-  and teaching it about empty arrays would change the contract for every caller to fix one field.
+- **`tags` are filters, joined to the date by middots** — `2026 · DeepPCB · UI`, each with a mark
+  of its own. Blanks, repeats and stray whitespace are stripped twice: in the Studio on write, so
+  the file cannot record them, and in `galleryLoader` on read, which is what covers a hand edit
+  that never went through the Studio. That is also what makes `GalleryItem.tags` a plain `string[]`
+  the component maps over without re-checking, and what makes the tag safe as a React key.
+  Emptying the field removes the key rather than writing `"tags": []`, normalised to `undefined`
+  at the call site exactly as `removeMediaRef` does for `media` — `mergePatch` deletes on
+  `''`/`null`/`undefined`, and teaching it about empty arrays would change the contract for every
+  caller to fix one field.
+
+  That normalising used to be tidiness and is now correctness: **a tag is the filter key**, so two
+  entries agreeing on a tag is precisely what puts them in one filtered set, and a trailing space
+  would split a tag in two without changing how either copy looks.
+- **Clicking a tag filters the list to it; clicking it again clears.** One tag at a time, held in
+  `Gallery`'s own state rather than in a `?tag=` search param — this is a static export, so the
+  prerendered HTML cannot know the tag, and seeding state from `location.search` at mount is
+  exactly the hydration mismatch the theme script already has to be forgiven for. The cost is that
+  a filtered view is not linkable, which is the trade taken deliberately. Five things follow:
+  - **`openable` is built from the filtered list, not from `items`.** The lightbox arrow-keys
+    through whatever array it is handed, so stepping would otherwise walk into rows that are not
+    on the page behind the backdrop.
+  - **The filter bar is sticky at `--sticky-top` with `z-index: 15`** — the CV's section-title
+    slot exactly, between the tab bar's fade (12) and the bar itself (20). It has to be: it lands
+    inside the fade's 72px band, which washes out anything at that height, and painting over the
+    fade is how the section titles already solve that. Pushing it below the band instead would open
+    a 128px hole above the list. It carries no background for the same reason those titles do not.
+  - **It is a section header, so it takes `.sectionHeader`'s whole box** — the same
+    `6px 0 calc((var(--type-size) * var(--line-height)) / 2)` padding and 16px column gap, restated
+    from those tokens rather than from their resolved pixels. Sharing the sticky offset is what
+    makes this matter: with no padding of its own the bar's label baseline sat **12.4px** above a
+    section title's, which read as the bar being tucked up against the tabs while the CV's headers
+    were not. And `.filterTag` takes the `h2` treatment from `.profileSection h2` — `--type-size`,
+    `--weight-emphasis`, `-0.02em` — because the active tag *is* the title of the list beneath it;
+    at the byline's 12px it read as a caption and left the bar half a header tall. Verified with
+    one measurement method across both routes: baseline 22.5px from the box top and height 39.6px,
+    identical on each.
+  - **`.filter + .list` is 12px, not 24px**, because the bar now contributes
+    `.sectionHeader`'s 11.2px bottom padding — the two together land within a pixel of the 24px
+    that was there before the padding arrived.
+  - **The mark in the bar needs no `vertical-align`, and adding one does nothing.** This is the
+    trap: `.metaIcon`'s -3px is tuned to 12px text, the bar's label is 14px, so the arithmetic
+    invites a ~-2px override. `.filterTag` is a flex container, so the mark is a flex item and
+    `align-items: center` places it — confirmed by setting an absurd value and measuring no
+    movement at all. Centring the 14px box in the 22.4px line box happens to land the ink 0.45px
+    off the cap's optical centre, so there is nothing to tune. Note the matching hazard when
+    *measuring* in there: a zero-size baseline probe inside `align-items: center` reports the
+    line's centre, not its baseline, which is off by half the line box and looks like a real
+    misalignment. Measure from the text's font box instead.
+  - **Clear is the CV's Show/Hide Details control, restyled to match it exactly** (verified
+    property by property against the live element, not by eye). Consistency is the smaller half
+    of the reason: the note beside `.detailsToggle` explains that it stays quiet *because* it
+    sits in a sticky header, where a filled pill parked under the tab bar for the length of a
+    section competes with the label beside it. This bar is sticky, in the same slot, with a label
+    beside it. It was a `--background-muted` pill first, which is exactly what that argument
+    rules out. The declarations are duplicated rather than shared, the same trade `.srOnly`
+    makes — so if the CV's toggle changes, this has to follow by hand.
+  - **The jump back to the top is `scrollTo`, never `scrollIntoView`** — and that is a consequence
+    of the bar being sticky. A pinned sticky element's rect reports the *pinned* position, so
+    `scrollIntoView` on it sees something already exactly where it asked to be and does nothing at
+    all, which reads as the scroll silently failing. The clearance is measured off `.list` instead:
+    its `scroll-margin-top` (the tab bar), its `margin-top` (which `.filter + .list` already
+    varies), and the bar's own height. All three are read from the DOM rather than restated in JS.
+  - **The scroll happens at all** because filtering shortens the list under a reader who is
+    somewhere down it, leaving them in blank space past the last surviving row.
+  - **Pressed and hover must not resolve to the same colour.** Hover takes one step off the line's
+    resting tertiary; pressed goes the whole way to `--foreground-primary`, so an active filter is
+    legible without the pointer anywhere near it. They were briefly both `--foreground-secondary`,
+    which made an active tag indistinguishable from one under the cursor.
+- **The tag marks are inlined in `app/TagIcon.tsx`, not files.** The `Arrow12.tsx` rule: each is a
+  single monochrome path, and `currentColor` only sees the page's colour when the SVG is part of
+  the document, so a file would have meant a `-dark` sibling or a filter plus a request apiece.
+  They are chrome, so `public/media/` would be the wrong home regardless — that pool is
+  reference-counted, and anything in it with no content record reads as an orphan. `TAG_PATHS`'s
+  keys **are** the vocabulary: an unlisted tag still filters, it just renders unadorned, which is
+  what a newly hand-authored label should look like until a mark is drawn for it. The date's mark
+  is deliberately *not* in that record — it is not a tag and filters nothing. `.metaIcon`'s
+  `vertical-align: -3px` is half the 14px box less half the measured 8.3px cap height; verified at
+  0.15px off the text's optical centre, so changing the size means revisiting it.
 - **That line is inline flow, not flex, and it was flex once.** Flex was right while the tags were
   filled pills, because a pill is a box and boxes need aligning; text does not. Inline layout puts
   the date and every tag on one baseline for free, wraps at the spaces, and needs no `gap`. The
   flex version measured 3px taller than its own text — a flex item that is itself a flex container
   contributes a *synthesized* baseline rather than its text's, so `align-items: baseline` did not
-  actually put the date and the tags on the same line. Two consequences: `.date` no longer needs a
-  class of its own (type and colour are inherited from `.byline`, so the line cannot drift into two
-  weights), but the `<span>` around the date **must stay**, because the leading middot is
-  `.tags:not(:first-child)::before` and the date's presence is what decides whether it is drawn —
-  which is also why an entry with tags and no date needs no branch in the component.
+  actually put the date and the tags on the same line. Two consequences: the `<span>` around the
+  date **must stay**, because the leading middot is `.tags:not(:first-child)::before` and the
+  date's presence is what decides whether it is drawn — which is also why an entry with tags and
+  no date needs no branch in the component; and `.date` carries **layout only**. It has a class
+  again now that a mark travels with it (`white-space: nowrap`, so the line never wraps between a
+  mark and what it labels), but still no type or colour — those stay inherited from `.byline`, or
+  the line drifts into two weights.
+
+  The marks cost this line nothing, which was worth checking rather than assuming: a 14px box in
+  12px text at `line-height: 1.6` sits inside the 19.2px line box, measured identical with the
+  marks, without them, and with the tag buttons laid out `inline-block` instead of `inline`. So
+  `.tagButton { display: inline }` is the smaller change rather than the fix for a bug — a UA
+  button is `inline-block`, and `inline` is simply what leaves the byline's flow untouched.
 - **Dropping the pills also dropped a whole class of bug**, worth remembering before reaching for
   one again. A short pill needs `line-height: 1`, which puts this font's 15px ascent + descent
   inside a 12px content box, leaving the cap height off-centre in a way no round padding fixes.
@@ -1092,6 +1364,18 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
 - Font: **Switzer**, loaded as a third-party stylesheet from `api.fontshare.com` via a `<link>` in
   `layout.tsx` (not `next/font`), with `--default-font` in `globals.css` pointing at it
 - No UI component library — all custom components
+- **Every paragraph of running prose is `text-wrap: pretty`**, declared once on `p` in
+  `globals.css` rather than per surface — `RichText` emits classless `<p>`s, so the element is the
+  only handle that covers About, the CV's descriptions and a case study's whole body at once (the
+  Studio's canvas reuses `RichText` and so gets it too). Two prose blocks are paragraphs without
+  being `<p>` and carry it by hand: a gallery `.caption`, which is a `<div>` only because it
+  renders as plain text, and `.description ul li`, because a *tight* markdown list arrives as bare
+  `<li>` text where a loose one arrives wrapped in a `<p>` — and which one an author gets follows
+  from a blank line they cannot see in the rendered page. Titles, the byline and the gallery's
+  metadata line are deliberately left out: they are labels, not paragraphs. Measured both ways:
+  it does real work (4–5 CV paragraphs end on a longer last line at 917px/480px) and it costs no
+  height — every paragraph, list item, section and header measures identically with the rule and
+  with it neutralised, at 917/600/480/375px on both routes, with no paragraph changing line count.
 
 #### The palette
 

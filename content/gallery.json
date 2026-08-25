@@ -44,6 +44,17 @@
       ]
     },
     {
+      "id": "design-ruler-icons",
+      "file": "design-ruler-icons.webp",
+      "title": "App Icons for Design Ruler",
+      "date": "2026",
+      "caption": "Three icons for Design Ruler, main, and one per tool: measuring and alignment guides. Each sits on the same blueprint grid so they read as one set.",
+      "tags": [
+        "Personal",
+        "Icon Design"
+      ]
+    },
+    {
       "id": "pcb-cube",
       "file": "pcb-cube.webp",
       "title": "PCB Cube",
@@ -71,7 +82,6 @@
       "title": "Landing Page Hero Section",
       "date": "2022",
       "tags": [
-        "Groupado",
         "UI"
       ]
     },
@@ -102,8 +112,18 @@
       "title": "AI Suggestions for Text",
       "caption": "A tool to help find and link sources, and to suggest text edits to research papers.",
       "tags": [
-        "Internal",
         "UI"
+      ]
+    },
+    {
+      "id": "pcb-icons",
+      "file": "pcb-icons.webp",
+      "title": "Icon Set for PCB Objects",
+      "date": "2023",
+      "caption": "A set of icons for the objects a board is made of: pads, traces, vias, components, keepouts, ratlines... Drawn flat and in the layer colours the editor already uses, so an icon and the thing it points at match.",
+      "tags": [
+        "DeepPCB",
+        "Icon Design"
       ]
     },
     {
@@ -133,7 +153,6 @@
       "title": "InstaDeep Logo Artwork",
       "date": "2024",
       "tags": [
-        "InstaDeep",
         "Experiments"
       ]
     },
@@ -144,8 +163,7 @@
       "title": "4 Iterations Over 3 Years",
       "caption": "Showing how DeepPCB evolved over time. Constant feedback, new features, and mixed testing (internal and based on VWO data, provided by the UX team).",
       "tags": [
-        "DeepPCB",
-        "Iterations"
+        "DeepPCB"
       ]
     },
     {
@@ -154,7 +172,6 @@
       "date": "2023",
       "title": "Grid of Articles",
       "tags": [
-        "Internal",
         "UI"
       ]
     },
@@ -164,7 +181,6 @@
       "date": "2024",
       "title": "Custom 404 Page",
       "tags": [
-        "InstaNovo",
         "UI"
       ]
     },
@@ -179,12 +195,21 @@
       ]
     },
     {
+      "id": "lexit-logo",
+      "file": "lexit-logo.webp",
+      "title": "Lexit Logo",
+      "date": "2024",
+      "caption": "An isometric logo for a construction company built from stacked blocks. Later featured on LogoSystem.co.",
+      "tags": [
+        "Branding"
+      ]
+    },
+    {
       "id": "timeline-view",
       "file": "timeline-view.webp",
       "date": "2024",
       "title": "Timeline View for a BioAI Product",
       "tags": [
-        "Internal",
         "UI"
       ]
     },
@@ -205,7 +230,6 @@
       "date": "2021",
       "title": "HR Tool for Small to Medium Companies — Admin Dashboard",
       "tags": [
-        "Unreleased",
         "UI"
       ]
     },
@@ -220,12 +244,22 @@
       ]
     },
     {
+      "id": "deeppcb-stickers",
+      "file": "deeppcb-stickers.webp",
+      "title": "DeepPCB Sticker Sheet",
+      "date": "2024",
+      "caption": "A sheet of stickers for conferences and events.",
+      "tags": [
+        "DeepPCB",
+        "Merch"
+      ]
+    },
+    {
       "id": "thinking",
       "file": "thinking.webm",
       "date": "2023",
       "title": "LLM Loading Animation",
       "tags": [
-        "Internal",
         "Animation"
       ]
     },

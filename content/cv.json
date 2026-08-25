@@ -4,7 +4,7 @@
     "displayName": "Haythem Gataa",
     "byline": "Product Designer {& Engineer}",
     "location": "Tunisia {(GMT+1)}",
-    "about": "I’m a Product Designer, passionate about micro-interactions, animations, and the art of design. With a track record of bringing products to life and enhancing existing ones (over 6 years), I blend creativity with my engineering background to deliver mindful user experiences.",
+    "about": "I’m a Product Designer with 6+ years of experience blending creativity with an engineering background to deliver mindful, full-cycle user experiences, from business to design to dev. I’m a perfectionist at heart, obsessed with micro-interactions, animations, and the art of design. My work has impressed teams at Tesla and NASA.",
     "photo": "profile.webp",
     "galleryPreview": [
       "invoices-page.webp",
@@ -77,27 +77,31 @@
     },
     {
       "key": "toolbox",
-      "label": "Toolbox",
+      "label": "Main Tools",
       "items": [
         {
           "id": "figma",
           "heading": "[figma-logo.svg] Figma",
-          "description": "I mean, of course, the GOAT! This is still my main tool for design, and probably will remain like so for a while, even with all the huge AI advancements and tools."
+          "description": "I mean, of course, the GOAT! This is still my main tool for design, and probably will remain like so for a while, even with all the huge AI advancements and tools.",
+          "year": "Daily"
         },
         {
           "id": "claude",
           "heading": "[claude-logo.svg] Claude",
-          "description": "Where would I be without it. From small brainstorming sessions, to quick artifacts I share with the dev team, to full apps and tools, Claude (and similar tools, but I prefer Claude) is a must-have. I use it almost daily."
+          "description": "Where would I be without it. From small brainstorming sessions, to quick artifacts I share with the dev team, to full apps and tools, Claude (and similar tools, but I prefer Claude) is a must-have. I use it almost daily.",
+          "year": "Almost Daily"
         },
         {
           "id": "rive",
           "heading": "[rive-logo.svg] Rive",
-          "description": "Rive has the edge over Lottie and other animation tools thanks to its state machine (I know that Lottie started supporting it recently, but Rive still does it better), great performance, and tiny file size. I love it, devs love it, and users probably do too."
+          "description": "Rive has the edge over Lottie and other animation tools thanks to its state machine (I know that Lottie started supporting it recently, but Rive still does it better), great performance, and tiny file size. I love it, devs love it, and users probably do too.",
+          "year": "Occasionally"
         },
         {
           "id": "framer",
           "heading": "[framer-logo.svg] Framer",
-          "description": "I honestly considered replacing Figma with Framer at some point. It’s super powerful when you want to create very specific interactions, and a great tool for someone with no coding background. I now use it from time to time to design landing pages before sending them to the dev team. The community is really good too, many components and scripts are available for free."
+          "description": "I honestly considered replacing Figma with Framer at some point. It’s super powerful when you want to create very specific interactions, and a great tool for someone with no coding background. I now use it from time to time to design landing pages before sending them to the dev team. The community is really good too, many components and scripts are available for free.",
+          "year": "Occasionally"
         }
       ]
     },
@@ -109,15 +113,13 @@
           "id": "master-in-software-engineering-at-ecole-polytechnique-sousse",
           "year": "2020 — 2023",
           "heading": "Master in Software Engineering at Ecole Polytechnique Sousse",
-          "subheading": "Sousse, Tunisia",
-          "description": "* Graduated with an excellent grade and jury honors."
+          "subheading": "Sousse, Tunisia"
         },
         {
           "id": "bachelor-in-computer-science-at-higher-institute-of-computer-science-and-management-of-kairouan",
           "year": "2017 — 2020",
           "heading": "Bachelor in Computer Science at Higher Institute of Computer Science and Management of Kairouan",
-          "subheading": "Kairouan, Tunisia",
-          "description": "* Graduated with an excellent grade and jury honors."
+          "subheading": "Kairouan, Tunisia"
         }
       ]
     },
@@ -256,8 +258,7 @@
         {
           "id": "photographer-on-buchhalter-international-group",
           "year": "2021",
-          "heading": "Photographer on Buchhalter International Group",
-          "url": "https://issuu.com/franze.buchhalter/docs/design_destinations_magazine_fall_2021"
+          "heading": "Photographer on Buchhalter International Group"
         }
       ]
     },
@@ -337,16 +338,22 @@
         "url": "https://dribbble.com/haythemgataa"
       },
       {
-        "id": "contact-twitter",
-        "platform": "Twitter",
-        "handle": "HaythemGataa",
-        "url": "https://twitter.com/HaythemGataa"
+        "id": "contact-github",
+        "platform": "GitHub",
+        "handle": "haythemgataa",
+        "url": "https://github.com/haythemgataa"
       },
       {
         "id": "contact-unsplash",
         "platform": "Unsplash",
         "handle": "@haythemgataa",
         "url": "https://unsplash.com/@haythemgataa"
+      },
+      {
+        "id": "contact-twitter",
+        "platform": "Twitter",
+        "handle": "HaythemGataa",
+        "url": "https://twitter.com/HaythemGataa"
       }
     ]
   }

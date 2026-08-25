@@ -1,10 +1,20 @@
 /**
- * Field definitions driving the Studio's forms.
+ * The Studio's remaining form fields.
+ *
+ * This file used to declare one of these tables per region — profile, item, contact, gallery —
+ * because every field was a labelled box in a form. Editing on the page retired all of them: a
+ * heading is edited by clicking the heading, so its label, its placeholder and its type are the
+ * rendered text itself rather than a row in a table. What is left is the one table that has no
+ * on-page form to fall back on.
+ *
+ * `MediaAsset`'s fields are facts about a *file* — its intrinsic pixels, its poster frame, and
+ * two flags that change how it is treated. None of them is text a visitor reads, so none of them
+ * can be clicked on the canvas, and the hints below are the only place the rules are stated.
  *
  * Keep this file free of Node built-ins — it is imported by the client UI.
  */
 
-export type FieldType = 'text' | 'url' | 'markdown' | 'checkbox';
+export type FieldType = 'text' | 'checkbox';
 
 export interface FieldDef {
   key: string;
@@ -14,103 +24,7 @@ export interface FieldDef {
   hint?: string;
   /** `checkbox` only: what an absent value means, so an unset flag shows its real state. */
   defaultChecked?: boolean;
-  /**
-   * Adds a pool picker that inserts an `[filename]` icon token at the caret. The field stays
-   * free text — the token is positional, so it has to be typed *somewhere in particular* — but
-   * the filename itself comes from a list, for the same reason the gallery's `+ From pool` is a
-   * picker: a name that cannot be typed cannot be mistyped.
-   */
-  iconInsert?: boolean;
-  /**
-   * Comma-separated in the form, `string[]` in the JSON. The input holds the author's raw text
-   * while it is focused — splitting on every keystroke would swallow the comma that starts the
-   * next entry, and the trailing space after it — and re-tidies from the saved array on blur.
-   */
-  list?: boolean;
 }
-
-/** Pinned to the top of the page. */
-export const PROFILE_FIELDS: FieldDef[] = [
-  { key: 'displayName', label: 'Name', type: 'text', placeholder: 'Haythem Gataa' },
-  {
-    key: 'byline',
-    label: 'Byline',
-    type: 'text',
-    placeholder: 'Software Designer {& Engineer} in Tunisia',
-    hint: 'Wrap any run in {braces} to set it in the lighter grey. The braces are stripped from the search-result and social-card description, so only the styling is affected.',
-  },
-  {
-    key: 'location',
-    label: 'Location',
-    type: 'text',
-    placeholder: 'Tunisia {(GMT+1)}',
-    hint: 'Shown in the footer, opposite the last-updated date. Takes {braces} the same way.',
-  },
-  {
-    key: 'about',
-    label: 'About',
-    type: 'markdown',
-    hint: 'Markdown. Rendered as the first section, above everything orderable.',
-  },
-];
-
-/**
- * Items in `sections[]`. Every orderable section uses this one form, which is
- * the point — they all render identically, so reordering them is safe.
- */
-export const ITEM_FIELDS: FieldDef[] = [
-  { key: 'year', label: 'Year', type: 'text', placeholder: '2023 — Now' },
-  {
-    key: 'heading',
-    label: 'Heading',
-    type: 'text',
-    placeholder: 'Product designer at InstaDeep',
-    iconInsert: true,
-    hint: 'Put [filename.webp] anywhere in the text to render that pool image inline at 18px — "Product Designer at [instadeep.webp] InstaDeep". Use the picker to insert one at the cursor. The spaces you leave around the token are the gaps you get.',
-  },
-  { key: 'url', label: 'Link', type: 'url', placeholder: 'https://example.com' },
-  {
-    key: 'subheading',
-    label: 'Subheading',
-    type: 'text',
-    placeholder: 'Tunis, Tunisia',
-    hint: 'The line under the heading — a location, a stack, whatever the section needs.',
-  },
-  {
-    key: 'description',
-    label: 'Description',
-    type: 'markdown',
-    hint: 'Markdown. Start a line with "* " for a bullet, blank line between bullets.',
-  },
-];
-
-/** Rows in the pinned contact section. */
-export const CONTACT_FIELDS: FieldDef[] = [
-  { key: 'platform', label: 'Platform', type: 'text', placeholder: 'Email' },
-  { key: 'handle', label: 'Handle', type: 'text', placeholder: 'you@example.com' },
-  { key: 'url', label: 'Link', type: 'url', placeholder: 'mailto:you@example.com' },
-];
-
-/** Gallery entries carry presentation only; dimensions live in media.json. */
-export const GALLERY_FIELDS: FieldDef[] = [
-  { key: 'title', label: 'Title', type: 'text', placeholder: 'Poster series' },
-  {
-    key: 'caption',
-    label: 'Caption',
-    type: 'markdown',
-    placeholder: 'Print work for We Are Kairouan.',
-    hint: 'Shown beneath the item. Also used as the image alt text.',
-  },
-  { key: 'date', label: 'Date', type: 'text', placeholder: '2026 — or "March 2026"' },
-  {
-    key: 'tags',
-    label: 'Tags',
-    type: 'text',
-    list: true,
-    placeholder: 'DeepPCB, Animation',
-    hint: 'Comma-separated. Joined to the date by middots — "2026 · DeepPCB · UI". Blanks and repeats are dropped, and clearing the field removes the key rather than leaving an empty list.',
-  },
-];
 
 /** Editable facts about a pooled asset, shared by both tabs. */
 export const ASSET_FIELDS: FieldDef[] = [
@@ -142,19 +56,4 @@ export const ASSET_FIELDS: FieldDef[] = [
     defaultChecked: false,
     hint: 'For collages and montages sitting on transparency. Opened, the image drops its border and rounded corners — which would trace an edge the artwork has not got — and keeps a shadow following its silhouette instead. Leave off for anything that fills its frame.',
   },
-];
-
-/** Suggestions only — any key works, and the label is what renders. */
-export const SECTION_SUGGESTIONS = [
-  'workExperience',
-  'education',
-  'awards',
-  'speaking',
-  'certifications',
-  'features',
-  'volunteering',
-  'projects',
-  'sideProjects',
-  'exhibitions',
-  'writing',
 ];

@@ -11,6 +11,14 @@
      the content on both routes. Without it the gallery's footer sat tight against the final
      caption while the CV's had 60px of section padding above it. */
   margin-bottom: 60px;
+  /* Filtering scrolls the list back to its top, and the tab bar is sticky over it. This is what
+     stops that jump parking the first row underneath the bar — the same offset the CV's sticky
+     section headers park at, so the two agree by construction rather than by a second literal.
+
+     It is *read* by that scroll rather than applied by the browser: the effect in Gallery.tsx
+     drives `scrollTo` itself (the sticky filter bar makes `scrollIntoView` a no-op — see the
+     note there), and this is where the number it needs is kept. */
+  scroll-margin-top: var(--sticky-top);
 }
 
 /* Declared on the row so that `.trigger` and `.frame` — nested inside it rather than siblings —
@@ -183,10 +191,15 @@
   color: var(--foreground-primary);
 }
 
+/* A caption is a paragraph in every way that matters to wrapping — a sentence or two of prose
+   under the media — and is a `<div>` only because it renders as plain text rather than through
+   `RichText` (see the note in Gallery.tsx). So it takes by hand the `text-wrap: pretty` that
+   globals.css gives a real `<p>`; the title above it is a title, and is deliberately left out. */
 .caption {
   font-size: var(--type-size);
   line-height: var(--line-height);
   color: var(--foreground-secondary);
+  text-wrap: pretty;
 }
 
 /* The date and its tags read as one quiet metadata line — "2026 · DeepPCB · UI".
@@ -224,6 +237,89 @@
   white-space: nowrap;
 }
 
+/* The date's mark and its year travel together — the line wraps between metadata, never between
+   a mark and the thing it labels. Layout only: type and colour stay inherited from `.byline`. */
+.date {
+  white-space: nowrap;
+}
+
+/* Each tag filters the list, so each is a button. Everything here bar the cursor is the UA
+   button reset — the type and colour are `.byline`'s, inherited through `.tag`, which is what
+   keeps a clickable tag looking like the rest of the line rather than like a control dropped
+   into it.
+
+   `display: inline`, which is the declaration that keeps the button transparent to layout: the
+   byline is inline flow on purpose (see `.byline`), and a UA button is inline-block by default.
+   Measured, `inline-block` is *not* worse here — the line box is 19.2px in both, and it is
+   19.2px with no marks at all, because a 14px mark fits inside 12px text at `line-height: 1.6`
+   without pushing on it. So the marks cost no height and this is the smaller change rather than
+   the fix for a bug: the mark inside is the only inline-block in the line, and its
+   `vertical-align` is what positions it. */
+.tagButton {
+  display: inline;
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+
+/* Hover and the pressed state both work on colour rather than on a box, because there is no box
+   — adding a pill back would undo the whole reason this line is inline flow, and re-import the
+   baseline problem documented on `.byline`.
+
+   They must not land on the same value. Hover takes one step off the tertiary the line rests at;
+   pressed goes the whole way to primary, so "this filter is on" is legible without the pointer
+   being anywhere near it. Both are the moves the palette already makes elsewhere — tertiary is
+   the line's resting colour and primary is what a hovered icon takes. At 12px against a 14px
+   title, primary here does not outweigh the heading above it. */
+.tagButton:hover {
+  color: var(--foreground-secondary);
+}
+
+.tagButton[aria-pressed="true"] {
+  color: var(--foreground-primary);
+}
+
+/* The mark is held back from the label at rest (see `.metaIcon`); on the active tag it comes up
+   to full strength with it, so the pair reads as one lit-up unit rather than a bright label
+   beside a dimmed mark. */
+.tagButton[aria-pressed="true"] .metaIcon {
+  opacity: 1;
+}
+
+.tagButton:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* The marks: a 14px box on a 12px line.
+
+   `inline-block` so it behaves like a word in the inline flow — the same treatment (and the same
+   reason) as `.titleIcon` in Profile.module.css. `vertical-align` is tuned to this pairing: half
+   the box less half the cap height, which lands the glyph's optical centre on the text's. Change
+   the size and this needs revisiting.
+
+   The 3px gap is a margin on the mark rather than a space in the markup, so it cannot be lost to
+   JSX whitespace collapsing, and it is right-only — the middots either side already own the
+   spacing between one piece of metadata and the next. */
+.metaIcon {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  vertical-align: -3px;
+  margin-right: 3px;
+  /* The glyphs sit on a 14px grid but only fill the middle ~11px of it, so they read a touch
+     lighter than the text beside them at full strength; this closes that gap without making the
+     marks compete with the labels. */
+  opacity: 0.8;
+}
+
 /* The middots: one before the tag list, one before each tag after the first.
    
    `:not(:first-child)` is the whole edge case, and it is why neither the component nor a second
@@ -236,6 +332,151 @@
   content: "·";
   margin: 0 5px;
   color: var(--tag-separator);
+}
+
+/* Shown only while a filter is on. It takes the 36px `.list` would have had below the tab bar,
+   and the adjacent-sibling rule below hands the list a smaller gap of its own — otherwise the
+   two `margin-top: 36px` declarations stack and the first row sits 72px plus a bar's height
+   down the page.
+
+   Flex here, unlike `.byline`, and for the reason `.byline` is not: this row genuinely is boxes.
+   `.clear` is a pill with padding, so there is a box to align, and no baseline to protect. */
+.filter {
+  display: flex;
+  /* Sticky, at exactly the offset the CV's section titles park at and with the z-index that
+     ordering already establishes: fade (12) < this (15) < tab bar (20).
+
+     It sticks for two reasons. The obvious one is that the way out of a filter should not be
+     something you have to scroll back up to find. The other is that it lands *inside* the tab
+     bar's 72px fade, which washes out anything at that height — the section titles have the
+     same problem and solve it by painting over the fade rather than by being pushed below it,
+     and copying that is what keeps the bar legible without opening a 128px hole above the list.
+
+     No background, for the same reason those titles carry none: the fade already covers this
+     band, so an opaque strip would do that work twice and cut the fade off flat where the two
+     met. Rows passing behind it stay faintly visible, which is the established treatment here.
+
+     It can stick for the whole list because `.filter` and `.list` are siblings — a sticky
+     element is confined to its containing block, and theirs contains both. */
+  position: sticky;
+  top: var(--sticky-top);
+  z-index: 15;
+  /* `.sectionHeader`'s box, restated from the same tokens rather than from its resolved pixels —
+     both pin at `--sticky-top`, so any difference here reads as one of them sitting closer to the
+     tab bar than the other. With no padding at all this bar's label baseline sat 12.4px above a
+     section title's, which is exactly what that looked like. The bottom half is the gap between a
+     title and the content it introduces, so it is half a line of the *primary* size, not this
+     row's. */
+  padding: 6px 0 calc((var(--type-size) * var(--line-height)) / 2);
+  align-items: center;
+  /* `.sectionHeader`'s gap too. There it is a floor that never binds, since `space-between`
+     spreads the pair; here it is the real distance from the tag to its count. */
+  column-gap: 16px;
+  margin-top: 36px;
+  font-size: var(--secondary-type-size);
+  line-height: var(--line-height);
+  color: var(--foreground-tertiary);
+}
+
+/* Only ever preceded by `.filter`, so this is the gap under the bar rather than under the tab
+   bar — see the note above. Smaller than it looks: the bar now carries `.sectionHeader`'s bottom
+   padding, so the real distance is that plus this, landing within a pixel of the 24px this was
+   before the padding arrived. */
+.filter + .list {
+  margin-top: 12px;
+}
+
+/* The tag being filtered by. It is the *title* of the list underneath it, which is why it takes
+   the `h2` treatment from `.profileSection h2` rather than this row's own type — same size, same
+   weight, same tracking, so the bar and a CV section header are the same object with the same
+   geometry. At the row's 12px it read as a caption and left the bar half a section header tall.
+
+   `--foreground-primary` is what a section title wears, and also what a pressed tag in the list
+   below wears, so the bar and the rows agree about what is active. */
+.filterTag {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  font-size: var(--type-size);
+  font-weight: var(--weight-emphasis);
+  letter-spacing: -0.02em;
+  color: var(--foreground-primary);
+}
+
+/* The mark beside it needs **no** `vertical-align`, unlike every other mark on the page, and that
+   is worth stating because the obvious fix is to add one: `.metaIcon`'s -3px is tuned to 12px text
+   and this label is 14px, so the arithmetic says ~-2px. It would do nothing. `.filterTag` is a
+   flex container, so the mark is a flex item and `align-items: center` positions it — confirmed by
+   setting an absurd `vertical-align` and measuring no movement at all. Centring the 14px box in
+   the 22.4px line box happens to land the ink 0.45px off the cap's optical centre, which is
+   why this reads correctly without anything being tuned. */
+.filterTag .metaIcon {
+  /* Full strength here rather than the 0.8 the byline's marks wear — this one sits beside
+     primary-weight text, and holding it back would read as a mismatch rather than as restraint. */
+  opacity: 1;
+}
+
+/* `margin-right: auto` rather than a spacer element, so `.clear` is pushed to the column's far
+   edge and the count stays beside the tag it belongs to. */
+.filterCount {
+  margin-right: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+/* `.detailsToggle` from Profile.module.css, declared again rather than shared — the same trade
+   `.srOnly` below makes, and for the same reason.
+
+   Matching the CV's Show/Hide Details control is not only for consistency: the note beside it
+   explains that it stays quiet *because* it sits in a sticky header, where a filled pill parked
+   under the tab bar for the length of a section competes with the label next to it. This bar is
+   sticky, parked in the same slot, and has a label next to it, so the reasoning carries over
+   whole. It was a `--background-muted` pill first, which is what that argument rules out.
+
+   Keep the two in step: if the CV's toggle changes, this should follow. */
+.clear {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 2px 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--foreground-tertiary);
+  font: inherit;
+  font-size: var(--secondary-type-size);
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.clear:hover {
+  color: var(--foreground-primary);
+}
+
+.clear:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clear {
+    transition: none;
+  }
+}
+
+/* The filter's spoken half. Same shape as `SiteFooter.module.css`'s — a CSS module cannot share
+   a class, and nine lines of a known utility is the cheaper duplicate. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .empty {

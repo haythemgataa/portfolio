@@ -71,4 +71,15 @@ a file in place actually busts the cache.
   The licence and README beside it are committed.
 - [CLAUDE.md](CLAUDE.md) is the long-form engineering record — why things are built the way
   they are, and which of them are load-bearing. It is considerably more detailed than this file.
-- The content, writing, and media are mine; the code is here to read.
+
+## License
+
+The **code** is MIT — see [LICENSE](LICENSE). Fork it, read it, build on it.
+
+The **content** is not: the CV prose, the photographs and video in `public/media/`, and the
+site artwork are all rights reserved, and some of the logos and product screenshots there
+belong to their owners rather than to me. [LICENSE-CONTENT](LICENSE-CONTENT) draws the line
+precisely and says what you may do either side of it.
+
+If you build on this, swap `content/` and `public/media/` for your own material first —
+both are read from disk at build time, so that needs no code changes.

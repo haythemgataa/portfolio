@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import UserHand from "./UserHand";
 import { usePrefersReducedMotion } from "./usePrefersReducedMotion";
 import FigmaCursor from "./FigmaCursor";
 import styles from "./SiteFooter.module.css";
@@ -41,8 +42,9 @@ const CLAP_MS = 560;
  * then greeting.
  */
 const WAVE_LEAD_IN_MS = 520;
-/** The drawn hand's fingertip, in its own 24x24 box — see public/hand-cursor.svg. */
+/** The drawn hand's fingertip, in its own 24x24 box — see UserHand.tsx. */
 const USER_HAND_HOTSPOT = { x: 12, y: 2 };
+
 
 /**
  * Where each pointer's tip sits in the SVG's own units — see FigmaCursor. The element is
@@ -397,17 +399,7 @@ const LastUpdated: React.FC<LastUpdatedProps> = ({ date }) => {
                 transform: `translate(${userHand.x - USER_HAND_HOTSPOT.x}px, ${userHand.y - USER_HAND_HOTSPOT.y}px)`,
               }}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element -- a 24px fixed-size mark
-                  with no responsive variants to pick between; next/image would add a wrapper
-                  and a srcset for one unoptimised SVG. */}
-              <img
-                className={styles.userHandArt}
-                src="/hand-cursor.svg"
-                alt=""
-                width={24}
-                height={24}
-                draggable={false}
-              />
+              <UserHand className={styles.userHandArt} />
             </span>
           ) : null}
         </span>

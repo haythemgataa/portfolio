@@ -1,14 +1,43 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import "./globals.css";
 import layout from "./layout.module.css";
 import styles from "./NotFound.module.css";
+import NotFoundCode from "./NotFoundCode";
 import ThemeScript from "./ThemeScript";
 import ThemeSwitch from "./ThemeSwitch";
 import { switzer } from "./lib/font";
 import { loadProfileData } from "./lib/contentLoader";
 import { SITE_URL } from "./lib/site";
 import { THEME_SWITCH_ENABLED } from "./lib/theme";
+
+/**
+ * Takes the finished numeral off the *first* frame, so the typing animation has something to
+ * start from.
+ *
+ * The markup ships complete and selected — that is what a reader with JavaScript off should get,
+ * and what a crawler should read. But static HTML paints long before React hydrates, so emptying
+ * the box from an effect would show the finished 404 for a few frames and then blank it, which
+ * reads as a fault rather than as an animation. The same argument the theme script is built on:
+ * anything deferred to React runs after the browser has already painted, and that *is* the flash.
+ *
+ * So this runs synchronously, parsed immediately after the numeral, and sets one attribute that
+ * two rules in `NotFound.module.css` key off. `NotFoundCode` clears it in a layout effect.
+ *
+ * Three things it deliberately does:
+ *
+ * - **It checks `prefers-reduced-motion` itself.** The attribute is never set for a reader who
+ *   has asked for less motion, so they get the finished numeral with no hiding and no restoring.
+ * - **It arms a timeout to undo itself.** If React never arrives — the bundle fails, an extension
+ *   blocks it — nothing would otherwise clear the attribute and the numeral would stay hidden on
+ *   a page whose whole job is to say 404. After two seconds it puts it back. When React does
+ *   arrive it has already cleared the attribute, so this finds nothing to do.
+ * - **`try`/`catch`**, because `matchMedia` is absent in some embedded webviews and a throw here
+ *   would take the rest of the inline script with it.
+ */
+const TYPING_SCRIPT =
+  `try{if(!matchMedia("(prefers-reduced-motion: reduce)").matches){` +
+  `var e=document.documentElement;e.setAttribute("data-typing","");` +
+  `setTimeout(function(){e.removeAttribute("data-typing")},2000)}}catch(e){}`;
 
 export async function generateMetadata(): Promise<Metadata> {
   const cv = await loadProfileData();
@@ -55,16 +84,19 @@ export async function generateMetadata(): Promise<Metadata> {
  *   `@font-face` and a second stylesheet chunk onto *every page of the site*, not just this one.
  * - **`globals.css`**, which is where the tokens, the palette and `p { text-wrap: pretty }` live.
  * - **the pre-paint theme script**, so a forced theme is honoured here too rather than this being
- *   the one page that ignores it. `suppressHydrationWarning` rides on the same flag for the same
- *   reason as in `layout.tsx`: the script writes an attribute the server never sent.
+ *   the one page that ignores it.
  * - **the glow and the dot texture**, which are `layout.module.css`'s own elements. They are what
  *   make this read as this site rather than as a generic error screen, and they cost no request.
  *
  * What it does *not* re-create is the header, the tab bar, About or the footer. That is the point
  * of the file, not an omission.
  *
- * Everything here is static: no client component, no state, no effect. The selection chrome is
- * five spans and the way out is a `<Link>`.
+ * **`suppressHydrationWarning` is unconditional here, where `layout.tsx` gates it on the theme
+ * flag.** Two scripts write to this `<html>` before React hydrates — the theme script, which only
+ * exists off the production branch, and `TYPING_SCRIPT`, which exists on every branch. So unlike
+ * the layout there is no build in which this element is left untouched, and gating it would report
+ * a mismatch that no change to the render could satisfy. It still covers only this element's own
+ * attributes, never its subtree.
  *
  * A note on `notFound()`: with this file present, a `notFound()` thrown inside a route segment
  * still looks for `app/not-found.tsx` and falls back to Next's default UI, which there is none of.
@@ -77,7 +109,7 @@ export default async function GlobalNotFound() {
     <html
       lang="en"
       className={switzer.variable}
-      suppressHydrationWarning={THEME_SWITCH_ENABLED}
+      suppressHydrationWarning
     >
       <head>
         <ThemeScript />
@@ -98,33 +130,36 @@ export default async function GlobalNotFound() {
 
           <div className={styles.inner}>
             {/* The page's only heading, and unlike the in-layout alternative there is no second
-                `<h1>` on screen to compete with it — `ProfileHeader` is not rendered here.
-                The four handles and the rule are empty spans: decorative, and contributing
-                nothing to the accessible name, which stays exactly "404". */}
-            <h1 className={styles.code}>
-              404
-              <span className={styles.selectionUnderline} />
-              <span className={styles.handle} data-corner="top-left" />
-              <span className={styles.handle} data-corner="top-right" />
-              <span className={styles.handle} data-corner="bottom-left" />
-              <span className={styles.handle} data-corner="bottom-right" />
-            </h1>
+                `<h1>` on screen to compete with it — `ProfileHeader` is not rendered here. */}
+            <NotFoundCode />
+            {/* Immediately after the numeral, so it runs while the parser is still inside this
+                subtree and before anything has been painted. See `TYPING_SCRIPT`. */}
+            <script dangerouslySetInnerHTML={{ __html: TYPING_SCRIPT }} />
 
             <p className={styles.line}>
               How did you manage to get lost in a single-page website?
             </p>
 
-            {/* A `<Link>` home, not a `history.back()` button, and that is a correctness choice
-                rather than a stylistic one. On a 404 the history is unknowable: a typed URL or a
-                fresh tab has none, where `back()` does nothing at all — the silent no-op this
-                codebase already has a paragraph about — and where history does exist it usually
-                leads off-site, which is the opposite of what this control is for. A link to `/`
-                is true in every case, needs no client component, and still works with JavaScript
-                off. The label names the destination the way the site's other controls do, and
-                matches the tab it lands on. */}
-            <Link href="/" className={styles.back}>
+            {/* **A plain `<a>`, not `next/link`, and that is a fix rather than a preference.**
+                This page replaces the root layout instead of rendering inside it, so the client
+                router has no app tree here to reconcile a new route into. A `<Link>` still
+                intercepted the press and pushed `/` into the address bar, then aborted the
+                navigation — leaving the 404 on screen at the site's own URL, which is worse than
+                doing nothing. Reproduced from a real 404 URL and from `/404.html` alike.
+                A full document load is also the honest thing from a standalone page: `/` is a
+                static file the CDN already has.
+
+                It is a link home rather than a `history.back()` button for a separate reason. On
+                a 404 the history is unknowable: a typed URL or a fresh tab has none, where
+                `back()` does nothing at all — the silent no-op this codebase already has a
+                paragraph about — and where history does exist it usually leads off-site, which is
+                the opposite of what this control is for. A link to `/` is true in every case and
+                still works with JavaScript off. The label names the destination the way the
+                site's other controls do, and matches the tab it lands on. */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+            <a href="/" className={styles.back}>
               Back to the CV
-            </Link>
+            </a>
           </div>
         </main>
         {/* Outside `.page` because it is `fixed` and belongs to the session rather than the

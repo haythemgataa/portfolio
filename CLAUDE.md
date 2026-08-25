@@ -312,16 +312,49 @@ restated**, because a second copy is the failure mode:
   override (`.grain`): as an absolutely positioned box it still contributes scrollable overflow, so
   on a short window it handed the page exactly `560 − viewportHeight` of scroll — 170px at 844x390.
 
+**The way out is a plain `<a href="/">`, never `next/link`, and that is a fix rather than a
+preference.** Because this file replaces the root layout instead of rendering inside it, the client
+router has no app tree here to reconcile a new route into. A `<Link>` still intercepted the press
+and pushed `/` into the address bar, then aborted the fetch — leaving the 404 on screen at the
+site's own URL, which is worse than doing nothing. Reproduced from a real 404 path and from
+`/404.html` alike, and fixed by letting the browser do a full document load. It is a link home
+rather than a `history.back()` button for a separate reason: on a 404 the history is unknowable,
+and in a fresh tab `back()` does nothing at all.
+
 The numeral wears the footer date's Figma **selected** treatment (`SiteFooter.module.css`),
-transcribed rather than shared — the footer's copy is entangled with the typing animation. Three
-things about scaling it, all measured:
+transcribed rather than shared — the footer's copy is entangled with its own hand/wave/clap. It is
+typed out under the same Figma cursor (`NotFoundCode.tsx`), which clicks into the frame, types,
+clicks the corner to select, and leaves. The one difference from the footer is the ending:
+`LastUpdated` *clears* its selection on the way out because a date left selected by a departed
+pointer reads as stuck, where here the selected state **is** the design, so the cursor leaves it
+behind.
+
+Three things make that animation safe, and all three are load-bearing:
+
+- **The width is reserved by a hidden copy of the finished string.** Let the frame grow with the
+  text instead and three things break at once: the box is centred, so it grows *both* ways and
+  every point the cursor has been aimed at drifts out from under it; the digits expand into the
+  cursor typing them; and the frame pops from nothing to full width on the first keystroke.
+- **A blocking script beside the numeral takes the finished state off the first frame.** The markup
+  ships complete and selected — that is what a reader with JavaScript off gets — but static HTML
+  paints long before React hydrates, so emptying the box from an effect would show the finished 404
+  and then blank it. Same argument as the theme script. It checks `prefers-reduced-motion` itself,
+  and arms a 2s timeout to undo itself if React never arrives.
+- **The preference is read twice, from two sources, deliberately.** `matchMedia` decides whether the
+  sequence arms; the hook decides what renders. `useSyncExternalStore` hands the *server* snapshot
+  to the hydrating pass, so `usePrefersReducedMotion()` still reports "motion allowed" on that first
+  render — arming on it emptied the box for one painted frame for exactly the readers who asked not
+  to see that.
+
+Four things about scaling the treatment, all measured:
 
 - **The type sizes are discrete, not a fluid `clamp()`**, and that is what puts the rule on the
   baseline. The rule's offset depends on the baseline, which is `ascent + half-leading`, and Blink
   *floors* half-leading to whole pixels — so fractional font sizes (exactly what `vw` produces)
   throw the rule up to 1.3px off, worst at 768px, iPad portrait. At fixed integer sizes the exact
-  offset is a known integer: at `line-height: 1`, 72→9px, 96→12px, 120→15px, 140→18px. Measured
-  error is **0 at every breakpoint in both themes**.
+  offset is a known integer: at `line-height: 1`, 96→12px, 120→15px, 160→21px, 200→26px. Measured
+  error is **0 at every breakpoint in both themes**. A `max-height` rule drops back to 96px on a
+  landscape phone, which the width breakpoints cannot see.
 - The continuous form is `F·(L − (a − d))/2 − 1px` with Switzer's `a = 0.980`, `d = 0.250` (hhea,
   upem 1000, identical across all nine shipped cuts). At the footer's 14px/1.6 it gives 5.08px
   against the 5px it ships, which is the check that this is the same rule.

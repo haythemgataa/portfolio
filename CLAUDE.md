@@ -373,6 +373,27 @@ and `currentColor` only sees the page's colour when the SVG is part of the docum
 is an independent document, so a file would have meant either a second `-dark` copy or a filter,
 plus a request for one path.
 
+**The footer's two hands are the case that proves the rule the hard way.** The reader's hand was
+`public/hand-cursor.svg` until it wasn't, and the file's own comment explained why it had to be
+one: the clap zone carried a CSS `cursor`, which takes a URL and so has nothing to inline into.
+That stopped being true the day the clap was added — a native cursor image is stamped by the
+compositor and cannot be animated, so the zone became `cursor: none` with the hand *drawn* in its
+place. The constraint lapsed at that moment and the comment outlived it by a long way.
+
+The cost of the leftover file was a bug with a distinctive shape: **the `<img>` is only rendered
+once the pointer is already inside a zone that has just hidden its own cursor**, so on a cold
+cache the first arrival hid the real pointer and then waited on a round trip with nothing drawn
+in its place. The hand appeared on the *second* hover and only then, which reads as broken rather
+than slow. Inline, there is nothing to wait for.
+
+Two things worth keeping from the fix. `handPaths.ts` holds the three path `d` strings once,
+because the file and `FigmaCursor.tsx` had held byte-identical copies of all three — verified,
+not assumed — so a redraw meant finding both; only the fill differs, and it is the whole
+difference between the site's hand and the reader's (two identical hands read as one object
+doubled rather than as someone arriving to meet it). And an inline `<svg>` needs `aria-hidden`
+where the `<img>` had `alt=""`, and needs no `draggable={false}`, which existed only because
+images are natively draggable and the drag pre-empted the pointer it stands in for.
+
 `content/` sits outside `public/` deliberately: it is compiler input, not a static asset.
 Keeping it in `public/` shipped 27 never-requested JSON files to the CDN and made the whole
 CV fetchable at `/content/.../item.json`. Media has to stay under `public/`.

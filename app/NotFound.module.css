@@ -2,13 +2,17 @@
  *
  * The page is the joke: the numeral wears the Figma *selected* treatment the footer's published
  * date wears — blue frame, a rule on the baseline, four corner handles — so the one thing the
- * visitor did not find is the one thing on screen that looks picked up. It is typed out under the
- * same Figma cursor, for the same reason.
+ * visitor did not find is the one thing on screen that looks picked up.
+ *
+ * It is the *resting* selected state and nothing animates: the footer's date types itself out
+ * under a Figma cursor, and this deliberately does not. Everything here is static, which is what
+ * lets the whole page be a server component with no client JavaScript at all.
  *
  * The treatment is transcribed from `SiteFooter.module.css` rather than shared, for the same
  * reason `.clear` restates `.detailsToggle` and `.srOnly` is written out twice: the footer's copy
- * is entangled with *its* animation — a hand that waves and claps, a name pill that has to be
- * offset when the pointer swaps — and none of that happens here.
+ * is entangled with *its* animation — a transparent border it toggles with `data-boxed`, a ZWSP
+ * strut that stops an empty inline-block collapsing, a hand that waves and claps — and none of
+ * that has any meaning here.
  * **If the footer's selection chrome changes, this has to follow by hand.**
  *
  * This file dresses `global-not-found.tsx`, which bypasses the root layout entirely — so unlike
@@ -105,15 +109,6 @@
 
 /* ---- the selected numeral ---------------------------------------------------------------- */
 
-/* Wraps the numeral so the cursor has something to be positioned against, and so every target it
-   aims at can be measured in one coordinate space. `inline-block` so it hugs the frame exactly
-   and is centred by `.inner`'s `text-align`; the handles are absolutely positioned and so do not
-   widen it, which keeps `.code`'s border box and this box the same rectangle. */
-.codeWrap {
-  position: relative;
-  display: inline-block;
-}
-
 /* `inline-block`, and that is the whole shape of it: an `<h1>` is a block box, so left as one the
    selection frame would span the column instead of hugging the digits — the numeral would look
    boxed, but not *selected*. As an inline-block the box is the text's own advance width, which is
@@ -126,25 +121,32 @@
   border: var(--frame-border) solid var(--blue);
   color: var(--foreground-primary);
 
-  /* 550, the site's emphasis weight, not a display-weight 700. globals.css: "The site uses
-     exactly two weights", declared as a pair so the pairing can be judged as one; a third would
-     be a third thing to keep in step. At this size 550 against 350 body copy reads as bold. */
-  font-weight: var(--weight-emphasis);
+  /* 350 — the site's *base* weight, the one the body copy is set in, rather than the 550 it wears
+     everywhere it wants emphasis. At 200px a numeral does not need weight to be loud; it is
+     already the largest thing on the page by a wide margin, and the thin cut is what keeps it
+     reading as a drawn object sitting in a selection frame rather than as a shout. It also stays
+     inside the site's two-weight vocabulary (globals.css: "The site uses exactly two weights"),
+     which a display 700 would not.
+     Note this is a token rather than a literal 350: both weights are off the 100s grid and only
+     resolve because the face is variable — `layout.tsx` declares `weight: "100 900"`. */
+  font-weight: var(--weight-base);
 
   /* `line-height: 1`, against the site's 1.6, and it is not only a space saving. It lifts the ink
      from 43% of the box to 67%, which is what stops a display numeral floating inside its own
      frame, and it is the value at which the box height is integral — see `--underline-offset`. */
   line-height: 1;
 
-  /* `normal`, where every other title on this site is tracked in, and this is measured rather
-     than stylistic. Letter-spacing is applied after *every* character including the last, so it
-     eats the trailing glyph's right side bearing — and Switzer's `4` has almost none: 0.0135em at
-     the emphasis weight. Pixel-scanned at 140px, the clearance between the last digit's ink and
-     the frame is 2.9px at `normal`, 0.7px at `-0.02em` (the site's section-title tracking), and
-     −1.1px at weight 900, where the ink crosses the frame outright.
-     So tracking does not quite break it at 550 — it leaves seven tenths of a pixel, which is not
-     a margin, and it goes negative the moment anyone reaches for a heavier weight. Keep `normal`,
-     or add a matching `padding-right` to give the trailing space back. */
+  /* `normal`, where every other title on this site is tracked in.
+     Partly a judgement — the frame Figma draws round a text layer is its *advance* box, so leaving
+     the tracking alone is what makes the box the digits' own width — and partly a trap worth
+     knowing about before anyone reverses it. Letter-spacing is applied after the **last**
+     character too, so it eats the trailing glyph's right side bearing, and Switzer's `4` has very
+     little to give: 0.029em of it at this weight and only 0.0135em at 550. Pixel-scanned at 140px,
+     `-0.02em` leaves 2.7px of clearance inside the frame at weight 350, 0.7px at 550, and −1.1px
+     at 900 — where the ink crosses the frame outright.
+     So tracking is survivable at the weight this ships at and stops being so a step or two up.
+     If it is ever wanted, add a matching `padding-right` to give the trailing space back rather
+     than relying on the bearing. */
   letter-spacing: normal;
 
   /* Figma's selection chrome, transcribed from `SiteFooter.module.css`. All of it is fixed screen
@@ -160,35 +162,6 @@
   --handle-size: 8px;
   --handle-depth: 4px;
   --handle-inset: calc(var(--handle-depth) - var(--handle-size) - var(--frame-border));
-}
-
-/* The typed glyphs and the box that reserves room for them.
- *
- * **The width is reserved by a hidden copy of the finished string, and that is what makes the
- * animation stable.** Let the frame grow with the text instead and three things break at once:
- * the box is centred, so it grows *both* ways and every point the cursor has been aimed at drifts
- * out from under it; the digits expand into the cursor that is sitting there typing them; and the
- * frame pops from nothing to full width on the first keystroke. With the width pinned from the
- * start, the frame is an empty Figma text layer waiting to be typed into — which is the story the
- * page is telling anyway — and every target is measurable before a single character exists.
- *
- * The typed run is taken out of flow so only the sizer decides the box. Both are `aria-hidden`;
- * the accessible name rides on `.srOnly` below, because a half-typed numeral is not a fact.
- * `user-select: none` on the sizer so selecting the numeral does not silently copy it twice. */
-.glyphBox {
-  position: relative;
-  display: inline-block;
-}
-
-.glyphs {
-  position: absolute;
-  top: 0;
-  left: 0;
-}
-
-.sizer {
-  visibility: hidden;
-  user-select: none;
 }
 
 /* The type size, and the rule's offset that follows from it.
@@ -300,101 +273,6 @@
   right: var(--handle-inset);
 }
 
-/* ---- the cursor that types it ------------------------------------------------------------- */
-
-/* Restated from `SiteFooter.module.css` rather than imported, and the copy is much the smaller of
-   the two: this cursor only ever arrives, clicks twice and leaves. It never becomes a hand, so
-   none of the cross-fade, the wave, the clap or the name-pill offset comes with it — and reaching
-   across modules for the half that *is* shared would mean two files racing to set `animation` and
-   `transition` on one element, decided by whichever stylesheet the bundler happened to emit last.
- *
- * `position: absolute` keeps it out of flow, which matters twice: the numeral's box does not
- * change size when it mounts, and nothing reflows as it travels. Only `transform` animates — no
- * `left`/`top` — so the travel is handed to the compositor rather than laying the page out sixty
- * times a second. `--cursor-move` is written per leg from the component, so the parting move can
- * take longer than the working ones without a second rule.
- *
- * It is `pointer-events: none` because a decorative graphic that drifts over the button below it
- * must not be able to swallow a press. */
-.cursor {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 2;
-  pointer-events: none;
-  transition:
-    transform var(--cursor-move, 520ms) cubic-bezier(0.33, 0, 0.16, 1),
-    opacity 400ms ease;
-  animation: cursorIn 220ms ease both;
-}
-
-/* The exit. `animation: none` is the load-bearing half: `cursorIn` is declared with `both`, so its
-   fill holds `opacity: 1` on the element forever and a plain `opacity: 0` here would be overridden
-   by it rather than transitioned to. Clearing the animation hands the property back to the
-   transition above. The attribute selector also puts this a specificity step above `.cursor`, so
-   the order of the two rules is not what decides it. */
-.cursor[data-leaving="true"] {
-  animation: none;
-  opacity: 0;
-}
-
-/* Opacity only, deliberately. `transform` on this element is the cursor's *position*, written from
-   the component — an animation touching it here would win over the inline style for its whole
-   duration and snap the cursor to the corner of the box before jumping back. */
-@keyframes cursorIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* `FigmaCursor` always draws both pointers — the footer needs them both present so it can
-   cross-fade between them — so the hand has to be turned off here rather than simply not asked
-   for. Left unstyled it renders at full opacity on top of the arrow. */
-.cursorHandLayer {
-  display: none;
-}
-
-/* The click. Scaling the pointer rather than the whole cursor is what the gesture actually looks
-   like — in a multiplayer cursor the pointer reacts and the name pill rides along unchanged — and
-   it is the reason this SVG is inlined at all: nothing outside an `<img>` can reach a group inside
-   it. The origin is in viewBox units pinned to the arrow's tip, so the pointer shrinks *into* the
-   point it is aiming at rather than sliding off it; it must match `POINTER_HOTSPOT` in
-   `NotFoundCode.tsx`, which positions against the same point. */
-.cursorPointer {
-  transform-origin: 6px 6.5px;
-  transition: transform 100ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.cursor[data-clicking="true"] .cursorPointer {
-  transform: scale(0.78);
-}
-
-/* ---- what the animation hides before it starts --------------------------------------------- */
-
-/* Set by a blocking script next to the numeral, before the browser has painted anything — see the
-   note on `TYPING_SCRIPT` in `global-not-found.tsx`.
- *
- * The markup ships the *finished* state so that a reader with JavaScript off gets a complete,
- * selected numeral. That is the right thing to serve and the wrong thing to animate from: the
- * static HTML paints long before React hydrates, so emptying the box in an effect would show the
- * finished 404 and then blank it, which reads as a fault rather than as an animation. These two
- * rules take the finished state off the first frame; React removes the attribute in a layout
- * effect, before the next paint.
- *
- * `visibility` on the glyphs rather than `display`, because the sizer is what holds the box open
- * and the two must keep measuring the same. `display` on the chrome, which is absolutely
- * positioned and so measures nothing either way. */
-:root[data-typing] .glyphs {
-  visibility: hidden;
-}
-
-:root[data-typing] .chrome {
-  display: none;
-}
-
 /* ---- the line, and the way out ------------------------------------------------------------ */
 
 /* Running prose, not a label — so it takes the body's 14px/350/1.6 by inheritance and declares
@@ -466,19 +344,4 @@
   .back {
     transition: none;
   }
-}
-
-/* The numeral is typed one character at a time and the box around it is `aria-hidden`, because a
-   half-typed 404 is not a fact worth announcing — so the real string rides here instead. The same
-   declarations as `SiteFooter.module.css`'s copy, duplicated for the same stated reason. */
-.srOnly {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  border: 0;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
 }

@@ -323,30 +323,11 @@ and in a fresh tab `back()` does nothing at all.
 
 The numeral wears the footer date's Figma **selected** treatment (`SiteFooter.module.css`),
 transcribed rather than shared — the footer's copy is entangled with its own hand/wave/clap. It is
-typed out under the same Figma cursor (`NotFoundCode.tsx`), which clicks into the frame, types,
-clicks the corner to select, and leaves. The one difference from the footer is the ending:
-`LastUpdated` *clears* its selection on the way out because a date left selected by a departed
-pointer reads as stuck, where here the selected state **is** the design, so the cursor leaves it
-behind.
+the *resting* selected state and nothing animates — the footer's date types itself out under a
+Figma cursor, and this deliberately does not, which is what lets the whole page stay a server
+component with no client JavaScript at all.
 
-Three things make that animation safe, and all three are load-bearing:
-
-- **The width is reserved by a hidden copy of the finished string.** Let the frame grow with the
-  text instead and three things break at once: the box is centred, so it grows *both* ways and
-  every point the cursor has been aimed at drifts out from under it; the digits expand into the
-  cursor typing them; and the frame pops from nothing to full width on the first keystroke.
-- **A blocking script beside the numeral takes the finished state off the first frame.** The markup
-  ships complete and selected — that is what a reader with JavaScript off gets — but static HTML
-  paints long before React hydrates, so emptying the box from an effect would show the finished 404
-  and then blank it. Same argument as the theme script. It checks `prefers-reduced-motion` itself,
-  and arms a 2s timeout to undo itself if React never arrives.
-- **The preference is read twice, from two sources, deliberately.** `matchMedia` decides whether the
-  sequence arms; the hook decides what renders. `useSyncExternalStore` hands the *server* snapshot
-  to the hydrating pass, so `usePrefersReducedMotion()` still reports "motion allowed" on that first
-  render — arming on it emptied the box for one painted frame for exactly the readers who asked not
-  to see that.
-
-Four things about scaling the treatment, all measured:
+Five things about scaling the treatment, all measured:
 
 - **The type sizes are discrete, not a fluid `clamp()`**, and that is what puts the rule on the
   baseline. The rule's offset depends on the baseline, which is `ascent + half-leading`, and Blink
@@ -361,6 +342,11 @@ Four things about scaling the treatment, all measured:
 - **The frame, the 1px rule and the 8px handles do not scale**, because a Figma selection handle is
   screen-sized whatever the object is. That is what makes it read as the same cursor having
   selected a bigger thing.
+- **The weight is `--weight-base` (350), not the 550 the site uses for emphasis.** At 200px the
+  numeral is already the largest thing on the page by a wide margin, so it needs no weight to be
+  loud, and the thin cut reads as a drawn object sitting in a selection frame rather than as a
+  shout. Weight moves neither the baseline nor the advance width — measured identical across all
+  nine cuts — so none of the geometry above depends on it.
 - **`letter-spacing` is `normal`**, where every other title here is tracked in. Tracking is applied
   after the *last* character too, and Switzer's `4` carries only 0.0135em of right side bearing —
   pixel-scanned at 140px, `-0.02em` leaves 0.7px of clearance at the emphasis weight and −1.1px at

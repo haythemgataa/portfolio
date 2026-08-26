@@ -1,6 +1,6 @@
 <div align="center">
   <picture>
-   <img width="2400" alt="opengraph-image" src="https://github.com/user-attachments/assets/4e6e2e2a-f7b7-416c-b8eb-0a8ec1f4e162" />
+   <img width="2400" alt="opengraph-image" src="https://github.com/user-attachments/assets/e34589a1-b2e6-4af7-8b18-4ff472a61c42" />
   </picture>
   
 # haythem.cv

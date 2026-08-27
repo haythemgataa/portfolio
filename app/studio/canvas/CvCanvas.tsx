@@ -11,7 +11,6 @@ import {
   EnvelopeIcon,
   PlatformIcon,
   hasPlatformIcon,
-  platformBrandStyle,
 } from '../../ContactIcon';
 import profile from '../../Profile.module.css';
 import type { ContactItem, CvItem, CvSection, ResolvedMedia } from '../../lib/contentTypes';
@@ -438,6 +437,10 @@ const CanvasSection: React.FC<{
  * about the link — inspector, by the rule in CLAUDE.md. What a visitor can still read stays on
  * the canvas: the address, and the *name* of a platform with no mark drawn for it, which is that
  * pill's whole visible content.
+ *
+ * The site's hover tooltip is the one piece of the pill deliberately not reproduced: it occupies
+ * exactly the space `.tools` does, directly above the pill, and both appear on hover. The
+ * toolbar is what a hover means here, so a plain `title` carries the handle instead.
  */
 const CanvasContactRow: React.FC<{
   item: ContactItem;
@@ -520,7 +523,6 @@ const CanvasContactRow: React.FC<{
           ]
             .filter(Boolean)
             .join(' ')}
-          style={platformBrandStyle(item.platform)}
           title={item.handle}
         >
           {marked ? (

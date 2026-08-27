@@ -9,7 +9,6 @@ import {
   EnvelopeIcon,
   PlatformIcon,
   hasPlatformIcon,
-  platformBrandStyle,
 } from "./ContactIcon";
 import { groupContactRows } from "./lib/contentTypes";
 import GalleryPreview from "./GalleryPreview";
@@ -321,8 +320,13 @@ type ContactRowProps = {
 };
 
 /**
- * A profile: the compact pill, its mark and nothing else. The brand colour it takes on hover
- * arrives as the light/dark pair `.contactCompact` composes — see `platformBrandStyle`.
+ * A profile: the compact pill, its mark and nothing else.
+ *
+ * The tooltip names the platform, and it replaced the native `title` rather than joining it —
+ * two tooltips over one pill is one too many, and the native one arrives after a delay the
+ * browser owns, in a chrome that is nobody's design. It is deliberately *not* rendered on an
+ * unmarked pill: that pill's whole visible content is already the platform's name, so a label
+ * repeating it hovers a word over itself.
  */
 const ContactProfile: React.FC<ContactRowProps> = ({
   item
@@ -336,13 +340,9 @@ const ContactProfile: React.FC<ContactRowProps> = ({
         styles.contactCompact,
         marked ? '' : styles.contactCompactLabel,
       ].filter(Boolean).join(' ')}
-      style={platformBrandStyle(item.platform)}
       href={item.url}
       target="_blank"
       rel="noreferrer"
-      // Redundant to a screen reader, which reads the spoken name below, but it is the only
-      // thing telling a mouse user which profile a bare glyph leads to.
-      title={item.handle}
     >
       {marked
         ? <PlatformIcon platform={item.platform} className={styles.contactIcon}/>
@@ -352,6 +352,11 @@ const ContactProfile: React.FC<ContactRowProps> = ({
           hidden from the tree above so this is the only name either shape has, which keeps the
           two announcing identically. */}
       <span className={styles.srOnly}>{item.platform}: {item.handle}</span>
+      {/* `aria-hidden` because the name above already says this, and a tooltip that repeats the
+          platform into the accessible name would have it announced twice. */}
+      {marked
+        ? <span className={styles.contactTip} aria-hidden="true">{item.platform}</span>
+        : null}
     </a>
   );
 }

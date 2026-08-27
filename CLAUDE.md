@@ -1175,23 +1175,51 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
     and so vanished against an already-filled pill — the collision the gallery's filter tags
     avoid by keeping hover and pressed a step apart. Making the whole pill the copy target
     dissolved both problems instead of tuning around them.
-  - **Hover takes the mark to the platform's own colour, and only the mark.** That is the one
-    thing a monochrome row of brands cannot say at rest. The pill never takes a brand ground: a
-    16px mark on a filled brand tile is a logo chip, and five of those in a row is a footer from
-    another site. The colour lives in `PLATFORM_MARKS` beside the path — same kind of fact — and
-    reaches CSS as a `[light, dark]` pair of custom properties rather than as a finished
-    `light-dark()`, because **an inline style is not processed by Lightning CSS** and would miss
-    the polyfill the whole palette depends on. `.contactCompact` composes the pair in the
-    stylesheet, where it does; verified in the built export in both themes. Two of the five are
-    near-black wordmarks with no colour to go to, so their dark entry is white — on that ground
-    the brand *is* the inversion.
-  - **Copy animates into check rather than swapping.** Both glyphs are mounted at all times,
-    stacked in one grid cell under `place-items: center`, and the press crossfades and scales
-    between them — an element that does not exist yet has nothing to animate from, the same
-    reason the lightbox's close cross is two real spans rather than two pseudo-elements. The
-    easing overshoots slightly (measured: the check passes 1.039 before settling), which is what
-    gives the confirmation its small snap. Under `prefers-reduced-motion` the transition is
-    dropped and the swap is instant.
+  - **The marks stay monochrome, and a tooltip carries the platform's name instead.** Each mark
+    was briefly tinted to its brand colour on hover; the row read as five logos rather than as one
+    set of controls, and the fill and the ink coming forward already say which pill the pointer is
+    on — in the page's own voice. What the tint was actually answering is "what is this glyph",
+    which a label answers better. `PLATFORM_MARKS` therefore carries paths and nothing else.
+  - **The tooltip is an element, not a `::after`.** A pseudo-element would have to carry the
+    platform through `content: attr(…)`, and generated content is exposed as text by some screen
+    readers — the pill's accessible name already spells out the platform and the handle, so that
+    would double it; a real span can be `aria-hidden`. Three more things: it is absolutely
+    positioned and `pointer-events: none`, so the row at rest measures exactly as it does without
+    it and the label never eats the press of the pill beneath; `.contactCompact` is
+    `position: relative` purely to be its containing block, which is what lets one `left: 50%`
+    centre it on any pill with nothing measured; and because the centring lives in the same
+    `transform` as the rise, **every state has to restate the `translate(-50%, …)`** — including
+    the reduced-motion rule, or the label lands half its width to the right. It replaced the
+    native `title` rather than joining it (two tooltips over one pill), and it is deliberately not
+    drawn on an *unmarked* pill, whose whole visible content is already the platform's name.
+  - **Copy animates into a green check.** Both glyphs are mounted at all times, stacked in one
+    grid cell under `place-items: center`, and the press crossfades and scales between them — an
+    element that does not exist yet has nothing to animate from, the same reason the lightbox's
+    close cross is two real spans rather than two pseudo-elements. The easing overshoots slightly
+    (measured: the check passes 1.039 before settling), which is what gives the confirmation its
+    small snap. Under `prefers-reduced-motion` the transition is dropped and the swap is instant.
+    The mark is 14px against the envelope's 16 — it is the affordance, not the pill's subject.
+
+    Two things about the green. It is `--green`, which is why the palette table now lists that
+    token as shipping rather than as Studio-only: "it worked" is exactly what it means everywhere
+    else here, and a confirmation that only changes *shape* asks the reader to compare two glyphs
+    they see for half a second each. And **`.contactAddress:hover` needs `:not([data-copied])`,
+    without which the green never appeared at all.** That selector and
+    `.contactAddress[data-copied] .contactCopyMark` are both (0,3,0), so source order decides and
+    the hover rule is later — and a copy is always made with the pointer on the pill, so hover was
+    live for the whole confirmation and painted straight over it. Excluding the confirming state
+    is the fix rather than shuffling the two rules, because the ordering it would depend on is
+    invisible at the point that matters: the same trap `.dropzone::before` documents in the
+    Studio's `canvas.module.css`.
+  - **The address's `line-height` is restated on the text, and leaving it at the pill's `1`
+    clipped it.** `.contactAddressText` carries `overflow: hidden` for the ellipsis, and that
+    clips the *content box* — which at `line-height: 1` is exactly `font-size` tall, while the
+    glyphs need ascent plus descent. Measured at 14px: an 18px font box inside a 14px box, 2px
+    lost off the top and 2px off the bottom, every descender in `hello@haythem.cv` beheaded. The
+    pill's own `1` is right for it — it is `.tab`'s box, and nothing there clips — so the fix
+    belongs on the box that does the clipping, and it takes `--line-height` rather than a number
+    picked to fit, since the ratio the whole site sets its prose in is by construction tall enough
+    for the face's own metrics.
   - **Copied is a live region, not a renamed button.** The button's name has to keep saying what
     a press *does*; renaming it to "Copied" tells a reader arriving a second later about
     something they never did. The swapped glyph is the sighted half. `navigator.clipboard` is
@@ -1643,7 +1671,8 @@ that cut it is worth knowing about before adding anything back.
 | `--foreground-secondary` | `#4b5563` | `#b4bac4` | Most running text and iconography |
 | `--foreground-tertiary` | `#9499a3` | `#868d99` | Dates, quiet text, the scrollbar thumb |
 | `--blue` | `#0788f5` | — | Links and every focus ring |
-| `--backdrop`, `--red`, `--green` | | | Studio only; these ship nowhere |
+| `--green` | `#32bd64` | — | The contact row's copied check, and the Studio |
+| `--backdrop`, `--red` | | | Studio only; these ship nowhere |
 
 Plus two values derived from `--overlay-ink` (`#000` light, `#fff` dark), which is not a palette
 colour so much as the direction "away from the ground":

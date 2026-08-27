@@ -209,19 +209,10 @@
   transition: background-color 150ms ease, color 150ms ease;
 }
 
-/* A profile: the box at its own height, so the pill is a circle.
-
-   `--contact-brand` is composed here rather than handed over finished, because the two halves
-   arrive as inline custom properties from `platformBrandStyle` and an inline style is not
-   processed by Lightning CSS — a `light-dark()` written there would miss the polyfill the whole
-   palette relies on. Written in the stylesheet it goes through the same machinery as every other
-   themed value, including the theme switch. The fallback is the hover ink, so a platform with a
-   mark but no brand entry still behaves like everything else rather than losing its colour. */
+/* A profile: the box at its own height, so the pill is a circle. `position: relative` is the
+   tooltip's containing block, and it costs the resting row nothing. */
 .contactCompact {
-  --contact-brand: light-dark(
-    var(--contact-brand-light, var(--foreground-primary)),
-    var(--contact-brand-dark, var(--foreground-primary))
-  );
+  position: relative;
   justify-content: center;
   width: var(--contact-pill-size);
   flex-shrink: 0;
@@ -252,11 +243,22 @@
 }
 
 /* Ellipsised rather than wrapped: the pill is a fixed-height object, so a second line of
-   address would break the row's rhythm rather than the address. */
+   address would break the row's rhythm rather than the address.
+
+   **`line-height` has to be restated here, and leaving it at the pill's 1 clipped the address.**
+   `overflow: hidden` is what buys the ellipsis, and it clips the *content box* — which at
+   `line-height: 1` is exactly `font-size` tall, while the glyphs need ascent + descent. Measured
+   at 14px: an 18px font box inside a 14px box, so 2px went off the top and 2px off the bottom and
+   every descender in `hello@haythem.cv` lost its tail. The pill's own 1 is right for it — it is
+   `.tab`'s box and nothing there clips — so the fix belongs on the box that does the clipping.
+   `--line-height` rather than a number picked to fit, since the ratio the whole site sets its
+   prose in is by construction tall enough for the face's own metrics. The pill's height is fixed,
+   so a taller inner box moves nothing. */
 .contactAddressText {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  line-height: var(--line-height);
 }
 
 .contactIcon {
@@ -275,8 +277,10 @@
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 16px;
-  height: 16px;
+  /* 14px against the envelope's 16. It is an affordance rather than the pill's subject — the
+     address is — so it sits a step below the mark that opens the row. */
+  width: 14px;
+  height: 14px;
   color: var(--foreground-tertiary);
   transition: color 150ms ease;
 }
@@ -284,8 +288,8 @@
 .contactCopyGlyph,
 .contactCheckGlyph {
   grid-area: 1 / 1;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   transition: opacity 180ms ease, transform 180ms cubic-bezier(0.2, 0.9, 0.3, 1.3);
 }
 
@@ -307,10 +311,13 @@
   transform: scale(1);
 }
 
-/* Confirmation is worth a colour the resting glyph does not have; the ink comes forward with it
-   so the pill reads as having answered. */
+/* Green is the one place the semantic tokens reach the site rather than only the Studio — see
+   the palette table in CLAUDE.md. It is worth the exception because "it worked" is exactly what
+   `--green` means everywhere else in this codebase, and a confirmation that only changes shape
+   asks the reader to compare two glyphs they see for half a second each. It tints the mark alone,
+   never the pill: a filled green pill in a row of grey ones is a notification, not an answer. */
 .contactAddress[data-copied] .contactCopyMark {
-  color: var(--foreground-primary);
+  color: var(--green);
 }
 
 /* Only the `:hover` half is gated, never the rest state — the same split `.title a:hover` and
@@ -330,16 +337,23 @@
     color: var(--foreground-primary);
   }
 
-  /* The mark goes to the platform's own colour, which is the one thing a monochrome row of
-     brands cannot say at rest. It is the icon that changes, never the pill: a filled brand
-     ground under a 16px mark is a logo tile, and five of those in a row is a footer from another
-     site. Scoped to `.contactIcon` inside a compact pill so the address pill's envelope — which
-     is nobody's brand — keeps taking the hover ink with the rest of the surface. */
-  .contactCompact:hover .contactIcon {
-    color: var(--contact-brand);
+  /* The tooltip is hover and keyboard focus only. `hover: hover` keeps it off touch, where a tap
+     opens the link and a label that appeared on the way out would be a flash of nothing useful. */
+  .contactCompact:not(.contactCompactLabel):hover .contactTip {
+    opacity: 1;
+    transform: translate(-50%, 0);
   }
 
-  .contactAddress:hover .contactCopyMark {
+  /* **`:not([data-copied])` is load-bearing, and without it the green check never appeared at
+     all.** This selector and `.contactAddress[data-copied] .contactCopyMark` have identical
+     specificity — a class plus a pseudo-class against a class plus an attribute, both (0,3,0) —
+     so source order decides, and this one is later. A copy is always made with the pointer on the
+     pill, so hover was live for the whole of the confirmation and painted straight over it: the
+     check turned over on schedule and did it in the hover ink. Excluding the confirming state
+     here is the fix rather than shuffling the two rules, because the ordering it depends on is
+     invisible at the point that matters — the same trap `.dropzone::before` documents in the
+     Studio's canvas.css. */
+  .contactAddress:hover:not([data-copied]) .contactCopyMark {
     color: var(--foreground-primary);
   }
 }
@@ -349,10 +363,12 @@
   outline-offset: 2px;
 }
 
-/* Same treatment as hover for a keyboard: the ring says *which* pill, the brand colour says
-   which platform. */
-.contactCompact:focus-visible .contactIcon {
-  color: var(--contact-brand);
+/* A keyboard gets the label too — the ring says *which* pill and the tooltip says which
+   platform, which is the pair a pointer gets. Not gated on `hover: hover`: `:focus-visible` never
+   matches a tap, so there is nothing here for touch to get stuck on. */
+.contactCompact:not(.contactCompactLabel):focus-visible .contactTip {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -360,9 +376,54 @@
   .contactIcon,
   .contactCopyMark,
   .contactCopyGlyph,
-  .contactCheckGlyph {
+  .contactCheckGlyph,
+  .contactTip {
     transition: none;
   }
+
+  /* The rise is the motion; the label still needs to arrive at its resting place rather than 4px
+     below it, so the offset is neutralised rather than left to a transition that no longer runs. */
+  .contactTip {
+    transform: translate(-50%, 0);
+  }
+}
+
+/* The tooltip, naming the platform a bare mark stands for.
+
+   It inverts the ground it sits on — `--foreground-primary` filled, `--background-primary`
+   lettered — which is the selected tab pill's construction and, like it, means the chip cannot
+   drift from either token and needs no dark-theme rule of its own.
+
+   Three things about how it is built:
+
+   - **It is an element, not a `::after` on the pill.** A pseudo-element would have to carry the
+     platform through `content: attr(...)`, and generated content is exposed to some screen
+     readers as text — the pill's accessible name already spells out the platform and the handle,
+     so that would double it. A real span can be `aria-hidden`.
+   - **Nothing it does moves a glyph.** Absolutely positioned out of flow and `pointer-events:
+     none`, so the row at rest measures exactly as it does without it and a tooltip never steals
+     the press of the pill under it. It sits above the pill because below is where the next line
+     of a wrapped row goes.
+   - **The pill is the containing block**, which is what lets one `left: 50%` centre it on any
+     pill without measuring. The `translate(-50%, …)` therefore carries the centring *and* the
+     rise, so both have to be written into every state or the label lands half a width to the
+     right. */
+.contactTip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translate(-50%, 4px);
+  z-index: 1;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background-color: var(--foreground-primary);
+  color: var(--background-primary);
+  font-size: var(--secondary-type-size);
+  line-height: var(--line-height);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 140ms ease, transform 140ms ease;
 }
 
 /* The compact pills' spoken half — a circle carrying one glyph has no text in it, so the name

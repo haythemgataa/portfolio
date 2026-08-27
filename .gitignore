@@ -16,4 +16,10 @@ out
 # Fetched by scripts/fetch-font.mjs at install/build time. The ITF Free Font License permits
 # self-hosting but not distribution through a public repository, so the binary stays out of git —
 # app/fonts/LICENSE.txt and README.md are committed, the font itself is not.
-app/fonts/*.woff2
+#
+# Named rather than globbed as `app/fonts/*.woff2`, which is what it was. The glob read as a
+# policy about the directory when it was only ever a fact about this one file's licence, and it
+# silently swallowed the next font added beside it — a build that then fails only off a clean
+# clone, since the file is present on the machine that added it. Bellina-Numbers.woff2 has no
+# upstream to be fetched from (it is a local subset, see README.md) so it has to be committed.
+app/fonts/Switzer-Variable.woff2

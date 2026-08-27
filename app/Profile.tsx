@@ -4,6 +4,7 @@ import { useState } from "react";
 import RichText from "./RichText";
 import Arrow12 from "./Arrow12";
 import GalleryPreview from "./GalleryPreview";
+import SectionNumber from "./SectionNumber";
 import styles from "./Profile.module.css";
 import Attachments from "./Attachments";
 import { cloudflareImageUrl } from "./lib/cloudflareImage";
@@ -66,12 +67,15 @@ const Profile: React.FC<ProfileProps> = ({
           // index says nothing about where it sits in the document — testing that index was
           // what put the first few thumbnails of *every* section into the initial fetch.
           priority={sectionIndex === 0}
+          index={sectionIndex}
         />
       ))}
 
       {cv.contact.items.length > 0 ?
         <section className={styles.profileSection}>
-          <SectionHeader label={cv.contact.label}/>
+          {/* Contact is pinned last rather than living in `sections`, so its ordinal continues
+              the sequence from the end of that array instead of being counted with it. */}
+          <SectionHeader label={cv.contact.label} index={cv.sections.length}/>
           <div className={styles.contacts}>
             {cv.contact.items.map((item) => (
               <ContactRow key={item.id} item={item}/>
@@ -89,12 +93,15 @@ type SectionProps = {
   onToggleDetails: () => void,
   /** Whether this is the first section, and so the one on screen at load. */
   priority?: boolean,
+  /** Its position in `sections`, which is also its ordinal — see `SectionNumber`. */
+  index: number,
 };
 const Section: React.FC<SectionProps> = ({
   section,
   showDetails,
   onToggleDetails,
   priority = false,
+  index,
 }) => {
   // Descriptions are the only thing the control hides, so a section whose items carry none
   // — Awards and Speaking, today — gets no control at all rather than a dead one. Media and
@@ -106,6 +113,7 @@ const Section: React.FC<SectionProps> = ({
     <section className={styles.profileSection}>
       <SectionHeader
         label={section.label}
+        index={index}
         toggle={hasDetails ? { open: showDetails, onToggle: onToggleDetails } : undefined}
       />
       <div className={styles.experiences}>
@@ -124,6 +132,8 @@ const Section: React.FC<SectionProps> = ({
 
 type SectionHeaderProps = {
   label: string,
+  /** Zero-based position in the numbered sequence; `SectionNumber` renders it 1-based and padded. */
+  index: number,
   toggle?: { open: boolean, onToggle: () => void },
 };
 
@@ -139,10 +149,15 @@ type SectionHeaderProps = {
  */
 const SectionHeader: React.FC<SectionHeaderProps> = ({
   label,
+  index,
   toggle,
 }) => {
   return (
     <div className={styles.sectionHeader}>
+      {/* First in source order, but out of flow — it is positioned against this header, which is
+          already sticky. Being absolutely positioned it is not a flex item either, so it takes no
+          part in the `space-between` that pushes the toggle to the far edge. */}
+      <SectionNumber index={index} />
       {/* h2, not h3. `ProfileHeader`'s is the page's only h1 and this is the only other heading
           on either route, so an h3 left every section title two levels below the page title with
           no h2 anywhere to bridge them — a hole in the outline, and nothing for a screen

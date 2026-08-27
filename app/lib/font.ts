@@ -52,3 +52,49 @@ export const switzer = localFont({
   adjustFontFallback: false,
   fallback: ["Arial"],
 });
+
+/**
+ * Bellina Slant Condensed, subset to the ten digits and used for nothing but the ordinal on a
+ * section title (`SectionNumber.tsx`).
+ *
+ * **It is a subset because that is all it can be.** The source is a numbers-only cut, 11 glyphs
+ * and no `fvar`, so there is nothing here to ration: `pyftsubset --unicodes=U+0030-0039` with
+ * hinting and layout features dropped lands at 1,688 bytes, against 2,856 for the same subset
+ * with `kern` kept. Keeping it cost nothing to give up — `GPOS` and `GSUB` are both present but
+ * carry *zero* lookups and zero features, checked rather than assumed, so there was never any
+ * kerning between these digits to lose. Hinting goes for the same reason it is safe to: the face
+ * is only ever set at 28px, well past where a `glyf` hinting program earns its bytes.
+ *
+ * `preload` is left on, and the reason is worth writing down because the obvious reasoning fails.
+ * `SectionNumber` scopes the face to the one component that sets it, so it looks as though the
+ * preload should follow the numeral onto `/` alone. It does not: Next merges this route's client
+ * CSS with the gallery's into a single chunk, both pages link it, and the `<link rel="preload">`
+ * is emitted from the chunk rather than from the component. Checked in `out/`, not assumed —
+ * `/gallery` carries the preload too, and only the 404 escapes it by being a separate tree.
+ *
+ * Turning it off would fix that at the cost of the thing it is there for: paired with
+ * `display: "block"` the numeral would be invisible until the font was discovered through the
+ * stylesheet and fetched. 1,688 bytes on one route that does not need them is the cheaper half of
+ * that trade — less than a single CV thumbnail — so it stays.
+ *
+ * `display: "block"` rather than the `"swap"` Switzer takes, and the difference follows from what
+ * the two faces are doing. Swapping body copy trades a moment of Arial for text you can read
+ * immediately. Swapping *this* would flash a fallback numeral in an unrelated face into a slot
+ * whose whole job is to be the flourish on a heading — the wrong shape is worse than no shape,
+ * and being absolutely positioned it can reflow nothing on arrival either way. The block period
+ * is close to theoretical here: 1.7 KB, from our own origin, `<link rel="preload">`d by Next into
+ * the head of the one route that renders it.
+ *
+ * `adjustFontFallback` is off for a much duller reason than Switzer's — there is nothing to
+ * adjust. The numeral is out of flow, so no metric a synthesised fallback could match can move
+ * anything on the page.
+ */
+export const bellina = localFont({
+  src: "../fonts/Bellina-Numbers.woff2",
+  weight: "400",
+  style: "normal",
+  display: "block",
+  variable: "--font-bellina",
+  adjustFontFallback: false,
+  fallback: ["Georgia", "serif"],
+});

@@ -1061,8 +1061,8 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
   first section) rather than inferred in `Attachments`: its leading `PRIORITY_THUMBNAILS` are
   hinted `high`, and past `DEPRIORITISE_AFTER` in an off-screen row a thumbnail is hinted `low`,
   so when a reader scrolls, the row's leading edge arrives first.
-- **Sticky section titles.** Each `.sectionHeader` pins at `--sticky-top`, directly below the
-  tab bar. This is why section spacing in `Profile.module.css` is `padding-bottom`, not
+- **Sticky section titles.** Each `.sectionHeader` pins at `--sticky-top` plus
+  `--section-number-headroom`, just below the tab bar. This is why section spacing in `Profile.module.css` is `padding-bottom`, not
   `margin`: a sticky element is confined to its own section box, so margins would leave a
   60px window between sections with no title pinned. With padding, consecutive section boxes
   touch and each title is pushed out exactly where the next one arrives. The title carries
@@ -1082,6 +1082,44 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
   `aria-pressed` — doing both makes a screen reader announce the state twice — and its
   accessible name says "in every section" rather than naming one, which would promise a
   scope it does not have.
+- **Section titles carry an ordinal, and it is derived rather than authored.** `SectionNumber.tsx`
+  renders `01`, `02` … from a section's position — array order is display order everywhere in this
+  content model, so the number is a restatement of where a section already sits rather than a
+  field that could disagree with it. Reordering in the Studio renumbers for free and there is no
+  way to commit a CV whose numbering skips or repeats. Contact is pinned outside `sections[]`, so
+  it continues the sequence from that array's length. It is `aria-hidden`: the heading beside it
+  is already the section's accessible name, and exposing the numeral prepends "01" to every one
+  of them.
+
+  Four things about it are load-bearing:
+  - **It is absolutely positioned, and the header is its containing block for free** —
+    `.sectionHeader` is already `position: sticky`. Out of flow it adds nothing to the header's
+    height, which is not incidental: that figure is 39.59375px, the tab bar parks every title
+    against it, and the Studio's canvas is measured to match `/` on it exactly. Verified
+    unchanged after the fact, on both surfaces.
+  - **The offset is derived from both faces' real metrics, not nudged until it looked right.** The
+    numeral's baseline parks on the title's cap line, which lands at
+    `LH + 0.315 * type-size - 0.132 * section-number-size` above the header's padding box — see
+    `SectionNumber.module.css` for where the two constants come from. Measured against the live
+    page: the baseline lands at 12.484px from the header's top against a computed cap line of
+    12.48px. Both constants are read off the files rather than the `OS/2` fields, which is
+    load-bearing in one place — Switzer's `sCapHeight` says 750 where its capitals actually ink 680.
+  - **A pinned title therefore has to park below `--sticky-top`, not at it.** The numeral overhangs
+    the header's top edge by 8.3px, and the tab bar's sticky wrapper is *exactly* `--sticky-top`
+    tall with an opaque background once stuck — so parked flush, the top third of every numeral sat
+    behind the bar for the whole length of its section. `--sticky-top` itself cannot absorb the
+    offset, because the bar's fade pins to the same value and has to stay flush with the bar;
+    widening it would open a band between the two with no cover and no fade. So
+    `--section-number-headroom` is added to `.sectionHeader`'s `top` alone, which costs no document
+    height. The gallery's filter bar keeps the bare `--sticky-top`: it pins in the same slot but
+    carries no numeral, and `Gallery.tsx` measures its scroll clearance off that value directly.
+  - **The gradient's far stop is the same orange at zero alpha, never `transparent`.**
+    `transparent` is `rgba(0, 0, 0, 0)`, so interpolating towards it in sRGB drags the midpoint
+    through black — a grey cast down the length of a fade whose whole job is to be clean. The
+    orange is the literal `#fb4107` the footer's cursor already wears, for the reason given in
+    `FigmaCursor.tsx`: it is a reference to Figma, so it should not follow the page's theme. It
+    carries on both grounds, though the faded end thins out sooner on the dark one.
+
 - **`--hover-room` is padding on `.images`, never on `.scrollableArea`.** The hover state paints
   outside a thumbnail's own box (the tilt lifts two corners, the shadow falls further), and
   `.scrollableArea` is a scroll container that clips both axes — `overflow-y: scroll` forces the x
@@ -1460,9 +1498,21 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
 
 - **CSS Modules** for component-scoped styles (`.module.css` files)
 - **CSS custom properties** in `globals.css` for theming (light/dark via `prefers-color-scheme`)
-- Font: **Switzer**, self-hosted through `next/font/local` in `layout.tsx` from
-  `app/fonts/Switzer-Variable.woff2` (one 42 KB variable file, 100-900), with `--default-font` in
-  `globals.css` pointing at the `--font-switzer` variable it emits
+- Font: **Switzer**, self-hosted through `next/font/local` from `app/fonts/Switzer-Variable.woff2`
+  (one 42 KB variable file, 100-900), with `--default-font` in `globals.css` pointing at the
+  `--font-switzer` variable it emits. Both faces are declared in `app/lib/font.ts` rather than
+  beside their callers, because `localFont()` does not dedupe: calling it twice emits a second
+  `@font-face` and a second stylesheet `<link>` on every page.
+- Second face: **Bellina Slant Condensed**, `app/fonts/Bellina-Numbers.woff2`, used for nothing
+  but the section ordinal. 1,688 bytes — the source is already a numbers-only cut, and
+  `pyftsubset --unicodes=U+0030-0039` with hinting and layout features dropped loses nothing:
+  `GPOS` and `GSUB` are both present but carry zero lookups and zero features, so there was never
+  any kerning between these digits. **Unlike Switzer it is committed**, since a hand-made subset
+  has no upstream for `scripts/fetch-font.mjs` to pull it from — which is why `.gitignore` now
+  names `Switzer-Variable.woff2` instead of globbing `app/fonts/*.woff2`. That glob read as a
+  policy about the directory when it was only ever a fact about one file's licence, and it
+  silently swallowed the next font added beside it: a build that then fails only off a clean
+  clone, since the file is present on the machine that added it.
 - No UI component library — all custom components
 - **Every paragraph of running prose is `text-wrap: pretty`**, declared once on `p` in
   `globals.css` rather than per surface — `RichText` emits classless `<p>`s, so the element is the

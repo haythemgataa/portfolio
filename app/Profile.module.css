@@ -24,7 +24,12 @@
    construction here, since there is no longer a background that needs to reach the edges. */
 .sectionHeader {
   position: sticky;
-  top: var(--sticky-top);
+  /* Not `--sticky-top` alone: the ordinal overhangs this box's top edge, and the tab bar's
+     wrapper is exactly `--sticky-top` tall and opaque once stuck, so a title parked flush
+     against it had the top third of its numeral cut off for the whole length of the section.
+     See `--section-number-headroom` in globals.css for why the offset is here rather than in
+     `--sticky-top`, which the bar's fade also pins to. */
+  top: calc(var(--sticky-top) + var(--section-number-headroom));
   z-index: 15;
   display: flex;
   align-items: center;

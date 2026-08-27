@@ -12,6 +12,7 @@ import { sameSelection, useStudio } from '../lib/studioContext';
 import { useDragHandlers } from '../lib/useDragHandlers';
 import Editable from './Editable';
 import styles from './canvas.module.css';
+import SectionNumber from '../../SectionNumber';
 
 /**
  * The CV route, editable.
@@ -329,6 +330,10 @@ const CanvasSection: React.FC<{
           select({ kind: 'section', sectionKey: section.key });
         }}
       >
+        {/* The site's ordinal, same component and same stylesheet. It is derived from position
+            there too, so dragging a section here renumbers it on the canvas exactly as the
+            rebuilt page will show it. */}
+        <SectionNumber index={index} />
         <h2 className={styles.sectionTitleSlot}>
           <Editable
             value={section.label}
@@ -608,6 +613,7 @@ const CvCanvas: React.FC = () => {
             select({ kind: 'contact' });
           }}
         >
+          <SectionNumber index={cv.sections.length} />
           <h2 className={styles.sectionTitleSlot}>
             <Editable
               value={cv.contact?.label ?? 'Contact'}

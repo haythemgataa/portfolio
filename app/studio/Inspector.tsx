@@ -533,6 +533,31 @@ const Inspector: React.FC = () => {
               onChange={(e) => setContactField(contactRow.id, 'url', e.target.value)}
             />
           </Row>
+          {/* Both of these are on the canvas for a `mailto:` row — it is wide and shows its
+              address — and neither is on a compact one, which shows a mark and nothing else.
+              They live here because for that pill they stopped being text a visitor reads and
+              became facts about the link, which is the split the whole inspector is for. */}
+          <Row
+            label="Platform"
+            hint="Draws this row's mark when it is one of the names ContactIcon.tsx knows. Anything else spells itself out on the pill instead."
+          >
+            <input
+              className={styles.input}
+              type="text"
+              placeholder="LinkedIn"
+              value={contactRow.platform ?? ''}
+              onChange={(e) => setContactField(contactRow.id, 'platform', e.target.value)}
+            />
+          </Row>
+          <Row label="Handle" hint="The address on an email pill; the tooltip and the spoken name on the rest.">
+            <input
+              className={styles.input}
+              type="text"
+              placeholder="you@example.com"
+              value={contactRow.handle ?? ''}
+              onChange={(e) => setContactField(contactRow.id, 'handle', e.target.value)}
+            />
+          </Row>
         </section>
       )}
 

@@ -1,8 +1,15 @@
 "use client"
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import RichText from "./RichText";
 import Arrow12 from "./Arrow12";
+import {
+  CheckIcon,
+  CopyIcon,
+  EnvelopeIcon,
+  PlatformIcon,
+  hasPlatformIcon,
+} from "./ContactIcon";
 import GalleryPreview from "./GalleryPreview";
 import SectionNumber from "./SectionNumber";
 import styles from "./Profile.module.css";
@@ -299,21 +306,103 @@ const TitleIcon: React.FC<{ icon: ResolvedIcon }> = ({ icon }) => {
 type ContactRowProps = {
   item: ContactItem,
 };
+
+/**
+ * One contact, as a pill. Which of the two treatments it gets comes from the link's *scheme*:
+ * an address is worth reading and copying, so `mailto:` is wide and carries the copy button,
+ * while a profile is somewhere you go and needs only its mark. Testing the scheme rather than
+ * the row's position or its label is the same choice `section.key` makes over `section.label` —
+ * a rename or a reorder cannot invalidate it.
+ */
 const ContactRow: React.FC<ContactRowProps> = ({
   item
 }) => {
+  if (item.url?.startsWith('mailto:')) return <ContactEmail item={item}/>;
+  return <ContactLink item={item}/>;
+}
+
+const ContactLink: React.FC<ContactRowProps> = ({
+  item
+}) => {
+  const marked = hasPlatformIcon(item.platform);
+
   return (
-    <div className={styles.experience}>
-      <div className={styles.year}>
-        <span>{item.platform}</span>
-      </div>
-      <div className={styles.experienceContent}>
-        <div className={styles.title}>
-          <a href={item.url} target="_blank">{item.handle}</a><span className={styles.linkArrow}>&#xfeff;<Arrow12/></span>
-        </div>
-      </div>
-    </div>
-  )
+    <a
+      className={[
+        styles.contactPill,
+        styles.contactCompact,
+        marked ? '' : styles.contactCompactLabel,
+      ].filter(Boolean).join(' ')}
+      href={item.url}
+      target="_blank"
+      rel="noreferrer"
+      // Redundant to a screen reader, which reads the spoken name below, but it is the only
+      // thing telling a mouse user which profile a bare glyph leads to.
+      title={item.handle}
+    >
+      {marked
+        ? <PlatformIcon platform={item.platform} className={styles.contactIcon}/>
+        : <span aria-hidden="true">{item.platform}</span>}
+      {/* Real text rather than `aria-label`: the pill's visible content is a glyph, or the
+          platform alone, and neither says whose account it is. The unmarked pill's label is
+          hidden from the tree above so this is the only name either shape has, which keeps the
+          two announcing identically. */}
+      <span className={styles.srOnly}>{item.platform}: {item.handle}</span>
+    </a>
+  );
+}
+
+const ContactEmail: React.FC<ContactRowProps> = ({
+  item
+}) => {
+  const [copied, setCopied] = useState(false);
+  // The reset has to be cancellable: a second press while the first is still counting down
+  // would otherwise be cleared by the earlier timer, and an unmount mid-countdown would set
+  // state on a component that is gone.
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(resetTimer.current), []);
+
+  const copy = async () => {
+    try {
+      // Absent outside a secure context, and it rejects when the permission is refused. Either
+      // way the address is still on screen and still selectable, so a failure asks for nothing
+      // more than leaving the button where it was.
+      await navigator.clipboard?.writeText(item.handle);
+    } catch {
+      return;
+    }
+    setCopied(true);
+    clearTimeout(resetTimer.current);
+    resetTimer.current = setTimeout(() => setCopied(false), 1600);
+  };
+
+  return (
+    <span className={`${styles.contactPill} ${styles.contactEmail}`}>
+      <a className={styles.contactEmailLink} href={item.url}>
+        <EnvelopeIcon className={styles.contactIcon}/>
+        <span className={styles.contactEmailAddress}>{item.handle}</span>
+      </a>
+      {/* A button inside an anchor is not valid nesting, so the pill is a plain span carrying
+          the surface and the two controls are siblings on it. */}
+      <button
+        type="button"
+        className={styles.contactCopy}
+        onClick={copy}
+        aria-label={`Copy ${item.platform.toLowerCase()} address`}
+      >
+        {copied
+          ? <CheckIcon className={styles.contactCopyIcon}/>
+          : <CopyIcon className={styles.contactCopyIcon}/>}
+      </button>
+      {/* The swapped glyph is the sighted feedback; this is the spoken half. It is a live
+          region rather than a renamed button because the name has to keep saying what the
+          press *does* — renaming it to "Copied" leaves a reader who arrives a second later
+          being told about something they never did. */}
+      <span className={styles.srOnly} role="status" aria-live="polite">
+        {copied ? 'Copied to clipboard' : ''}
+      </span>
+    </span>
+  );
 }
 
 export default Profile;

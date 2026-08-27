@@ -49,6 +49,14 @@ machine-facing `key`, and the orphan report.
 The rule is worth keeping: **a field that appears in both places is a field with two truths on
 screen at once**, and the one not being looked at is the one that will surprise you.
 
+**A contact row is the case where that rule moved a field rather than placing one.** Its
+`platform` and `handle` were both edited on the canvas while contact was a year-gutter row that
+printed them. As pills they mostly stopped being readable — a compact pill shows a mark and
+nothing else — so for those two the pair became facts about the link and moved to the inspector.
+What a visitor can still read stays put: the email pill's address, and the *name* of a platform
+with no mark drawn for it, which is that pill's whole visible content. The split did not change;
+what the page shows did.
+
 The inspector floats *over* the canvas rather than sitting beside it as a flex sibling. That is
 not decoration — the site's full-bleed constructions (the tab bar's sticky wrapper, its fade, the
 dot texture) are all `calc(50% - 50vw)` measured from the centred column, so a canvas narrower
@@ -1119,6 +1127,43 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
     orange is the literal `#fb4107` the footer's cursor already wears, for the reason given in
     `FigmaCursor.tsx`: it is a reference to Figma, so it should not follow the page's theme. It
     carries on both grounds, though the faded end thins out sooner on the dark one.
+
+- **Contact is a wrapping row of pills, and it is the one section allowed a shape of its own.**
+  Every other section is a year gutter beside a heading, and `sections[]` is homogeneous
+  *because* that is what makes reordering it safe. Contact is pinned outside that array — so a
+  treatment of its own costs the reorderable set nothing, and `ContactRow` in `Profile.tsx` is
+  where it lives. The row wraps rather than scrolling: it is not the attachment carousel, there
+  is nothing to drag and nothing hidden past an edge, so a second line needs no fades, no arrows
+  and no measurement. Six things:
+  - **The wide pill is chosen by the link's *scheme*, not by position or label.** A `mailto:` is
+    an address, which is a thing to read and copy; everything else is a profile, which is a place
+    to go and needs only its mark. Testing `url.startsWith('mailto:')` is the same choice
+    `section.key` makes over `section.label` — a rename or a reorder cannot invalidate it, where
+    "the first row" and "the one called Email" both can.
+  - **An unmarked platform spells its name; it does not render unadorned.** `TAG_PATHS`'s closed
+    set has an honest empty case, because a tag's label sits right beside its mark. A compact
+    pill *is* its mark, so the same fallback would be an unlabelled dot — `PLATFORM_PATHS` in
+    `ContactIcon.tsx` is therefore still a closed vocabulary, but a miss falls back to a wider
+    pill carrying the platform's name. Adding a platform means adding a path or accepting text.
+  - **The surface hover is `.contactCompact`'s, never `.contactPill`'s.** A compact pill is the
+    link, so filling it points at the thing being pointed at. The email pill is a surface
+    carrying two separate controls, and filling it did something worse than mislead: the copy
+    button's own hover disc resolves to the same `--background-hover`, so pressed onto an
+    already-filled pill it was invisible — the collision the gallery's filter tags avoid by
+    keeping hover and pressed a step apart. Each half carries its own hover instead.
+  - **The pill is a `<span>`, not an `<a>`.** A `<button>` inside an anchor is invalid nesting,
+    so the surface is a plain element and the address link and the copy button are siblings on
+    it. `.contactEmailLink` carries a `border-radius` it never paints, purely so its focus ring
+    follows the pill instead of landing on it as a rectangle.
+  - **Copied is a live region, not a renamed button.** The button's name has to keep saying what
+    a press *does*; renaming it to "Copied" tells a reader arriving a second later about
+    something they never did. The swapped glyph is the sighted half. `navigator.clipboard` is
+    absent outside a secure context and rejects on refusal, and a failure needs no handling
+    beyond leaving the button alone — the address is on screen and selectable either way.
+  - **The compact pills' names are real text, not `aria-label`.** A circle holds one glyph and
+    the fallback holds a platform with no owner in it, so `.srOnly` writes out
+    `Platform: handle` and the fallback's visible label is `aria-hidden` — which is what keeps
+    the two shapes announcing identically rather than one of them doubling its platform.
 
 - **`--hover-room` is padding on `.images`, never on `.scrollableArea`.** The hover state paints
   outside a thumbnail's own box (the tilt lifts two corners, the shadow falls further), and

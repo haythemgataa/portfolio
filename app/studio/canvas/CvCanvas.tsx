@@ -5,6 +5,7 @@ import Arrow12 from '../../Arrow12';
 import Attachments from '../../Attachments';
 import GalleryPreview from '../../GalleryPreview';
 import RichText from '../../RichText';
+import { CopyIcon, EnvelopeIcon, PlatformIcon, hasPlatformIcon } from '../../ContactIcon';
 import profile from '../../Profile.module.css';
 import type { ContactItem, CvItem, CvSection, ResolvedMedia } from '../../lib/contentTypes';
 import { resolveHeading, resolveMedia, silent } from '../../lib/resolveContent';
@@ -416,6 +417,20 @@ const CanvasSection: React.FC<{
 // Contact
 // ---------------------------------------------------------------------------
 
+/**
+ * A contact pill, editable — and the one row where the canvas/inspector split moved when the
+ * design did.
+ *
+ * The site's pills are `<a>`s and these are spans: the canvas navigates nowhere, which is the
+ * same choice the item headings already make. What changed with the pills is *which* strings
+ * are readable. A compact pill shows a mark and nothing else, so its platform and handle stopped
+ * being things a visitor reads and became facts about the link — inspector, by the rule in
+ * CLAUDE.md. What a visitor can still read stays on the canvas: the email's address, and the
+ * *name* of a platform with no mark drawn for it, which is that pill's whole visible content.
+ *
+ * The copy button is a span rather than a button. It is the pill's geometry, not a control the
+ * editor has any use for, and a real one would compete with the node's own press for selection.
+ */
 const CanvasContactRow: React.FC<{
   item: ContactItem;
   index: number;
@@ -428,12 +443,18 @@ const CanvasContactRow: React.FC<{
   const selected = sameSelection(selection, { kind: 'contactRow', itemId: item.id });
   const selectSelf = () => select({ kind: 'contactRow', itemId: item.id });
 
+  // The same two tests `Profile.tsx` makes, and they have to stay the same two: the canvas
+  // showing one treatment where the build emits the other is the one failure an edit-in-place
+  // editor must not have.
+  const isEmail = item.url?.startsWith('mailto:') ?? false;
+  const marked = hasPlatformIcon(item.platform ?? '');
+
   return (
     <div
       {...dragTarget}
       className={[
-        profile.experience,
         styles.node,
+        styles.contactNode,
         selected ? styles.nodeSelected : '',
         dragOver ? styles.dropping : '',
       ]
@@ -463,34 +484,48 @@ const CanvasContactRow: React.FC<{
         </Tool>
       </div>
 
-      <div className={profile.year}>
-        <span className={styles.yearSlot}>
-          <Editable
-            value={item.platform ?? ''}
-            onChange={(next) => setContactField(item.id, 'platform', next)}
-            placeholder="Platform"
-            label="Platform"
-            onEdit={selectSelf}
-          />
-        </span>
-      </div>
-      <div className={profile.experienceContent}>
-        <div className={profile.title}>
-          <Editable
-            value={item.handle ?? ''}
-            onChange={(next) => setContactField(item.id, 'handle', next)}
-            placeholder="Handle"
-            label="Handle"
-            onEdit={selectSelf}
-          />
-          {item.url ? (
-            <span className={profile.linkArrow}>
-              &#xfeff;
-              <Arrow12 />
+      {isEmail ? (
+        <span className={`${profile.contactPill} ${profile.contactEmail}`}>
+          <span className={profile.contactEmailLink}>
+            <EnvelopeIcon className={profile.contactIcon} />
+            <span className={profile.contactEmailAddress}>
+              <Editable
+                value={item.handle ?? ''}
+                onChange={(next) => setContactField(item.id, 'handle', next)}
+                placeholder="you@example.com"
+                label="Email address"
+                onEdit={selectSelf}
+              />
             </span>
-          ) : null}
-        </div>
-      </div>
+          </span>
+          <span className={profile.contactCopy} aria-hidden>
+            <CopyIcon className={profile.contactCopyIcon} />
+          </span>
+        </span>
+      ) : (
+        <span
+          className={[
+            profile.contactPill,
+            profile.contactCompact,
+            marked ? '' : profile.contactCompactLabel,
+          ]
+            .filter(Boolean)
+            .join(' ')}
+          title={item.handle}
+        >
+          {marked ? (
+            <PlatformIcon platform={item.platform} className={profile.contactIcon} />
+          ) : (
+            <Editable
+              value={item.platform ?? ''}
+              onChange={(next) => setContactField(item.id, 'platform', next)}
+              placeholder="Platform"
+              label="Platform"
+              onEdit={selectSelf}
+            />
+          )}
+        </span>
+      )}
     </div>
   );
 };

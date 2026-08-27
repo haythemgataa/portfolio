@@ -210,6 +210,34 @@
   z-index: 13;
 }
 
+/* A contact row is a 40px pill in a wrapping horizontal row, and every number in the node chrome
+   above was measured for a full-width row in a vertical column. Two of them land badly here and
+   both are fixed by geometry alone, so this rule sets no colour and cannot disturb the drop
+   state's ordering below.
+
+   `inset: -10px -12px` reaches 12px sideways where the pills sit 8px apart, so a hovered node's
+   ring crossed 4px into each neighbour — a hairline through two pills that are not the one being
+   pointed at. Pulled in to 4px, which leaves 4px of clear ground between two rings. The radius
+   follows the pill rather than the 10px a text row gets: a rounded rectangle around a circle
+   reads as a second, squarer object rather than as that circle's own ring.
+
+   `.tools` is the half that actually obscured something. Anchored `top: -14px` on a 40px box it
+   covered the pill's top half, and being wider than the pill it belongs to it covered its
+   neighbours' too — so the toolbar for a contact hid the contact it was about. Lifted clear
+   above the pill and centred on it, which also stops the buttons for one pill sitting over the
+   next one's hit area. */
+.contactNode::before {
+  inset: -4px;
+  border-radius: 999px;
+}
+
+.contactNode > .tools {
+  top: -40px;
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
 /* Declared *above* `.dropping::before` on purpose. Both selectors have the same specificity, so
    source order decides — and the `border` shorthand below is a shorthand, so sitting after the
    drop state it reset that state's `border-color` and `border-style` and the drop ring rendered

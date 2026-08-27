@@ -146,7 +146,13 @@
 
    It wraps rather than scrolling. A row that outgrows the 540px column is not the attachment
    carousel — there is no dragging here and nothing to discover past an edge, so a second line
-   is the honest answer and needs no fades, no arrows and no measurement. */
+   is the honest answer and needs no fades, no arrows and no measurement.
+
+   **Where it breaks is not left to the flex algorithm**, which would fill the first line and
+   strand one lone mark up beside the address. `groupContactRows` hands this box one child per
+   run — each address, and each stretch of consecutive profiles — so the break lands between the
+   address and the marks. Array order survives it: the runs are built by walking the array, not
+   by hoisting every address to the front. */
 .contacts {
   display: flex;
   flex-direction: row;
@@ -156,30 +162,66 @@
   margin-top: 24px;
 }
 
-/* The shared box. Every pill is the same height and the same fully rounded shape whatever it
-   carries, so the row reads as one set — the compact ones are simply that box at its own
-   height, which is what makes them circles without a second radius anywhere.
+/* One run of profile pills, wrapping internally if even they do not fit. `display: contents`
+   would be the way to keep them flex items of `.contacts` — and is exactly wrong here, since
+   being one wrap unit is the entire job. */
+.contactProfiles {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
 
-   `--background-muted` and `--background-hover` rather than literals, the same pair the tab
-   bar's unselected pills and the lightbox's controls wear: this is a raised control on the
-   page's ground and cannot be allowed to drift from the others, and the dark theme then needs
-   no second rule. The glyph follows the palette's own split — `--foreground-secondary` is
-   iconography at rest, `--foreground-primary` is a hovered icon. */
+/* The shared box, and it is `.tab`'s box (`Tabs.module.css`) down to the border: same 999px
+   radius, same `--background-muted` fill, same `1px solid var(--border)`, same
+   `--background-hover` on hover. Not a coincidence to be maintained by eye — a tab pill and a
+   contact pill are the same object, a raised control on the page's ground, and the tokens are
+   what stop the two drifting apart and what save the dark theme a second rule of its own.
+
+   32px, so the row sits lighter under the section title than the tab bar does under the name.
+   The compact pills are simply this box at its own height, which is what makes them circles
+   with no second radius anywhere. `border-box`, so the border eats into the 32 rather than
+   adding to it and the two shapes stay exactly as tall as each other.
+
+   The glyph follows the palette's own split — `--foreground-secondary` is iconography at rest,
+   `--foreground-primary` is a hovered icon. */
 .contactPill {
-  --contact-pill-size: 40px;
+  --contact-pill-size: 32px;
   display: inline-flex;
   align-items: center;
   box-sizing: border-box;
   height: var(--contact-pill-size);
+  border: 1px solid var(--border);
   border-radius: 999px;
   background-color: var(--background-muted);
   color: var(--foreground-secondary);
+  /* The family and the weight are declared, not left to inherit, because one of these pills is
+     a `<button>` and a button does not inherit the page font — the same trap `Tabs.module.css`
+     hit, where `.tab` set a size and a weight but no family and the Studio's `<button>` twin
+     fell back to Arial while the site's `<a>` stayed Switzer. */
+  font-family: inherit;
+  font-weight: inherit;
+  font-size: var(--type-size);
+  line-height: 1;
   text-decoration: none;
   transition: background-color 150ms ease, color 150ms ease;
 }
 
-/* A platform with a mark: the box at its own height, so the pill is a circle. */
+/* A profile: the box at its own height, so the pill is a circle.
+
+   `--contact-brand` is composed here rather than handed over finished, because the two halves
+   arrive as inline custom properties from `platformBrandStyle` and an inline style is not
+   processed by Lightning CSS — a `light-dark()` written there would miss the polyfill the whole
+   palette relies on. Written in the stylesheet it goes through the same machinery as every other
+   themed value, including the theme switch. The fallback is the hover ink, so a platform with a
+   mark but no brand entry still behaves like everything else rather than losing its colour. */
 .contactCompact {
+  --contact-brand: light-dark(
+    var(--contact-brand-light, var(--foreground-primary)),
+    var(--contact-brand-dark, var(--foreground-primary))
+  );
   justify-content: center;
   width: var(--contact-pill-size);
   flex-shrink: 0;
@@ -190,126 +232,135 @@
    fallback a tag gets. */
 .contactCompactLabel {
   width: auto;
-  padding: 0 16px;
-  font-size: var(--type-size);
+  padding: 0 12px;
   white-space: nowrap;
 }
 
-/* The email. Wide because the address is the one contact worth reading rather than following,
-   which is also why it is the only one carrying a copy button. Which row this is comes from
-   the URL's scheme, not from its position or its label — a `mailto:` is a fact about the link
-   in the same way a section's `key` is a fact about the section, where "the first row" and
-   "the one called Email" are both things a content edit can quietly invalidate. */
-.contactEmail {
-  gap: 2px;
-  /* Asymmetric: the address needs the pill's full inset, the copy button brings its own. */
-  padding: 0 6px 0 16px;
+/* The address. Wide because the address is the one contact worth reading rather than following,
+   and the whole pill is one button that copies it — see `ContactAddress`. Symmetric padding
+   again now that there is no second control inset into the right end. */
+.contactAddress {
+  gap: 8px;
+  padding: 0 12px;
   max-width: 100%;
   min-width: 0;
-}
-
-/* Fully rounded for the focus ring alone — nothing here is painted, so the radius is invisible
-   until a keyboard arrives. An `outline` follows its element's own corners, and a hard rectangle
-   drawn inside a pill reads as a box that has landed on it rather than as this control's ring. */
-.contactEmailLink {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  border-radius: 999px;
-  color: inherit;
-  text-decoration: none;
-  transition: color 150ms ease;
+  cursor: pointer;
+  /* A press is a copy, not a selection — and a half-selected address left highlighted behind
+     the check reads as the copy having gone wrong. */
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Ellipsised rather than wrapped: the pill is a fixed-height object, so a second line of
    address would break the row's rhythm rather than the address. */
-.contactEmailAddress {
+.contactAddressText {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-/* Its own smaller disc inside the pill, so pressing it is unambiguous — the address beside it
-   is a link to the mail client, and one hit area doing both would be a coin toss. */
-.contactCopy {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: none;
-  color: var(--foreground-tertiary);
-  font: inherit;
-  cursor: pointer;
-  transition: background-color 150ms ease, color 150ms ease;
-}
-
 .contactIcon {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-}
-
-.contactCopyIcon {
   width: 16px;
   height: 16px;
+  flex-shrink: 0;
+  transition: color 150ms ease;
+}
+
+/* The copy/check pair, stacked in one grid cell so the swap is a crossfade in place. Both are
+   mounted at all times: an element that does not exist yet has nothing to animate from, which
+   is the same reason the lightbox's close cross is two real spans rather than two
+   pseudo-elements. `place-items: center` is what puts them on top of one another without either
+   needing a translate that the scale would then have to compose with. */
+.contactCopyMark {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: var(--foreground-tertiary);
+  transition: color 150ms ease;
+}
+
+.contactCopyGlyph,
+.contactCheckGlyph {
+  grid-area: 1 / 1;
+  width: 16px;
+  height: 16px;
+  transition: opacity 180ms ease, transform 180ms cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+
+/* The check arrives from slightly under-size and the copy leaves the same way, so the two read
+   as one glyph turning over rather than as a dissolve between two pictures. The overshoot in the
+   easing above is what gives the confirmation its small snap. */
+.contactCheckGlyph {
+  opacity: 0;
+  transform: scale(0.6);
+}
+
+.contactAddress[data-copied] .contactCopyGlyph {
+  opacity: 0;
+  transform: scale(0.6);
+}
+
+.contactAddress[data-copied] .contactCheckGlyph {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Confirmation is worth a colour the resting glyph does not have; the ink comes forward with it
+   so the pill reads as having answered. */
+.contactAddress[data-copied] .contactCopyMark {
+  color: var(--foreground-primary);
 }
 
 /* Only the `:hover` half is gated, never the rest state — the same split `.title a:hover` and
    `.media:hover` use, and for the same reason: on touch `:hover` sticks after a tap, and these
-   links open elsewhere, so a reader coming back would find a pill still lit with nothing to
-   clear it but a tap somewhere else. */
+   pills open a tab or fire a copy, so a reader coming back would find one still lit with nothing
+   to clear it but a tap somewhere else. */
 @media (hover: hover) {
-  /* The surface hover is `.contactCompact`'s, never `.contactPill`'s, and the difference is the
-     email pill: a compact pill *is* the link, so darkening the whole thing points at the thing
-     being pointed at, where the email pill is a surface carrying two separate controls. Filling
-     it would darken the address when the pointer is on the copy button and vice versa — and it
-     did something worse than that, since `.contactCopy:hover` resolves to the same
-     `--background-hover`: the button's own disc appeared *on* an already-darkened pill and so
-     was invisible, exactly the collision the gallery's filter tags avoid by keeping hover and
-     pressed a step apart. The email pill's halves each carry their own hover instead. */
-  .contactCompact:hover {
+  /* The fill is `.contactPill`'s, every pill's, because every pill is now exactly one control —
+     the address pill was a surface carrying a link *and* a copy button, and filling it then
+     darkened whichever half the pointer was not on. Worse, the copy button's own hover disc
+     resolved to this same `--background-hover` and so vanished against an already-filled pill,
+     the collision the gallery's filter tags avoid by keeping hover and pressed a step apart.
+     Making the whole pill the copy target retired both problems rather than tuning around
+     them. */
+  .contactPill:hover {
     background-color: var(--background-hover);
     color: var(--foreground-primary);
   }
 
-  .contactEmailLink:hover {
-    color: var(--foreground-primary);
+  /* The mark goes to the platform's own colour, which is the one thing a monochrome row of
+     brands cannot say at rest. It is the icon that changes, never the pill: a filled brand
+     ground under a 16px mark is a logo tile, and five of those in a row is a footer from another
+     site. Scoped to `.contactIcon` inside a compact pill so the address pill's envelope — which
+     is nobody's brand — keeps taking the hover ink with the rest of the surface. */
+  .contactCompact:hover .contactIcon {
+    color: var(--contact-brand);
   }
 
-  .contactCopy:hover {
-    background-color: var(--background-hover);
+  .contactAddress:hover .contactCopyMark {
     color: var(--foreground-primary);
   }
 }
 
-.contactPill:focus-visible,
-.contactEmailLink:focus-visible,
-.contactCopy:focus-visible {
+.contactPill:focus-visible {
   outline: 2px solid var(--blue);
   outline-offset: 2px;
 }
 
-/* Both of the email pill's controls are focusable and they sit 2px apart inside it, so a ring
-   drawn the usual 2px outside either one would meet the other. Tightened to the smallest offset
-   that still reads as a ring around the thing rather than a border on it. */
-.contactEmailLink:focus-visible {
-  outline-offset: 1px;
-}
-
-.contactCopy:focus-visible {
-  outline-offset: -2px;
+/* Same treatment as hover for a keyboard: the ring says *which* pill, the brand colour says
+   which platform. */
+.contactCompact:focus-visible .contactIcon {
+  color: var(--contact-brand);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .contactPill,
-  .contactEmailLink,
-  .contactCopy {
+  .contactIcon,
+  .contactCopyMark,
+  .contactCopyGlyph,
+  .contactCheckGlyph {
     transition: none;
   }
 }

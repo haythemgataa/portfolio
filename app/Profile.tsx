@@ -9,7 +9,9 @@ import {
   EnvelopeIcon,
   PlatformIcon,
   hasPlatformIcon,
+  platformBrandStyle,
 } from "./ContactIcon";
+import { groupContactRows } from "./lib/contentTypes";
 import GalleryPreview from "./GalleryPreview";
 import SectionNumber from "./SectionNumber";
 import styles from "./Profile.module.css";
@@ -83,10 +85,21 @@ const Profile: React.FC<ProfileProps> = ({
           {/* Contact is pinned last rather than living in `sections`, so its ordinal continues
               the sequence from the end of that array instead of being counted with it. */}
           <SectionHeader label={cv.contact.label} index={cv.sections.length}/>
+          {/* Grouped rather than laid out flat, so a row too wide for the column breaks between
+              the address and the marks instead of stranding one lone mark up beside it — see
+              `groupContactRows`. Every run is still in array order. */}
           <div className={styles.contacts}>
-            {cv.contact.items.map((item) => (
-              <ContactRow key={item.id} item={item}/>
-            ))}
+            {groupContactRows(cv.contact.items).map((run) =>
+              run.kind === 'address'
+                ? <ContactAddress key={run.item.id} item={run.item}/>
+                : (
+                  <div key={run.items[0].id} className={styles.contactProfiles}>
+                    {run.items.map((item) => (
+                      <ContactProfile key={item.id} item={item}/>
+                    ))}
+                  </div>
+                )
+            )}
           </div>
         </section>
       : null}
@@ -308,20 +321,10 @@ type ContactRowProps = {
 };
 
 /**
- * One contact, as a pill. Which of the two treatments it gets comes from the link's *scheme*:
- * an address is worth reading and copying, so `mailto:` is wide and carries the copy button,
- * while a profile is somewhere you go and needs only its mark. Testing the scheme rather than
- * the row's position or its label is the same choice `section.key` makes over `section.label` —
- * a rename or a reorder cannot invalidate it.
+ * A profile: the compact pill, its mark and nothing else. The brand colour it takes on hover
+ * arrives as the light/dark pair `.contactCompact` composes — see `platformBrandStyle`.
  */
-const ContactRow: React.FC<ContactRowProps> = ({
-  item
-}) => {
-  if (item.url?.startsWith('mailto:')) return <ContactEmail item={item}/>;
-  return <ContactLink item={item}/>;
-}
-
-const ContactLink: React.FC<ContactRowProps> = ({
+const ContactProfile: React.FC<ContactRowProps> = ({
   item
 }) => {
   const marked = hasPlatformIcon(item.platform);
@@ -333,6 +336,7 @@ const ContactLink: React.FC<ContactRowProps> = ({
         styles.contactCompact,
         marked ? '' : styles.contactCompactLabel,
       ].filter(Boolean).join(' ')}
+      style={platformBrandStyle(item.platform)}
       href={item.url}
       target="_blank"
       rel="noreferrer"
@@ -352,7 +356,22 @@ const ContactLink: React.FC<ContactRowProps> = ({
   );
 }
 
-const ContactEmail: React.FC<ContactRowProps> = ({
+/** How long the check stays up before the copy glyph comes back, in ms. */
+const COPIED_MS = 1600;
+
+/**
+ * An address: the wide pill, and **the whole pill copies**. It carried a `mailto:` link with a
+ * copy button beside it, which is the arrangement a mail client deserves and almost nobody
+ * wants — a press on an address is nearly always a press meaning *give me that address*. One
+ * control also retires the invalid-nesting problem the split had (a `<button>` inside an `<a>`),
+ * and puts the pill's hover fill back where it belongs: the whole surface is now the thing being
+ * pointed at, so filling all of it points at the thing.
+ *
+ * The row still stores a `mailto:` URL, and that is what `isAddressContact` reads. The scheme is
+ * the fact that makes this row an address; whether the browser is asked to open it is a
+ * separate question, and the answer is now no.
+ */
+const ContactAddress: React.FC<ContactRowProps> = ({
   item
 }) => {
   const [copied, setCopied] = useState(false);
@@ -365,43 +384,43 @@ const ContactEmail: React.FC<ContactRowProps> = ({
   const copy = async () => {
     try {
       // Absent outside a secure context, and it rejects when the permission is refused. Either
-      // way the address is still on screen and still selectable, so a failure asks for nothing
-      // more than leaving the button where it was.
+      // way the address is still on screen, so a failure asks for nothing more than leaving the
+      // pill as it was.
       await navigator.clipboard?.writeText(item.handle);
     } catch {
       return;
     }
     setCopied(true);
     clearTimeout(resetTimer.current);
-    resetTimer.current = setTimeout(() => setCopied(false), 1600);
+    resetTimer.current = setTimeout(() => setCopied(false), COPIED_MS);
   };
 
   return (
-    <span className={`${styles.contactPill} ${styles.contactEmail}`}>
-      <a className={styles.contactEmailLink} href={item.url}>
-        <EnvelopeIcon className={styles.contactIcon}/>
-        <span className={styles.contactEmailAddress}>{item.handle}</span>
-      </a>
-      {/* A button inside an anchor is not valid nesting, so the pill is a plain span carrying
-          the surface and the two controls are siblings on it. */}
-      <button
-        type="button"
-        className={styles.contactCopy}
-        onClick={copy}
-        aria-label={`Copy ${item.platform.toLowerCase()} address`}
-      >
-        {copied
-          ? <CheckIcon className={styles.contactCopyIcon}/>
-          : <CopyIcon className={styles.contactCopyIcon}/>}
-      </button>
-      {/* The swapped glyph is the sighted feedback; this is the spoken half. It is a live
-          region rather than a renamed button because the name has to keep saying what the
-          press *does* — renaming it to "Copied" leaves a reader who arrives a second later
-          being told about something they never did. */}
+    <button
+      type="button"
+      className={`${styles.contactPill} ${styles.contactAddress}`}
+      onClick={copy}
+      data-copied={copied || undefined}
+    >
+      {/* Before the address, so the name reads "Copy email address <address>". The button's
+          name has to keep saying what a press *does*, which is why the copied state is the live
+          region at the end rather than a rename — that would tell a reader arriving a second
+          later about something they never did. */}
+      <span className={styles.srOnly}>Copy email address</span>
+      <EnvelopeIcon className={styles.contactIcon}/>
+      <span className={styles.contactAddressText}>{item.handle}</span>
+      {/* Both glyphs are always mounted, stacked in one grid cell, so the swap is a crossfade
+          rather than a replacement — there is nothing to animate between two elements where one
+          of them does not exist yet. The same reason `Lightbox.module.css` gives for the close
+          cross being two real spans instead of a pair of pseudo-elements. */}
+      <span className={styles.contactCopyMark} aria-hidden="true">
+        <CopyIcon className={styles.contactCopyGlyph}/>
+        <CheckIcon className={styles.contactCheckGlyph}/>
+      </span>
       <span className={styles.srOnly} role="status" aria-live="polite">
         {copied ? 'Copied to clipboard' : ''}
       </span>
-    </span>
+    </button>
   );
 }
 

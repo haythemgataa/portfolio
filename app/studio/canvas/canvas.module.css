@@ -227,7 +227,8 @@
    above the pill and centred on it, which also stops the buttons for one pill sitting over the
    next one's hit area. */
 .contactNode::before {
-  inset: -4px;
+  /* 3px, not the 4 that would exactly fill the pills' 8px gap and leave two rings touching. */
+  inset: -3px;
   border-radius: 999px;
 }
 

@@ -53,9 +53,17 @@ screen at once**, and the one not being looked at is the one that will surprise 
 `platform` and `handle` were both edited on the canvas while contact was a year-gutter row that
 printed them. As pills they mostly stopped being readable — a compact pill shows a mark and
 nothing else — so for those two the pair became facts about the link and moved to the inspector.
-What a visitor can still read stays put: the email pill's address, and the *name* of a platform
+What a visitor can still read stays put: the address pill's text, and the *name* of a platform
 with no mark drawn for it, which is that pill's whole visible content. The split did not change;
 what the page shows did.
+
+Two mechanical consequences on the canvas, both from the pills being small boxes in a horizontal
+row where the node chrome was measured for full-width rows in a column. `.contactNode` re-aims
+the toolbar above the pill and tightens the selection ring to 3px — anchored at the usual
+`top: -14px` the toolbar covered its own pill and its neighbours', and a 12px ring reached 4px
+into each neighbour, drawing a hairline through two pills nobody was pointing at. And because the
+row now renders in runs, **a pill's position inside its run is not its index in `contact.items`**;
+everything that reorders addresses the document, so the canvas looks the index up by id.
 
 The inspector floats *over* the canvas rather than sitting beside it as a flex sibling. That is
 not decoration — the site's full-bleed constructions (the tab bar's sticky wrapper, its fade, the
@@ -1131,39 +1139,88 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
 - **Contact is a wrapping row of pills, and it is the one section allowed a shape of its own.**
   Every other section is a year gutter beside a heading, and `sections[]` is homogeneous
   *because* that is what makes reordering it safe. Contact is pinned outside that array — so a
-  treatment of its own costs the reorderable set nothing, and `ContactRow` in `Profile.tsx` is
-  where it lives. The row wraps rather than scrolling: it is not the attachment carousel, there
-  is nothing to drag and nothing hidden past an edge, so a second line needs no fades, no arrows
-  and no measurement. Six things:
+  treatment of its own costs the reorderable set nothing, and `ContactAddress` / `ContactProfile`
+  in `Profile.tsx` are where it lives. The row wraps rather than scrolling: it is not the
+  attachment carousel, there is nothing to drag and nothing hidden past an edge, so a second line
+  needs no fades, no arrows and no measurement. Eight things:
+  - **It is `.tab`'s box, borrowed rather than approximated.** Same 999px radius, same
+    `--background-muted` fill, same `1px solid var(--border)`, same `--background-hover` on
+    hover — a tab pill and a contact pill are the same object, a raised control on the page's
+    ground, and taking the tokens is what stops the two drifting and what saves the dark theme a
+    rule of its own. It differs from the tab bar in height alone: 32px, so the row sits lighter
+    under a section title than the bar does under the name. `box-sizing: border-box`, so the
+    border eats into the 32 rather than adding to it and the round and wide pills stay exactly as
+    tall as each other.
+  - **The family and the weight are declared on `.contactPill`, not inherited.** One of these
+    pills is a `<button>`, and a button does not inherit the page font — the trap
+    `Tabs.module.css` already hit, where `.tab` set a size and a weight but no family and the
+    Studio's `<button>` twin fell back to Arial while the site's `<a>` stayed Switzer.
   - **The wide pill is chosen by the link's *scheme*, not by position or label.** A `mailto:` is
     an address, which is a thing to read and copy; everything else is a profile, which is a place
-    to go and needs only its mark. Testing `url.startsWith('mailto:')` is the same choice
-    `section.key` makes over `section.label` — a rename or a reorder cannot invalidate it, where
-    "the first row" and "the one called Email" both can.
-  - **An unmarked platform spells its name; it does not render unadorned.** `TAG_PATHS`'s closed
-    set has an honest empty case, because a tag's label sits right beside its mark. A compact
-    pill *is* its mark, so the same fallback would be an unlabelled dot — `PLATFORM_PATHS` in
-    `ContactIcon.tsx` is therefore still a closed vocabulary, but a miss falls back to a wider
-    pill carrying the platform's name. Adding a platform means adding a path or accepting text.
-  - **The surface hover is `.contactCompact`'s, never `.contactPill`'s.** A compact pill is the
-    link, so filling it points at the thing being pointed at. The email pill is a surface
-    carrying two separate controls, and filling it did something worse than mislead: the copy
-    button's own hover disc resolves to the same `--background-hover`, so pressed onto an
-    already-filled pill it was invisible — the collision the gallery's filter tags avoid by
-    keeping hover and pressed a step apart. Each half carries its own hover instead.
-  - **The pill is a `<span>`, not an `<a>`.** A `<button>` inside an anchor is invalid nesting,
-    so the surface is a plain element and the address link and the copy button are siblings on
-    it. `.contactEmailLink` carries a `border-radius` it never paints, purely so its focus ring
-    follows the pill instead of landing on it as a rectangle.
+    to go and needs only its mark. `isAddressContact` lives in `contentTypes.ts` beside the type
+    rather than in the component, because the Studio's canvas has to reach the same verdict for
+    the same row. Testing the scheme is the same choice `section.key` makes over `section.label` —
+    a rename or a reorder cannot invalidate it, where "the first row" and "the one called Email"
+    both can.
+  - **The whole address pill copies; it is not a `mailto:` link.** A press on an address is
+    nearly always a press meaning *give me that address*, so the pill is one `<button>` rather
+    than a link with a copy button inset into it. That also retired the invalid nesting the split
+    had (a `<button>` inside an `<a>`) and settled the hover question below. The row still
+    *stores* a `mailto:` URL and that is still what picks the treatment — whether the browser is
+    asked to open it is a separate question, and the answer is no.
+  - **The hover fill is every pill's, because every pill is exactly one control.** It was briefly
+    scoped to the compact ones, and that was a workaround rather than a rule: while the address
+    pill carried a link *and* a copy button, filling it darkened whichever half the pointer was
+    not on, and worse, the copy button's own hover disc resolved to the same `--background-hover`
+    and so vanished against an already-filled pill — the collision the gallery's filter tags
+    avoid by keeping hover and pressed a step apart. Making the whole pill the copy target
+    dissolved both problems instead of tuning around them.
+  - **Hover takes the mark to the platform's own colour, and only the mark.** That is the one
+    thing a monochrome row of brands cannot say at rest. The pill never takes a brand ground: a
+    16px mark on a filled brand tile is a logo chip, and five of those in a row is a footer from
+    another site. The colour lives in `PLATFORM_MARKS` beside the path — same kind of fact — and
+    reaches CSS as a `[light, dark]` pair of custom properties rather than as a finished
+    `light-dark()`, because **an inline style is not processed by Lightning CSS** and would miss
+    the polyfill the whole palette depends on. `.contactCompact` composes the pair in the
+    stylesheet, where it does; verified in the built export in both themes. Two of the five are
+    near-black wordmarks with no colour to go to, so their dark entry is white — on that ground
+    the brand *is* the inversion.
+  - **Copy animates into check rather than swapping.** Both glyphs are mounted at all times,
+    stacked in one grid cell under `place-items: center`, and the press crossfades and scales
+    between them — an element that does not exist yet has nothing to animate from, the same
+    reason the lightbox's close cross is two real spans rather than two pseudo-elements. The
+    easing overshoots slightly (measured: the check passes 1.039 before settling), which is what
+    gives the confirmation its small snap. Under `prefers-reduced-motion` the transition is
+    dropped and the swap is instant.
   - **Copied is a live region, not a renamed button.** The button's name has to keep saying what
     a press *does*; renaming it to "Copied" tells a reader arriving a second later about
     something they never did. The swapped glyph is the sighted half. `navigator.clipboard` is
     absent outside a secure context and rejects on refusal, and a failure needs no handling
-    beyond leaving the button alone — the address is on screen and selectable either way.
+    beyond leaving the pill alone — the address is on screen either way.
   - **The compact pills' names are real text, not `aria-label`.** A circle holds one glyph and
     the fallback holds a platform with no owner in it, so `.srOnly` writes out
     `Platform: handle` and the fallback's visible label is `aria-hidden` — which is what keeps
-    the two shapes announcing identically rather than one of them doubling its platform.
+    the two shapes announcing identically rather than one of them doubling its platform. On the
+    address pill the same `.srOnly` leads with "Copy email address", so the name reads as the
+    action and then the value.
+  - **An unmarked platform spells its name; it does not render unadorned.** `TAG_PATHS`'s closed
+    set has an honest empty case, because a tag's label sits right beside its mark. A compact
+    pill *is* its mark, so the same fallback would be an unlabelled dot — `PLATFORM_MARKS` in
+    `ContactIcon.tsx` is therefore still a closed vocabulary, but a miss falls back to a wider
+    pill carrying the platform's name. Adding a platform means adding a mark or accepting text.
+
+- **Where that row breaks is decided by `groupContactRows`, not by the flex algorithm.** Left
+  flat, a row too wide for the column fills the first line and strands one lone mark up beside
+  the address. `contentTypes.ts` splits the rows into the units that wrap together — each address
+  on its own, each stretch of consecutive profiles as one — and `.contacts` lays out one child per
+  unit, so the break lands between the address and the marks. Two things follow:
+  - **It groups consecutive rows rather than hoisting every address to the front**, which is what
+    keeps "array order is display order" true here. Reordering in the Studio still moves a pill to
+    exactly where the array says, and a document with an address in the middle renders it in the
+    middle — it simply gets a line of its own if the row has to break there.
+  - **`.contactProfiles` must not be `display: contents`.** That would make the marks flex items
+    of `.contacts` again, which is precisely the flat layout this exists to avoid; being one wrap
+    unit is the whole job.
 
 - **`--hover-room` is padding on `.images`, never on `.scrollableArea`.** The hover state paints
   outside a thumbnail's own box (the tilt lifts two corners, the shadow falls further), and

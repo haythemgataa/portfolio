@@ -5,9 +5,17 @@ import Arrow12 from '../../Arrow12';
 import Attachments from '../../Attachments';
 import GalleryPreview from '../../GalleryPreview';
 import RichText from '../../RichText';
-import { CopyIcon, EnvelopeIcon, PlatformIcon, hasPlatformIcon } from '../../ContactIcon';
+import {
+  CheckIcon,
+  CopyIcon,
+  EnvelopeIcon,
+  PlatformIcon,
+  hasPlatformIcon,
+  platformBrandStyle,
+} from '../../ContactIcon';
 import profile from '../../Profile.module.css';
 import type { ContactItem, CvItem, CvSection, ResolvedMedia } from '../../lib/contentTypes';
+import { groupContactRows, isAddressContact } from '../../lib/contentTypes';
 import { resolveHeading, resolveMedia, silent } from '../../lib/resolveContent';
 import { sameSelection, useStudio } from '../lib/studioContext';
 import { useDragHandlers } from '../lib/useDragHandlers';
@@ -421,15 +429,15 @@ const CanvasSection: React.FC<{
  * A contact pill, editable — and the one row where the canvas/inspector split moved when the
  * design did.
  *
- * The site's pills are `<a>`s and these are spans: the canvas navigates nowhere, which is the
- * same choice the item headings already make. What changed with the pills is *which* strings
- * are readable. A compact pill shows a mark and nothing else, so its platform and handle stopped
- * being things a visitor reads and became facts about the link — inspector, by the rule in
- * CLAUDE.md. What a visitor can still read stays on the canvas: the email's address, and the
- * *name* of a platform with no mark drawn for it, which is that pill's whole visible content.
+ * The site's pills are an `<a>` and a `<button>`; these are spans. The canvas navigates nowhere
+ * and copies nothing — the same choice the item headings already make — and a real control here
+ * would compete with the node's own press for the selection.
  *
- * The copy button is a span rather than a button. It is the pill's geometry, not a control the
- * editor has any use for, and a real one would compete with the node's own press for selection.
+ * What changed with the pills is *which* strings are readable. A compact pill shows a mark and
+ * nothing else, so its platform and handle stopped being things a visitor reads and became facts
+ * about the link — inspector, by the rule in CLAUDE.md. What a visitor can still read stays on
+ * the canvas: the address, and the *name* of a platform with no mark drawn for it, which is that
+ * pill's whole visible content.
  */
 const CanvasContactRow: React.FC<{
   item: ContactItem;
@@ -443,10 +451,10 @@ const CanvasContactRow: React.FC<{
   const selected = sameSelection(selection, { kind: 'contactRow', itemId: item.id });
   const selectSelf = () => select({ kind: 'contactRow', itemId: item.id });
 
-  // The same two tests `Profile.tsx` makes, and they have to stay the same two: the canvas
-  // showing one treatment where the build emits the other is the one failure an edit-in-place
-  // editor must not have.
-  const isEmail = item.url?.startsWith('mailto:') ?? false;
+  // Both tests come from the same place `Profile.tsx` gets them, rather than being restated
+  // here: the canvas showing one treatment where the build emits the other is the one failure an
+  // edit-in-place editor must not have.
+  const isAddress = isAddressContact(item);
   const marked = hasPlatformIcon(item.platform ?? '');
 
   return (
@@ -484,22 +492,23 @@ const CanvasContactRow: React.FC<{
         </Tool>
       </div>
 
-      {isEmail ? (
-        <span className={`${profile.contactPill} ${profile.contactEmail}`}>
-          <span className={profile.contactEmailLink}>
-            <EnvelopeIcon className={profile.contactIcon} />
-            <span className={profile.contactEmailAddress}>
-              <Editable
-                value={item.handle ?? ''}
-                onChange={(next) => setContactField(item.id, 'handle', next)}
-                placeholder="you@example.com"
-                label="Email address"
-                onEdit={selectSelf}
-              />
-            </span>
+      {isAddress ? (
+        <span className={`${profile.contactPill} ${profile.contactAddress}`}>
+          <EnvelopeIcon className={profile.contactIcon} />
+          <span className={profile.contactAddressText}>
+            <Editable
+              value={item.handle ?? ''}
+              onChange={(next) => setContactField(item.id, 'handle', next)}
+              placeholder="you@example.com"
+              label="Email address"
+              onEdit={selectSelf}
+            />
           </span>
-          <span className={profile.contactCopy} aria-hidden>
-            <CopyIcon className={profile.contactCopyIcon} />
+          {/* Both glyphs, as the site mounts them — the check rests at `opacity: 0`, so what
+              shows is the copy mark and the pair costs the canvas nothing. */}
+          <span className={profile.contactCopyMark} aria-hidden>
+            <CopyIcon className={profile.contactCopyGlyph} />
+            <CheckIcon className={profile.contactCheckGlyph} />
           </span>
         </span>
       ) : (
@@ -511,6 +520,7 @@ const CanvasContactRow: React.FC<{
           ]
             .filter(Boolean)
             .join(' ')}
+          style={platformBrandStyle(item.platform)}
           title={item.handle}
         >
           {marked ? (
@@ -555,6 +565,16 @@ const CvCanvas: React.FC = () => {
 
   const sectionDrag = useDragHandlers(moveSection);
   const contactDrag = useDragHandlers(moveContactRow);
+
+  // The pills render in runs (see `groupContactRows`), so a row's position inside its run is no
+  // longer its position in the document. Everything that reorders — the drag, the arrows, the
+  // disabled ends — addresses `contact.items`, so the document index is looked up by id.
+  const contactItems = useMemo(() => cv.contact?.items ?? [], [cv.contact?.items]);
+  const contactTotal = contactItems.length;
+  const contactIndex = useMemo(
+    () => new Map(contactItems.map((item, index) => [item.id, index])),
+    [contactItems],
+  );
 
   const teaser = useMemo(
     () =>
@@ -664,18 +684,41 @@ const CvCanvas: React.FC = () => {
             </Tool>
           </span>
         </div>
+        {/* Grouped into runs exactly as the page groups them, so the canvas breaks its row in
+            the same place. The drag index is still the row's index in `contact.items` — it has
+            to be, since that is what `moveContactRow` reorders — so it is read off the map
+            rather than off the position within a run. */}
         <div className={profile.contacts}>
-          {(cv.contact?.items ?? []).map((item, index) => (
-            <CanvasContactRow
-              key={item.id}
-              item={item}
-              index={index}
-              total={cv.contact.items.length}
-              dragSource={contactDrag.source(index)}
-              dragTarget={contactDrag.target(index)}
-              dragOver={contactDrag.over === index}
-            />
-          ))}
+          {groupContactRows(cv.contact?.items ?? []).map((run) =>
+            run.kind === 'address' ? (
+              <CanvasContactRow
+                key={run.item.id}
+                item={run.item}
+                index={contactIndex.get(run.item.id) ?? 0}
+                total={contactTotal}
+                dragSource={contactDrag.source(contactIndex.get(run.item.id) ?? 0)}
+                dragTarget={contactDrag.target(contactIndex.get(run.item.id) ?? 0)}
+                dragOver={contactDrag.over === contactIndex.get(run.item.id)}
+              />
+            ) : (
+              <div key={run.items[0].id} className={profile.contactProfiles}>
+                {run.items.map((item) => {
+                  const index = contactIndex.get(item.id) ?? 0;
+                  return (
+                    <CanvasContactRow
+                      key={item.id}
+                      item={item}
+                      index={index}
+                      total={contactTotal}
+                      dragSource={contactDrag.source(index)}
+                      dragTarget={contactDrag.target(index)}
+                      dragOver={contactDrag.over === index}
+                    />
+                  );
+                })}
+              </div>
+            ),
+          )}
         </div>
         <button
           type="button"

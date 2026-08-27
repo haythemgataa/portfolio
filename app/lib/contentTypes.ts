@@ -86,6 +86,53 @@ export type ContactItem = {
 };
 
 /**
+ * Whether a contact row is an address rather than a profile — which is what decides its pill's
+ * whole treatment: wide, showing the address, and copying it on press, against a compact mark
+ * that links out.
+ *
+ * The test is the URL's *scheme*, not the row's position or its label. That is the same choice
+ * `section.key` makes over `section.label`: a rename or a reorder cannot invalidate it, where
+ * "the first row" and "the one called Email" both can. It lives here beside the type, rather
+ * than in `Profile.tsx`, because the Studio's canvas has to pick the same treatment for the same
+ * row — an editor that shows one pill where the build emits the other is the single failure an
+ * edit-in-place editor cannot have.
+ */
+export function isAddressContact(item: ContactItem): boolean {
+  return item.url?.startsWith('mailto:') ?? false;
+}
+
+/**
+ * The contact row split into the runs the layout wraps as units: each address is a unit of its
+ * own, and each stretch of consecutive profiles is one unit.
+ *
+ * This exists so that a row too wide for the column breaks *between* the address and the marks
+ * rather than wherever the flex algorithm happens to run out — a wrapping row of mixed pills
+ * otherwise leaves one lone mark stranded beside the address on the first line.
+ *
+ * **It groups consecutive rows rather than hoisting every address to the front**, which is what
+ * keeps "array order is display order" true here. Reordering in the Studio still moves a pill to
+ * exactly where the array says, and a document with an address in the middle renders it in the
+ * middle; it simply gets a line of its own if the row has to break there.
+ */
+export type ContactRun =
+  | { kind: 'address'; item: ContactItem }
+  | { kind: 'profiles'; items: ContactItem[] };
+
+export function groupContactRows(items: ContactItem[]): ContactRun[] {
+  const runs: ContactRun[] = [];
+  for (const item of items) {
+    if (isAddressContact(item)) {
+      runs.push({ kind: 'address', item });
+      continue;
+    }
+    const last = runs[runs.length - 1];
+    if (last?.kind === 'profiles') last.items.push(item);
+    else runs.push({ kind: 'profiles', items: [item] });
+  }
+  return runs;
+}
+
+/**
  * An orderable section. Every entry renders identically, which is what makes
  * reordering safe — see CONTENT-SCHEMA.md, "Fixed vs. orderable sections".
  */

@@ -116,9 +116,21 @@
        heading can contain rather than the cap height a lowercase-free title would need. At 14px
        that is 17.2px, which leaves 7.3px of ink standing at each end of a 40px ordinal.
 
-     `--section-number-cut` is the ramp, and it is short on purpose: long enough not to read as a
-     torn edge, short enough that the band still reads as a cut rather than as the fade this
-     replaced.
+     **The ramp is derived and eased, and both halves of that are the fix for it reading as
+     sharp.** It was 3px of linear interpolation, which is short enough to be an edge rather than
+     a transition — and worse, a linear ramp meeting a flat run puts a *corner* in the alpha at
+     each junction, which the eye finds even when the ramp itself is long (Mach banding). So:
+
+     - **`--section-number-cut` now runs from the band's edge to the tip of the ink**, which is
+       the longest ramp available — 7.33px at 40px, against the 3px it replaced. Past the ink
+       there is nothing left to paint, so no length beyond this buys anything. `--section-number-ink`
+       is half the digits' height, `0.3984 * size`, from the same `TextMetrics` measurement as the
+       `bottom` above (the ink spans 0.1007em to 0.8976em of its box).
+     - **Three intermediate stops per side round the corners off.** They are `smoothstep` sampled
+       at a quarter, a half and three quarters of the ramp — 0.367, 0.625, 0.883 against the 0.25
+       floor — so the alpha leaves the band and arrives at full strength with no slope change at
+       either end. Four segments is where the junctions stop being findable by eye; more stops
+       would be arithmetic nobody can see.
 
      The band's stops are the same orange at a quarter alpha, never `transparent` and never a
      grey. `transparent` is `rgba(0, 0, 0, 0)`, and interpolating towards it in sRGB drags the
@@ -130,14 +142,21 @@
      `background-clip` to `border-box`, which would throw away the text clipping below it and
      paint a rectangle of gradient across the header instead of two digits. */
   --section-number-band: calc(var(--type-size) * 0.615);
-  --section-number-cut: 3px;
+  --section-number-ink: calc(var(--section-number-size) * 0.3984);
+  --section-number-cut: calc(var(--section-number-ink) - var(--section-number-band));
   background-image: linear-gradient(
     to bottom,
     #fb4107 0,
-    #fb4107 calc(50% - var(--section-number-band) - var(--section-number-cut)),
+    #fb4107 calc(50% - var(--section-number-ink)),
+    rgb(251 65 7 / 0.883) calc(50% - var(--section-number-band) - var(--section-number-cut) * 0.75),
+    rgb(251 65 7 / 0.625) calc(50% - var(--section-number-band) - var(--section-number-cut) * 0.5),
+    rgb(251 65 7 / 0.367) calc(50% - var(--section-number-band) - var(--section-number-cut) * 0.25),
     rgb(251 65 7 / 0.25) calc(50% - var(--section-number-band)),
     rgb(251 65 7 / 0.25) calc(50% + var(--section-number-band)),
-    #fb4107 calc(50% + var(--section-number-band) + var(--section-number-cut)),
+    rgb(251 65 7 / 0.367) calc(50% + var(--section-number-band) + var(--section-number-cut) * 0.25),
+    rgb(251 65 7 / 0.625) calc(50% + var(--section-number-band) + var(--section-number-cut) * 0.5),
+    rgb(251 65 7 / 0.883) calc(50% + var(--section-number-band) + var(--section-number-cut) * 0.75),
+    #fb4107 calc(50% + var(--section-number-ink)),
     #fb4107 100%
   );
   -webkit-background-clip: text;

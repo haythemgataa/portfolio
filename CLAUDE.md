@@ -1137,6 +1137,16 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
     two orange fragments with no numeral between them; a quarter keeps the strokes continuous
     through the band, so what reads is one ordinal that the heading passes in front of. It is the
     same judgement the old fade's 0.3 midpoint was making, applied to a band rather than a ramp.
+  - **The ramps into it are derived and eased, and both halves of that matter.** Length first:
+    `--section-number-cut` runs from the band's edge to the tip of the ink (7.33px at 40px,
+    against the 3px it started at), which is the longest ramp available — past the ink there is
+    nothing left to paint. `--section-number-ink` is half the digits' height, `0.3984 * size`,
+    from the same `TextMetrics` pass as the `bottom`. Then shape: a *linear* ramp meeting a flat
+    run leaves a corner in the alpha at each junction, and the eye finds a corner even when the
+    ramp is long — so three intermediate stops per side sample `smoothstep` at a quarter, a half
+    and three quarters (0.367, 0.625, 0.883 against the 0.25 floor), and the alpha leaves the band
+    and arrives at full strength with no slope change at either end. Lengthening the ramp alone
+    did not fix it; the corners were most of what read as sharp.
   - **A pinned title parks below `--sticky-top`, not at it.** Centred, the numeral no longer
     overhangs the header at all — its ink stops 1.24px inside the top edge — so
     `--section-number-headroom` is 4px of daylight rather than the rescue it was: the tab bar's

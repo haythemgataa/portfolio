@@ -1133,6 +1133,10 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
     ordinal. Percentages, because a gradient's line length *is* the box height, so the stops track
     `--section-number-size` on their own. It replaced a downward fade, which had no way to say
     "here specifically" and whose midpoint at this size competed with the title it sat under.
+  - **The band is dimmed to a quarter alpha, not cut to zero.** At zero the digits came apart into
+    two orange fragments with no numeral between them; a quarter keeps the strokes continuous
+    through the band, so what reads is one ordinal that the heading passes in front of. It is the
+    same judgement the old fade's 0.3 midpoint was making, applied to a band rather than a ramp.
   - **A pinned title parks below `--sticky-top`, not at it.** Centred, the numeral no longer
     overhangs the header at all — its ink stops 1.24px inside the top edge — so
     `--section-number-headroom` is 4px of daylight rather than the rescue it was: the tab bar's
@@ -1144,9 +1148,11 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
     numeral, and `Gallery.tsx` measures its scroll clearance off that value directly. **The ceiling
     on the size is now the header rather than the bar**: the ink is `0.797 * size` tall against
     39.578px, so it reaches both edges at 49.7px.
-  - **The gradient's transparent stops are the same orange at zero alpha, never `transparent`.**
-    `transparent` is `rgba(0, 0, 0, 0)`, so interpolating towards it in sRGB drags the midpoint
-    through black — a grey cast on both edges of a band whose whole job is to be clean. The
+  - **The band's stops are the same orange, never `transparent` and never a grey.**
+    `transparent` is `rgba(0, 0, 0, 0)`, so interpolating towards it in sRGB drags the ramp
+    through black — a grey cast on both edges of a band whose whole job is to be clean. That still
+    binds at a quarter alpha: it is the *hue* being held across the ramp that matters, not the
+    alpha it lands on. The
     orange is the literal `#fb4107` the footer's cursor already wears, for the reason given in
     `FigmaCursor.tsx`: it is a reference to Figma, so it should not follow the page's theme. It
     carries on both grounds.
@@ -1264,22 +1270,14 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
   - **`.contactProfiles` must not be `display: contents`.** That would make the marks flex items
     of `.contacts` again, which is precisely the flat layout this exists to avoid; being one wrap
     unit is the whole job.
-  - **On two lines the runs share an edge, and `width: fit-content` on `.contacts` is the whole
-    mechanism.** Both children take `flex: 1 1 auto`, and the run distributes with
-    `space-between`. When everything fits, `fit-content` resolves to the one-line max-content, so
-    there is *no free space at all* and neither child grows: the row stays packed left exactly as
-    it was, measured at 195.4px + 8px + 232px. When it does not fit, `fit-content` resolves to the
-    available width and both children grow to it — so the address and the marks span the same
-    width and the block reads as one rectangle rather than two ragged lines. There is no
-    breakpoint, no measurement and no magic number in it; the one-line case and the two-line case
-    come out of the same three declarations.
-  - **At 40px the marks are wider than the address, so matching means the address stretching.**
-    Five 40px pills with 8px between them is 232px against the address's 195.4px, and a gap of
-    −1.15px is not available — which is why `.contactAddress` takes `justify-content: center`, so
-    its contents stay a group in the middle of a pill that is now wider than they are. The cost is
-    that the marks' gaps grow with the column: 27.8px at a 311px column (a 375px viewport), 54px
-    at 416px, which is the loosest the wrapped range gets and the one width where they start to
-    read as scattered rather than as a set.
+  - **Nothing stretches: every pill stays at its own width on both lines.** The two runs were
+    briefly made to share both edges — `width: fit-content` on `.contacts` plus `flex: 1 1 auto`
+    on both children, which grew them to the column only in the wrapped case and left the one-line
+    case untouched because `fit-content` leaves no free space there. It is a neat mechanism and
+    the wrong look: at 40px the five marks are 232px against the address's 195.4px, so matching
+    could only widen the address, and it dragged the marks' gaps out with it — 27.8px at a 311px
+    column, 54px at 416px, where they read as scattered rather than as a set. Both are back to
+    minimum width, packed left, ragged by 36.6px on two lines.
 
 - **`--hover-room` is padding on `.images`, never on `.scrollableArea`.** The hover state paints
   outside a thumbnail's own box (the tilt lifts two corners, the shadow falls further), and

@@ -160,8 +160,6 @@
   align-items: center;
   gap: 8px;
   margin-top: 24px;
-  width: fit-content;
-  max-width: 100%;
 }
 
 /* One run of profile pills, wrapping internally if even they do not fit. `display: contents`
@@ -172,8 +170,6 @@
   flex-direction: row;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  flex: 1 1 auto;
   gap: 8px;
   min-width: 0;
 }
@@ -235,8 +231,6 @@
    and the whole pill is one button that copies it — see `ContactAddress`. Symmetric padding
    again now that there is no second control inset into the right end. */
 .contactAddress {
-  flex: 1 1 auto;
-  justify-content: center;
   gap: 8px;
   padding: 0 14px;
   max-width: 100%;

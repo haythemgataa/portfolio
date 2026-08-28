@@ -49,10 +49,13 @@ const Profile: React.FC<ProfileProps> = ({
   cv
 }) => {
   // One piece of state for the whole page rather than one per section: every section's
-  // control reads and writes it, so opening details anywhere opens them everywhere. Open
-  // by default — the control is deliberately quiet, and a reader who never notices it
-  // should still get the CV's substance rather than only its headings.
-  const [showDetails, setShowDetails] = useState(true);
+  // control reads and writes it, so opening details anywhere opens them everywhere.
+  // **Closed by default**, which is a reversal: it was open on the reasoning that a reader who
+  // never noticed the quiet control should still get the CV's substance. Closed, the whole CV is
+  // its headings — every role, project and award on a couple of screens — and the prose is there
+  // for whoever wants it. That is the better first read, and it is the one the control exists to
+  // let a reader change.
+  const [showDetails, setShowDetails] = useState(false);
   const toggleDetails = () => setShowDetails(open => !open);
 
   return (

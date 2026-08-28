@@ -5,13 +5,22 @@ import Arrow12 from '../../Arrow12';
 import Attachments from '../../Attachments';
 import GalleryPreview from '../../GalleryPreview';
 import RichText from '../../RichText';
+import {
+  CheckIcon,
+  CopyIcon,
+  EnvelopeIcon,
+  PlatformIcon,
+  hasPlatformIcon,
+} from '../../ContactIcon';
 import profile from '../../Profile.module.css';
 import type { ContactItem, CvItem, CvSection, ResolvedMedia } from '../../lib/contentTypes';
+import { groupContactRows, isAddressContact } from '../../lib/contentTypes';
 import { resolveHeading, resolveMedia, silent } from '../../lib/resolveContent';
 import { sameSelection, useStudio } from '../lib/studioContext';
 import { useDragHandlers } from '../lib/useDragHandlers';
 import Editable from './Editable';
 import styles from './canvas.module.css';
+import SectionNumber from '../../SectionNumber';
 
 /**
  * The CV route, editable.
@@ -329,6 +338,10 @@ const CanvasSection: React.FC<{
           select({ kind: 'section', sectionKey: section.key });
         }}
       >
+        {/* The site's ordinal, same component and same stylesheet. It is derived from position
+            there too, so dragging a section here renumbers it on the canvas exactly as the
+            rebuilt page will show it. */}
+        <SectionNumber index={index} />
         <h2 className={styles.sectionTitleSlot}>
           <Editable
             value={section.label}
@@ -411,6 +424,24 @@ const CanvasSection: React.FC<{
 // Contact
 // ---------------------------------------------------------------------------
 
+/**
+ * A contact pill, editable — and the one row where the canvas/inspector split moved when the
+ * design did.
+ *
+ * The site's pills are an `<a>` and a `<button>`; these are spans. The canvas navigates nowhere
+ * and copies nothing — the same choice the item headings already make — and a real control here
+ * would compete with the node's own press for the selection.
+ *
+ * What changed with the pills is *which* strings are readable. A compact pill shows a mark and
+ * nothing else, so its platform and handle stopped being things a visitor reads and became facts
+ * about the link — inspector, by the rule in CLAUDE.md. What a visitor can still read stays on
+ * the canvas: the address, and the *name* of a platform with no mark drawn for it, which is that
+ * pill's whole visible content.
+ *
+ * The site's hover tooltip is the one piece of the pill deliberately not reproduced: it occupies
+ * exactly the space `.tools` does, directly above the pill, and both appear on hover. The
+ * toolbar is what a hover means here, so a plain `title` carries the handle instead.
+ */
 const CanvasContactRow: React.FC<{
   item: ContactItem;
   index: number;
@@ -423,12 +454,18 @@ const CanvasContactRow: React.FC<{
   const selected = sameSelection(selection, { kind: 'contactRow', itemId: item.id });
   const selectSelf = () => select({ kind: 'contactRow', itemId: item.id });
 
+  // Both tests come from the same place `Profile.tsx` gets them, rather than being restated
+  // here: the canvas showing one treatment where the build emits the other is the one failure an
+  // edit-in-place editor must not have.
+  const isAddress = isAddressContact(item);
+  const marked = hasPlatformIcon(item.platform ?? '');
+
   return (
     <div
       {...dragTarget}
       className={[
-        profile.experience,
         styles.node,
+        styles.contactNode,
         selected ? styles.nodeSelected : '',
         dragOver ? styles.dropping : '',
       ]
@@ -458,34 +495,49 @@ const CanvasContactRow: React.FC<{
         </Tool>
       </div>
 
-      <div className={profile.year}>
-        <span className={styles.yearSlot}>
-          <Editable
-            value={item.platform ?? ''}
-            onChange={(next) => setContactField(item.id, 'platform', next)}
-            placeholder="Platform"
-            label="Platform"
-            onEdit={selectSelf}
-          />
+      {isAddress ? (
+        <span className={`${profile.contactPill} ${profile.contactAddress}`}>
+          <EnvelopeIcon className={profile.contactIcon} />
+          <span className={profile.contactAddressText}>
+            <Editable
+              value={item.handle ?? ''}
+              onChange={(next) => setContactField(item.id, 'handle', next)}
+              placeholder="you@example.com"
+              label="Email address"
+              onEdit={selectSelf}
+            />
+          </span>
+          {/* Both glyphs, as the site mounts them — the check rests at `opacity: 0`, so what
+              shows is the copy mark and the pair costs the canvas nothing. */}
+          <span className={profile.contactCopyMark} aria-hidden>
+            <CopyIcon className={profile.contactCopyGlyph} />
+            <CheckIcon className={profile.contactCheckGlyph} />
+          </span>
         </span>
-      </div>
-      <div className={profile.experienceContent}>
-        <div className={profile.title}>
-          <Editable
-            value={item.handle ?? ''}
-            onChange={(next) => setContactField(item.id, 'handle', next)}
-            placeholder="Handle"
-            label="Handle"
-            onEdit={selectSelf}
-          />
-          {item.url ? (
-            <span className={profile.linkArrow}>
-              &#xfeff;
-              <Arrow12 />
-            </span>
-          ) : null}
-        </div>
-      </div>
+      ) : (
+        <span
+          className={[
+            profile.contactPill,
+            profile.contactCompact,
+            marked ? '' : profile.contactCompactLabel,
+          ]
+            .filter(Boolean)
+            .join(' ')}
+          title={item.handle}
+        >
+          {marked ? (
+            <PlatformIcon platform={item.platform} className={profile.contactIcon} />
+          ) : (
+            <Editable
+              value={item.platform ?? ''}
+              onChange={(next) => setContactField(item.id, 'platform', next)}
+              placeholder="Platform"
+              label="Platform"
+              onEdit={selectSelf}
+            />
+          )}
+        </span>
+      )}
     </div>
   );
 };
@@ -515,6 +567,16 @@ const CvCanvas: React.FC = () => {
 
   const sectionDrag = useDragHandlers(moveSection);
   const contactDrag = useDragHandlers(moveContactRow);
+
+  // The pills render in runs (see `groupContactRows`), so a row's position inside its run is no
+  // longer its position in the document. Everything that reorders — the drag, the arrows, the
+  // disabled ends — addresses `contact.items`, so the document index is looked up by id.
+  const contactItems = useMemo(() => cv.contact?.items ?? [], [cv.contact?.items]);
+  const contactTotal = contactItems.length;
+  const contactIndex = useMemo(
+    () => new Map(contactItems.map((item, index) => [item.id, index])),
+    [contactItems],
+  );
 
   const teaser = useMemo(
     () =>
@@ -608,6 +670,7 @@ const CvCanvas: React.FC = () => {
             select({ kind: 'contact' });
           }}
         >
+          <SectionNumber index={cv.sections.length} />
           <h2 className={styles.sectionTitleSlot}>
             <Editable
               value={cv.contact?.label ?? 'Contact'}
@@ -623,18 +686,41 @@ const CvCanvas: React.FC = () => {
             </Tool>
           </span>
         </div>
+        {/* Grouped into runs exactly as the page groups them, so the canvas breaks its row in
+            the same place. The drag index is still the row's index in `contact.items` — it has
+            to be, since that is what `moveContactRow` reorders — so it is read off the map
+            rather than off the position within a run. */}
         <div className={profile.contacts}>
-          {(cv.contact?.items ?? []).map((item, index) => (
-            <CanvasContactRow
-              key={item.id}
-              item={item}
-              index={index}
-              total={cv.contact.items.length}
-              dragSource={contactDrag.source(index)}
-              dragTarget={contactDrag.target(index)}
-              dragOver={contactDrag.over === index}
-            />
-          ))}
+          {groupContactRows(cv.contact?.items ?? []).map((run) =>
+            run.kind === 'address' ? (
+              <CanvasContactRow
+                key={run.item.id}
+                item={run.item}
+                index={contactIndex.get(run.item.id) ?? 0}
+                total={contactTotal}
+                dragSource={contactDrag.source(contactIndex.get(run.item.id) ?? 0)}
+                dragTarget={contactDrag.target(contactIndex.get(run.item.id) ?? 0)}
+                dragOver={contactDrag.over === contactIndex.get(run.item.id)}
+              />
+            ) : (
+              <div key={run.items[0].id} className={profile.contactProfiles}>
+                {run.items.map((item) => {
+                  const index = contactIndex.get(item.id) ?? 0;
+                  return (
+                    <CanvasContactRow
+                      key={item.id}
+                      item={item}
+                      index={index}
+                      total={contactTotal}
+                      dragSource={contactDrag.source(index)}
+                      dragTarget={contactDrag.target(index)}
+                      dragOver={contactDrag.over === index}
+                    />
+                  );
+                })}
+              </div>
+            ),
+          )}
         </div>
         <button
           type="button"

@@ -1,0 +1,347 @@
+/* The 404.
+ *
+ * The page is the joke: the numeral wears the Figma *selected* treatment the footer's published
+ * date wears — blue frame, a rule on the baseline, four corner handles — so the one thing the
+ * visitor did not find is the one thing on screen that looks picked up.
+ *
+ * It is the *resting* selected state and nothing animates: the footer's date types itself out
+ * under a Figma cursor, and this deliberately does not. Everything here is static, which is what
+ * lets the whole page be a server component with no client JavaScript at all.
+ *
+ * The treatment is transcribed from `SiteFooter.module.css` rather than shared, for the same
+ * reason `.clear` restates `.detailsToggle` and `.srOnly` is written out twice: the footer's copy
+ * is entangled with *its* animation — a transparent border it toggles with `data-boxed`, a ZWSP
+ * strut that stops an empty inline-block collapsing, a hand that waves and claps — and none of
+ * that has any meaning here.
+ * **If the footer's selection chrome changes, this has to follow by hand.**
+ *
+ * This file dresses `global-not-found.tsx`, which bypasses the root layout entirely — so unlike
+ * every other module here it cannot assume `.page`/`.column` are already around it, and it
+ * carries the column geometry itself. */
+
+/* Fills the viewport and centres its one child.
+ *
+ * `min-height`, not `height`: if a future edit makes the stack taller than a very short window,
+ * this scrolls rather than clipping the button off the bottom. That is the safe direction — a
+ * page that scrolls a little is recoverable, a page whose only exit is cut off is not.
+ *
+ * `dvh` rather than `vh`, matching the one other place on the site that has this exact problem
+ * (`Lightbox.module.css`). `100vh` on iOS Safari is the *large* viewport — measured as though the
+ * browser chrome were retracted — so content sized to it is taller than what is actually visible
+ * and the page scrolls on arrival, which is the one thing this page must not do. `vh` is declared
+ * first as a bare fallback, the same shape as `overflow-x: hidden; clip`.
+ *
+ * **It deliberately paints no background.** `body` already carries `--background-primary`
+ * (globals.css), and a background here would put an opaque, positioned surface over the glow and
+ * the dot texture below — both of which sit at negative z-index and paint on the canvas. That is
+ * exactly the trap the Studio canvas hit ("the canvas simply had no glow, which is the one thing
+ * above the fold"). For the same reason this element must not become a stacking context: no
+ * `z-index`, no `isolation`, no `transform`, no `filter`. `position: relative` alone does not
+ * create one, and it is needed so `.decoration` has something to anchor to. */
+.page {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  /* `.page`'s horizontal padding from the root layout, applied on all four sides so the stack
+     never touches an edge on a short window. */
+  padding: 24px;
+}
+
+/* The site's glow and page grain, borrowed from the root layout rather than redrawn — the two
+   divs inside are `layout.module.css`'s own, so the transcribed alpha ramps have exactly one
+   home. It is what makes this page read as *this* site rather than as a generic error screen,
+   and it costs no request: both are drawn in CSS.
+
+   Anchored to the top of the viewport and given the content column's width, because that is what
+   `.topGradient` measures itself against (`width: calc(100% / var(--glow-fraction))`, `left: 50%`).
+   Centred with `left: 0; right: 0; margin: 0 auto` rather than a translate, deliberately: a
+   `transform` would make this a stacking context, which is fine here but is one more thing to
+   reason about, and the auto-margin needs no compensating.
+
+   `z-index: -1` is load-bearing. Absolutely positioned elements paint above in-flow content
+   whatever the source order, so without it the glow would wash over the numeral instead of
+   sitting behind it. With it, this becomes a stacking context that contains `.topGradient` (-1)
+   and `.dotTexture` (-2) in their correct relative order and lands the pair below `.inner` and
+   above the body's background on the canvas.
+
+   It spans `.page` (`top: 0; bottom: 0`) rather than collapsing to nothing, purely so `.grain`
+   below has a definite height to measure itself against. It deliberately does **not** clip:
+   `.topGradient` is over twice the column's width and hangs off both sides by design, so an
+   `overflow: hidden` here would cut the glow down to 540px and destroy it. */
+.decoration {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 540px;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* The dot texture declares a fixed `height: 560px`, which is correct on a page that is always
+   taller than that and wrong on one that must fit a viewport. As an absolutely positioned box it
+   still contributes to the document's scrollable overflow, so on a short window it handed the
+   page exactly `560 − viewportHeight` of scroll — measured at 170px on a 844x390 landscape phone
+   and 260px at 800x300, on the one page whose entire requirement is not to scroll.
+   `max-height` rather than `height`: above 560px tall this does not bind at all, so the grain
+   stays byte-identical to every other page on the site, and it only takes effect exactly where it
+   has to. Its fade is a mask in percentages of its own box, so on a short window the grain simply
+   fades out by the bottom edge instead of being cut off at full strength. */
+.grain {
+  max-height: 100%;
+}
+
+/* The content column, at the same 540px the rest of the site uses.
+   Centred rather than set against the column's left edge: with nothing else on the page there is
+   no column of type for the numeral to line up with, and a left-aligned stack under a centred
+   glow reads as though it had drifted. */
+.inner {
+  width: 100%;
+  max-width: 540px;
+  text-align: center;
+}
+
+/* ---- the selected numeral ---------------------------------------------------------------- */
+
+/* `inline-block`, and that is the whole shape of it: an `<h1>` is a block box, so left as one the
+   selection frame would span the column instead of hugging the digits — the numeral would look
+   boxed, but not *selected*. As an inline-block the box is the text's own advance width, which is
+   precisely what Figma draws around a text layer.
+   The border stays 1px: a Figma selection frame is chrome, drawn at a fixed screen size whatever
+   the object's size. Scaling it with the type would stop this being "exactly like" the footer. */
+.code {
+  display: inline-block;
+  position: relative;
+  border: var(--frame-border) solid var(--blue);
+  color: var(--foreground-primary);
+
+  /* 350 — the site's *base* weight, the one the body copy is set in, rather than the 550 it wears
+     everywhere it wants emphasis. At 200px a numeral does not need weight to be loud; it is
+     already the largest thing on the page by a wide margin, and the thin cut is what keeps it
+     reading as a drawn object sitting in a selection frame rather than as a shout. It also stays
+     inside the site's two-weight vocabulary (globals.css: "The site uses exactly two weights"),
+     which a display 700 would not.
+     Note this is a token rather than a literal 350: both weights are off the 100s grid and only
+     resolve because the face is variable — `layout.tsx` declares `weight: "100 900"`. */
+  font-weight: var(--weight-base);
+
+  /* `line-height: 1`, against the site's 1.6, and it is not only a space saving. It lifts the ink
+     from 43% of the box to 67%, which is what stops a display numeral floating inside its own
+     frame, and it is the value at which the box height is integral — see `--underline-offset`. */
+  line-height: 1;
+
+  /* `normal`, where every other title on this site is tracked in.
+     Partly a judgement — the frame Figma draws round a text layer is its *advance* box, so leaving
+     the tracking alone is what makes the box the digits' own width — and partly a trap worth
+     knowing about before anyone reverses it. Letter-spacing is applied after the **last**
+     character too, so it eats the trailing glyph's right side bearing, and Switzer's `4` has very
+     little to give: 0.029em of it at this weight and only 0.0135em at 550. Pixel-scanned at 140px,
+     `-0.02em` leaves 2.7px of clearance inside the frame at weight 350, 0.7px at 550, and −1.1px
+     at 900 — where the ink crosses the frame outright.
+     So tracking is survivable at the weight this ships at and stops being so a step or two up.
+     If it is ever wanted, add a matching `padding-right` to give the trailing space back rather
+     than relying on the bearing. */
+  letter-spacing: normal;
+
+  /* Figma's selection chrome, transcribed from `SiteFooter.module.css`. All of it is fixed screen
+     sizes, unscaled by the type — the handles belong to the tool, not to the object, which is
+     exactly what makes this read as the same cursor having selected a bigger thing rather than as
+     unrelated decoration.
+     `--handle-inset` has to count the frame's border, because an absolutely positioned child
+     resolves against the *padding* box: at 8px square and 4px deep the handle's outer edge lands
+     4px outside the frame and 4px of it covers the corner. The border is a variable rather than a
+     literal `1px` precisely because that arithmetic depends on it — measured, thickening the
+     frame to 2px while leaving a hardcoded `1px` here silently pushes every handle 1px deeper. */
+  --frame-border: 1px;
+  --handle-size: 8px;
+  --handle-depth: 4px;
+  --handle-inset: calc(var(--handle-depth) - var(--handle-size) - var(--frame-border));
+}
+
+/* The type size, and the rule's offset that follows from it.
+ *
+ * **These are discrete rather than a fluid `clamp()`, and that is the whole reason the rule lands
+ * on the baseline.** The offset is measured up from the box's inner bottom edge, so it depends on
+ * where the baseline falls — `ascent + half-leading` — and Blink *floors* half-leading to whole
+ * pixels. A fluid size produces fractional font-sizes, and the floor then throws the rule up to
+ * 1.3px off: swept across viewport widths 420-900px, a `clamp()` missed by more than half a pixel
+ * at 43% of widths, worst at 768px — iPad portrait — where 1.3px is 2.6 device pixels of daylight
+ * under the digits' feet. At a fixed integer size the exact offset is a known integer and the
+ * error is zero.
+ *
+ * Each pair below is measured, not computed: the continuous form is `F·(L − (a − d))/2 − 1px`
+ * with Switzer's `a = 0.980`, `d = 0.250` (hhea, upem 1000, identical across all nine shipped
+ * cuts), i.e. `0.135·F − 1` at `line-height: 1` — but the shipped value is the integer that
+ * actually put the rule on the baseline in Chromium, which is what the floor makes authoritative.
+ * The same derivation at the footer's 14px/1.6 gives 5.08px against the 5px it ships, which is the
+ * check that this is the footer's rule and not a lookalike.
+ *
+ * The sizes themselves are chosen so the whole stack clears the viewport at every step — verified
+ * at 375x667, 480x800, 768x1024, 1024x768, 1280x800 and, via the short-viewport rule at the end,
+ * 844x390 and 800x300.
+ *
+ * Two dependencies worth knowing before editing: the offset assumes the rule is 1px tall
+ * (measured, a 2px rule moves it 1px up and every number here would need re-deriving), and it is
+ * consumed by a child that inherits this font-size — putting a `font-size` on
+ * `.selectionUnderline` moves the rule 17.5px at the largest step. */
+.code {
+  font-size: 96px;
+  --underline-offset: 12px;
+}
+
+@media (min-width: 480px) {
+  .code {
+    font-size: 120px;
+    --underline-offset: 15px;
+  }
+}
+
+@media (min-width: 768px) {
+  .code {
+    font-size: 160px;
+    --underline-offset: 21px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .code {
+    font-size: 200px;
+    --underline-offset: 26px;
+  }
+}
+
+/* A short window is the case the width breakpoints cannot see: a landscape phone is wide enough
+   to earn the 160px step and far too short to hold it. Declared last so it wins over all of them,
+   since they carry the same specificity. */
+@media (max-height: 560px) {
+  .code {
+    font-size: 96px;
+    --underline-offset: 12px;
+  }
+}
+
+/* Absolutely positioned so none of the chrome widens the box it is drawn around — the frame has
+   to stay exactly the digits' advance width.
+   `-1px` rather than 0 at each end: this resolves against the padding box, which sits inside the
+   1px border, so `left: 0` would leave the rule a pixel short at both ends and read as
+   misaligned rather than as the box's own underline. */
+.selectionUnderline {
+  position: absolute;
+  left: calc(var(--frame-border) * -1);
+  right: calc(var(--frame-border) * -1);
+  bottom: var(--underline-offset);
+  height: 1px;
+  background-color: var(--blue);
+}
+
+/* White-filled with a blue edge, the way Figma draws a resize handle — a solid blue square would
+   read as a bullet sitting on the corner rather than as something grabbable.
+   `--background-primary` rather than white so it follows the dark theme instead of punching four
+   light holes in it. Four separate elements because a box has only two pseudo-elements. */
+.handle {
+  position: absolute;
+  width: var(--handle-size);
+  height: var(--handle-size);
+  background-color: var(--background-primary);
+  border: 1px solid var(--blue);
+  box-sizing: border-box;
+}
+
+.handle[data-corner="top-left"] {
+  top: var(--handle-inset);
+  left: var(--handle-inset);
+}
+
+.handle[data-corner="top-right"] {
+  top: var(--handle-inset);
+  right: var(--handle-inset);
+}
+
+.handle[data-corner="bottom-left"] {
+  bottom: var(--handle-inset);
+  left: var(--handle-inset);
+}
+
+.handle[data-corner="bottom-right"] {
+  bottom: var(--handle-inset);
+  right: var(--handle-inset);
+}
+
+/* ---- the line, and the way out ------------------------------------------------------------ */
+
+/* Running prose, not a label — so it takes the body's 14px/350/1.6 by inheritance and declares
+   only its colour, exactly as `.description` does in About and in the CV. The 12px
+   `--secondary-type-size` is reserved for labels, and `--foreground-tertiary` for dates and
+   deliberately quiet metadata; this is the only sentence on the page and belongs at the ink
+   running text is set in. `p { text-wrap: pretty }` in globals.css applies for free, and does real
+   work here — the sentence wraps to two lines below about 480px.
+   The top margin clears the handles, which hang 4px below the frame: 28px here reads as the 24px
+   it would be measured from the numeral's own edge. */
+.line {
+  margin-top: 28px;
+  color: var(--foreground-secondary);
+}
+
+/* The way out, wearing the tab pill's treatment (`Tabs.module.css`).
+ *
+ * That is the right sibling rather than the quiet `.clear`/`.detailsToggle` control, for a reason
+ * the site states itself: those are underplayed *because* they sit in a sticky header where a
+ * filled pill would compete with the label beside it. Neither the header nor the label exists
+ * here — this is the only interactive thing in an otherwise empty viewport, and on a 404 it stands
+ * in for the navigation that is missing. A tab pill is also the only control on this site that is
+ * both a box and a link to a route, which is exactly what this is.
+ *
+ * Restated rather than imported, and it could not be imported cleanly anyway: `.tab` carries
+ * `flex: 1 1 0` and `height: 100%`, both answers to living inside a 32px flex bar — and
+ * `height: 100%` against an auto-height parent computes to `auto`, so the 32px would silently not
+ * apply. **Keep the two in step by hand.**
+ *
+ * `padding: 4px 14px` is the one value not lifted: `.tab`'s `4px 8px` is a floor under
+ * `flex: 1 1 0` rather than a real width, and this pill has to size itself.
+ * The height comes from `--tab-bar-height` rather than a literal 32px so the two cannot drift. */
+.back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 24px;
+  height: var(--tab-bar-height);
+  padding: 4px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background-color: var(--background-muted);
+  color: var(--foreground-secondary);
+  font-size: var(--type-size);
+  font-weight: var(--weight-base);
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: background-color 150ms ease, color 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.back:hover {
+  background-color: var(--background-hover);
+  color: var(--foreground-primary);
+}
+
+/* The site's one focus treatment: `2px solid var(--blue)` at a positive offset. It goes negative
+   in exactly two places on the site, both because a clipping ancestor would eat it; nothing clips
+   here. No `border-radius` restated — an outline follows the element's own radius. */
+.back:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .back {
+    transition: none;
+  }
+}

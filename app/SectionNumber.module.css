@@ -1,0 +1,170 @@
+/* The section ordinal: 40px of Bellina standing behind the title, centred on the title's line and
+   cut through the middle by a transparent band, so what is left is the top and the bottom of the
+   digits with the heading running between them.
+
+   Absolutely positioned, and that is the whole reason this can exist at all. `.sectionHeader` is
+   already `position: sticky`, so it is the containing block here without being given anything —
+   and out of flow the numeral adds nothing to the header's height. That figure is not incidental:
+   it is 39.59375px, the tab bar parks every section title against it, and the Studio's canvas is
+   measured to match `/` on it exactly. A numeral in flow would have grown all three. Verified
+   unchanged after moving the numeral down onto the baseline and widening its box for the slant.
+
+   Centring is what keeps it *inside* the header now that it is this big: the ink is `0.797 * size`
+   tall, so at 40px it spans 31.9px of a 39.58px header with ~3.8px clear at either edge. It used
+   to share the title's baseline, which put almost all of it above the heading — fine for a fading
+   28px numeral, and useless for a band that has to have numeral on both sides of it.
+   `--section-number-headroom` stays 4px of daylight under the bar — see globals.css, which also
+   carries the ceiling this centring puts on the size. The numeral does still sit inside the fade
+   the bar casts, which is harmless: the fade is z-index 12 against the header's 15, the same way
+   the titles themselves already paint over it. */
+.number {
+  position: absolute;
+
+  /* Behind the title, not over it. The numeral overlaps the heading's own glyphs now, and a
+     positioned element paints above in-flow content whatever the source order says — so without
+     this the `0` sat on top of the `W`. It is confined rather than escaping to an ancestor
+     because both places this renders are already stacking contexts for their own reasons:
+     `.sectionHeader` is `position: sticky; z-index: 15`, and the Studio's copy also carries
+     `.node`'s `isolation: isolate`. Neither header paints a background, which is what leaves the
+     numeral legible behind the text rather than buried under a surface. On the canvas it lands
+     above `.node::before` — the selection ring, also at -1 — by tree order, which is the right
+     way round: the ring is a hairline and a 3% tint, and the numeral reads through it. */
+  z-index: -1;
+
+  /* Optical, and it costs nothing to get right: Bellina's `0` carries a 0.0933em left side
+     bearing where Switzer's `W` carries 0.038em, so at 40px against 14px the numeral's ink
+     already begins ~3.2px inside the title's. That is the indent the design asks for, so `left`
+     is 0 and the two faces' own sidebearings do the work. */
+  left: 0;
+
+  /* Room for the slant to overhang into, and it is a fix rather than a nicety. Under
+     `background-clip: text` what paints is the *intersection* of the glyphs and the background
+     positioning area, so ink outside the box is not clipped by an overflow rule — it simply
+     never receives paint, which is why no `overflow` value answers this. Bellina is a slanted
+     face and every digit leans past its own advance, so the trailing stroke of the ordinal was
+     going unpainted.
+
+     **The figure is the worst digit's overhang, not the first ordinal's.** Measured with
+     `TextMetrics` at 28px, the overhang runs from 0.077em (`0`) to 0.148em (`7`) — and it was
+     0.15em, derived from `01`'s 0.106em, which left `07` exactly 0.06px of margin: a clip waiting
+     for a section to be added or reordered into that slot. At 0.2em the worst digit clears by
+     1.46px and every other by more. In em rather than a pixel patch so it holds at any size.
+
+     Padding is the right lever precisely because the gradient is vertical — its line length is
+     the box's height, so widening the box rightwards moves no stop. It is free of layout
+     consequences too: the element is out of flow, so nothing reflows, and it is
+     `pointer-events: none`, so the wider box catches no press. */
+  padding-right: 0.2em;
+
+  /* The numeral's **ink centre**, parked on the centre of the title's line box — so the heading
+     runs through the middle of the digits and there is numeral above and below it for the band to
+     cut between. Derived from both faces' real metrics rather than nudged until it looked right,
+     so it survives a change to `--type-size`, `--line-height` or the ordinal's own size.
+
+     The title's line-box centre is exactly `LH` above the header's padding-box bottom, and that
+     falls out of the header's own padding rather than being a coincidence: the box is
+     `6px + LH + LH/2` tall (see `.sectionHeader`), so the centre of the content, at `6px + LH/2`
+     from the top, is `LH` up from the bottom. The 6px cancels.
+
+     The numeral's ink centre sits `0.499 * size` above its own box bottom. Measured off the file
+     with `TextMetrics` at 1000px rather than read from `OS/2`: at `line-height: 1` Bellina's
+     baseline is `0.132em` up from the box bottom (1 - 0.986 + (1.236 - 1) / 2), its digits ink
+     `0.7656em` above that line and `0.0313em` below it — the slant dips just past the baseline —
+     so the ink runs 0.1007em to 0.8976em and its centre is the mean of the two. Note that is
+     within 0.03px of the box's own centre at 40px; the derivation is kept because that near-miss
+     is a fact about Bellina, not a rule, and a different face would not repeat it. */
+  bottom: calc(
+    var(--type-size) * var(--line-height)
+    - var(--section-number-size) * 0.499
+  );
+
+  /* No fallback tail after the variable, deliberately: `localFont`'s `fallback` is already baked
+     into the value Next assigns to `--font-bellina`, and an undefined `var()` invalidates the
+     whole declaration regardless of what follows it — so a repeated `Georgia, serif` here would
+     buy nothing and only read as though it did. */
+  font-family: var(--font-bellina);
+  font-size: var(--section-number-size);
+
+  /* Load-bearing: the `bottom` above solves for the baseline `line-height: 1` produces. Inheriting
+     the page's 1.6 would move it 8.4px and read as the numeral floating off the title. */
+  line-height: 1;
+
+  /* Figma's orange, the literal the footer's cursor already wears rather than a token — and for
+     the same reason given in FigmaCursor.tsx: it is a reference, so it should not follow the
+     page's theme. It carries on both grounds.
+
+     **Opaque, then quiet, then opaque.** The band is dropped to a quarter alpha where the heading
+     crosses, so the numeral reads as one object with the title passing through it rather than as
+     a wash behind the words. It replaced a downward fade, which was the right answer while the
+     numeral sat almost entirely above the heading and is the wrong one now that it is centred on
+     it: a fade has no way to say "here specifically", and at 40px the middle of the ramp was
+     dense enough to compete with the title it sat under.
+
+     **The band is dimmed, not cut.** At zero alpha the digits came apart into two orange
+     fragments with no numeral between them; a quarter keeps the strokes continuous through the
+     band, so what reads is one ordinal that the heading passes in front of. It is the same
+     judgement the old fade's 0.3 midpoint was making, applied to a band rather than to a ramp.
+
+     Every stop is derived, and the two that matter are:
+
+     - **50% is the ink centre, not the box centre**, and they differ by 0.03px at 40px — see the
+       `bottom` above for why that near-miss is Bellina's rather than a rule. Written as a
+       percentage because a gradient's line length *is* the box height, so the fraction tracks
+       `--section-number-size` on its own.
+     - **The band is the title's own font box**, `(0.980 + 0.250) * --type-size` tall, halved
+       either side of the centre — Switzer's real ascent and descent, so it clears every glyph a
+       heading can contain rather than the cap height a lowercase-free title would need. At 14px
+       that is 17.2px, which leaves 7.3px of ink standing at each end of a 40px ordinal.
+
+     **The ramp is derived and eased, and both halves of that are the fix for it reading as
+     sharp.** It was 3px of linear interpolation, which is short enough to be an edge rather than
+     a transition — and worse, a linear ramp meeting a flat run puts a *corner* in the alpha at
+     each junction, which the eye finds even when the ramp itself is long (Mach banding). So:
+
+     - **`--section-number-cut` now runs from the band's edge to the tip of the ink**, which is
+       the longest ramp available — 7.33px at 40px, against the 3px it replaced. Past the ink
+       there is nothing left to paint, so no length beyond this buys anything. `--section-number-ink`
+       is half the digits' height, `0.3984 * size`, from the same `TextMetrics` measurement as the
+       `bottom` above (the ink spans 0.1007em to 0.8976em of its box).
+     - **Three intermediate stops per side round the corners off.** They are `smoothstep` sampled
+       at a quarter, a half and three quarters of the ramp — 0.367, 0.625, 0.883 against the 0.25
+       floor — so the alpha leaves the band and arrives at full strength with no slope change at
+       either end. Four segments is where the junctions stop being findable by eye; more stops
+       would be arithmetic nobody can see.
+
+     The band's stops are the same orange at a quarter alpha, never `transparent` and never a
+     grey. `transparent` is `rgba(0, 0, 0, 0)`, and interpolating towards it in sRGB drags the
+     ramp through black — a grey cast on both edges of a band whose whole job is to be clean.
+     That still binds at 0.25: it is the *hue* being held constant across the ramp that matters,
+     not the alpha it lands on.
+
+     `background-image` rather than the `background` shorthand: the shorthand resets
+     `background-clip` to `border-box`, which would throw away the text clipping below it and
+     paint a rectangle of gradient across the header instead of two digits. */
+  --section-number-band: calc(var(--type-size) * 0.615);
+  --section-number-ink: calc(var(--section-number-size) * 0.3984);
+  --section-number-cut: calc(var(--section-number-ink) - var(--section-number-band));
+  background-image: linear-gradient(
+    to bottom,
+    #fb4107 0,
+    #fb4107 calc(50% - var(--section-number-ink)),
+    rgb(251 65 7 / 0.883) calc(50% - var(--section-number-band) - var(--section-number-cut) * 0.75),
+    rgb(251 65 7 / 0.625) calc(50% - var(--section-number-band) - var(--section-number-cut) * 0.5),
+    rgb(251 65 7 / 0.367) calc(50% - var(--section-number-band) - var(--section-number-cut) * 0.25),
+    rgb(251 65 7 / 0.25) calc(50% - var(--section-number-band)),
+    rgb(251 65 7 / 0.25) calc(50% + var(--section-number-band)),
+    rgb(251 65 7 / 0.367) calc(50% + var(--section-number-band) + var(--section-number-cut) * 0.25),
+    rgb(251 65 7 / 0.625) calc(50% + var(--section-number-band) + var(--section-number-cut) * 0.5),
+    rgb(251 65 7 / 0.883) calc(50% + var(--section-number-band) + var(--section-number-cut) * 0.75),
+    #fb4107 calc(50% + var(--section-number-ink)),
+    #fb4107 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+
+  /* Decoration laid over a sticky header: it must not eat a press meant for the title or the
+     Show/Hide control, and it must not join a selection dragged across the heading. */
+  pointer-events: none;
+  user-select: none;
+}

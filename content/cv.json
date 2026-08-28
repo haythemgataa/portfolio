@@ -317,13 +317,13 @@
     }
   ],
   "contact": {
-    "label": "Contact",
+    "label": "Contact & Socials",
     "items": [
       {
         "id": "contact-email",
         "platform": "Email",
-        "handle": "gataa.haythem@gmail.com",
-        "url": "mailto:gataa.haythem@gmail.com"
+        "handle": "hello@haythem.cv",
+        "url": "mailto:hello@haythem.cv"
       },
       {
         "id": "contact-linkedin",

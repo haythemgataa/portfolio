@@ -1,9 +1,18 @@
 "use client"
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import RichText from "./RichText";
 import Arrow12 from "./Arrow12";
+import {
+  CheckIcon,
+  CopyIcon,
+  EnvelopeIcon,
+  PlatformIcon,
+  hasPlatformIcon,
+} from "./ContactIcon";
+import { groupContactRows } from "./lib/contentTypes";
 import GalleryPreview from "./GalleryPreview";
+import SectionNumber from "./SectionNumber";
 import styles from "./Profile.module.css";
 import Attachments from "./Attachments";
 import { cloudflareImageUrl } from "./lib/cloudflareImage";
@@ -66,16 +75,30 @@ const Profile: React.FC<ProfileProps> = ({
           // index says nothing about where it sits in the document — testing that index was
           // what put the first few thumbnails of *every* section into the initial fetch.
           priority={sectionIndex === 0}
+          index={sectionIndex}
         />
       ))}
 
       {cv.contact.items.length > 0 ?
         <section className={styles.profileSection}>
-          <SectionHeader label={cv.contact.label}/>
+          {/* Contact is pinned last rather than living in `sections`, so its ordinal continues
+              the sequence from the end of that array instead of being counted with it. */}
+          <SectionHeader label={cv.contact.label} index={cv.sections.length}/>
+          {/* Grouped rather than laid out flat, so a row too wide for the column breaks between
+              the address and the marks instead of stranding one lone mark up beside it — see
+              `groupContactRows`. Every run is still in array order. */}
           <div className={styles.contacts}>
-            {cv.contact.items.map((item) => (
-              <ContactRow key={item.id} item={item}/>
-            ))}
+            {groupContactRows(cv.contact.items).map((run) =>
+              run.kind === 'address'
+                ? <ContactAddress key={run.item.id} item={run.item}/>
+                : (
+                  <div key={run.items[0].id} className={styles.contactProfiles}>
+                    {run.items.map((item) => (
+                      <ContactProfile key={item.id} item={item}/>
+                    ))}
+                  </div>
+                )
+            )}
           </div>
         </section>
       : null}
@@ -89,12 +112,15 @@ type SectionProps = {
   onToggleDetails: () => void,
   /** Whether this is the first section, and so the one on screen at load. */
   priority?: boolean,
+  /** Its position in `sections`, which is also its ordinal — see `SectionNumber`. */
+  index: number,
 };
 const Section: React.FC<SectionProps> = ({
   section,
   showDetails,
   onToggleDetails,
   priority = false,
+  index,
 }) => {
   // Descriptions are the only thing the control hides, so a section whose items carry none
   // — Awards and Speaking, today — gets no control at all rather than a dead one. Media and
@@ -106,6 +132,7 @@ const Section: React.FC<SectionProps> = ({
     <section className={styles.profileSection}>
       <SectionHeader
         label={section.label}
+        index={index}
         toggle={hasDetails ? { open: showDetails, onToggle: onToggleDetails } : undefined}
       />
       <div className={styles.experiences}>
@@ -124,6 +151,8 @@ const Section: React.FC<SectionProps> = ({
 
 type SectionHeaderProps = {
   label: string,
+  /** Zero-based position in the numbered sequence; `SectionNumber` renders it 1-based and padded. */
+  index: number,
   toggle?: { open: boolean, onToggle: () => void },
 };
 
@@ -139,10 +168,15 @@ type SectionHeaderProps = {
  */
 const SectionHeader: React.FC<SectionHeaderProps> = ({
   label,
+  index,
   toggle,
 }) => {
   return (
     <div className={styles.sectionHeader}>
+      {/* First in source order, but out of flow — it is positioned against this header, which is
+          already sticky. Being absolutely positioned it is not a flex item either, so it takes no
+          part in the `space-between` that pushes the toggle to the far edge. */}
+      <SectionNumber index={index} />
       {/* h2, not h3. `ProfileHeader`'s is the page's only h1 and this is the only other heading
           on either route, so an h3 left every section title two levels below the page title with
           no h2 anywhere to bridge them — a hole in the outline, and nothing for a screen
@@ -284,21 +318,115 @@ const TitleIcon: React.FC<{ icon: ResolvedIcon }> = ({ icon }) => {
 type ContactRowProps = {
   item: ContactItem,
 };
-const ContactRow: React.FC<ContactRowProps> = ({
+
+/**
+ * A profile: the compact pill, its mark and nothing else.
+ *
+ * The tooltip names the platform, and it replaced the native `title` rather than joining it —
+ * two tooltips over one pill is one too many, and the native one arrives after a delay the
+ * browser owns, in a chrome that is nobody's design. It is deliberately *not* rendered on an
+ * unmarked pill: that pill's whole visible content is already the platform's name, so a label
+ * repeating it hovers a word over itself.
+ */
+const ContactProfile: React.FC<ContactRowProps> = ({
   item
 }) => {
+  const marked = hasPlatformIcon(item.platform);
+
   return (
-    <div className={styles.experience}>
-      <div className={styles.year}>
-        <span>{item.platform}</span>
-      </div>
-      <div className={styles.experienceContent}>
-        <div className={styles.title}>
-          <a href={item.url} target="_blank">{item.handle}</a><span className={styles.linkArrow}>&#xfeff;<Arrow12/></span>
-        </div>
-      </div>
-    </div>
-  )
+    <a
+      className={[
+        styles.contactPill,
+        styles.contactCompact,
+        marked ? '' : styles.contactCompactLabel,
+      ].filter(Boolean).join(' ')}
+      href={item.url}
+      target="_blank"
+      rel="noreferrer"
+    >
+      {marked
+        ? <PlatformIcon platform={item.platform} className={styles.contactIcon}/>
+        : <span aria-hidden="true">{item.platform}</span>}
+      {/* Real text rather than `aria-label`: the pill's visible content is a glyph, or the
+          platform alone, and neither says whose account it is. The unmarked pill's label is
+          hidden from the tree above so this is the only name either shape has, which keeps the
+          two announcing identically. */}
+      <span className={styles.srOnly}>{item.platform}: {item.handle}</span>
+      {/* `aria-hidden` because the name above already says this, and a tooltip that repeats the
+          platform into the accessible name would have it announced twice. */}
+      {marked
+        ? <span className={styles.contactTip} aria-hidden="true">{item.platform}</span>
+        : null}
+    </a>
+  );
+}
+
+/** How long the check stays up before the copy glyph comes back, in ms. */
+const COPIED_MS = 1600;
+
+/**
+ * An address: the wide pill, and **the whole pill copies**. It carried a `mailto:` link with a
+ * copy button beside it, which is the arrangement a mail client deserves and almost nobody
+ * wants — a press on an address is nearly always a press meaning *give me that address*. One
+ * control also retires the invalid-nesting problem the split had (a `<button>` inside an `<a>`),
+ * and puts the pill's hover fill back where it belongs: the whole surface is now the thing being
+ * pointed at, so filling all of it points at the thing.
+ *
+ * The row still stores a `mailto:` URL, and that is what `isAddressContact` reads. The scheme is
+ * the fact that makes this row an address; whether the browser is asked to open it is a
+ * separate question, and the answer is now no.
+ */
+const ContactAddress: React.FC<ContactRowProps> = ({
+  item
+}) => {
+  const [copied, setCopied] = useState(false);
+  // The reset has to be cancellable: a second press while the first is still counting down
+  // would otherwise be cleared by the earlier timer, and an unmount mid-countdown would set
+  // state on a component that is gone.
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(resetTimer.current), []);
+
+  const copy = async () => {
+    try {
+      // Absent outside a secure context, and it rejects when the permission is refused. Either
+      // way the address is still on screen, so a failure asks for nothing more than leaving the
+      // pill as it was.
+      await navigator.clipboard?.writeText(item.handle);
+    } catch {
+      return;
+    }
+    setCopied(true);
+    clearTimeout(resetTimer.current);
+    resetTimer.current = setTimeout(() => setCopied(false), COPIED_MS);
+  };
+
+  return (
+    <button
+      type="button"
+      className={`${styles.contactPill} ${styles.contactAddress}`}
+      onClick={copy}
+      data-copied={copied || undefined}
+    >
+      {/* Before the address, so the name reads "Copy email address <address>". The button's
+          name has to keep saying what a press *does*, which is why the copied state is the live
+          region at the end rather than a rename — that would tell a reader arriving a second
+          later about something they never did. */}
+      <span className={styles.srOnly}>Copy email address</span>
+      <EnvelopeIcon className={styles.contactIcon}/>
+      <span className={styles.contactAddressText}>{item.handle}</span>
+      {/* Both glyphs are always mounted, stacked in one grid cell, so the swap is a crossfade
+          rather than a replacement — there is nothing to animate between two elements where one
+          of them does not exist yet. The same reason `Lightbox.module.css` gives for the close
+          cross being two real spans instead of a pair of pseudo-elements. */}
+      <span className={styles.contactCopyMark} aria-hidden="true">
+        <CopyIcon className={styles.contactCopyGlyph}/>
+        <CheckIcon className={styles.contactCheckGlyph}/>
+      </span>
+      <span className={styles.srOnly} role="status" aria-live="polite">
+        {copied ? 'Copied to clipboard' : ''}
+      </span>
+    </button>
+  );
 }
 
 export default Profile;

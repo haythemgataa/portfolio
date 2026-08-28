@@ -159,6 +159,29 @@
   );
   /* Overridden per route in layout.tsx: 0 when the tab bar is not rendered at all. */
   --sticky-top: calc(var(--tab-bar-height) + var(--tab-bar-gap-top) + var(--tab-bar-gap-bottom));
+  /* The section ordinal (`SectionNumber.tsx`), and the room a pinned section title leaves above
+     itself for it. The two live together because neither is usable without the other.
+
+     The numeral is centred on the title's line box rather than sharing its baseline, which is
+     what leaves ink both above and below the heading for the band across its middle to cut
+     between. Centred, its ink is *inside* the header at any size the header can hold: at 40px
+     the digits span 31.9px of a 39.58px header and stop 1.7px short of its top edge.
+
+     What is left is air rather than rescue. The tab bar's sticky wrapper is exactly
+     `--sticky-top` tall with an opaque background once stuck, so at zero headroom the numeral's
+     top would stop 1.7px short of it and read as kissing the bar. 4px buys visible daylight.
+     `--sticky-top` itself still cannot absorb it: the fade below the bar pins to the same offset
+     and has to stay flush with it, so widening it opens an uncovered band. Only the CV's headers
+     take the offset, since the gallery's filter bar pins in the same slot but carries no numeral
+     (and `Gallery.tsx` measures its scroll clearance off `--sticky-top` directly). It costs no
+     document height either way.
+
+     The ceiling is now the header itself rather than the bar. Centred, the ink is
+     `0.797 * size` tall against the header's 39.58px, so it reaches the top and bottom edges
+     together at 49.7px; the 4px of headroom buys the top edge another 8px on its own, but the
+     bottom would already be through the floor. The two are always revisited together. */
+  --section-number-size: 40px;
+  --section-number-headroom: 4px;
   /* How long the ground takes to cross-fade when a tab is clicked. Shared by the page
      background and the unselected pills, so the whole surface changes as one thing rather than
      the pills snapping while the page eases. */

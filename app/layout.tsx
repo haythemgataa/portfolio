@@ -10,7 +10,7 @@ import ThemeSwitch from "./ThemeSwitch";
 import { switzer } from "./lib/font";
 import { loadProfileData } from "./lib/contentLoader";
 import { hasGalleryItems } from "./lib/galleryLoader";
-import { SITE_URL } from "./lib/site";
+import { SITE_URL, pageTitle } from "./lib/site";
 import { THEME_SWITCH_ENABLED } from "./lib/theme";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -24,7 +24,9 @@ export async function generateMetadata(): Promise<Metadata> {
     // so a canonical here would be handed to every route that does not override it, and
     // /gallery would claim to be a duplicate of /. Each page declares its own.
     metadataBase: new URL(SITE_URL),
-    title: cv.profile.displayName,
+    // Suffixed on the dev deploy — see `pageTitle`, which is also why the two `title` fields in
+    // the card blocks below are left bare.
+    title: pageTitle(cv.profile.displayName),
     description: cv.profile.byline || '',
     // The card's text. Its *image* is deliberately not named here: `app/opengraph-image.png` is
     // a file convention, so Next emits `og:image` and `twitter:image` for this segment along

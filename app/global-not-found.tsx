@@ -6,7 +6,7 @@ import ThemeScript from "./ThemeScript";
 import ThemeSwitch from "./ThemeSwitch";
 import { switzer } from "./lib/font";
 import { loadProfileData } from "./lib/contentLoader";
-import { SITE_URL } from "./lib/site";
+import { SITE_URL, pageTitle } from "./lib/site";
 import { THEME_SWITCH_ENABLED } from "./lib/theme";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -21,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
     // The same `X — name` shape `/gallery` uses, rather than a third title format. Left alone the
     // tab would just read the site's name, which is not wrong but says nothing about where you
     // have landed.
-    title: `Not found — ${cv.profile.displayName}`,
+    title: pageTitle(`Not found — ${cv.profile.displayName}`),
     // No `robots` entry, and that is checked rather than assumed: Next injects
     // `<meta name="robots" content="noindex">` into this route at build time, so it is already in
     // `out/404.html` even though a static export has no server deciding a status. Declaring one

@@ -372,6 +372,24 @@ Five things about scaling the treatment, all measured:
 failure when they do not is quiet — a sitemap pointing at the wrong host is still valid XML. It
 feeds `metadataBase` in the root layout, the `Sitemap:` line in robots.txt, and every `<loc>`.
 
+**`pageTitle()` lives beside it, and suffixes the dev deploy's tab with ` | Dev`.** Every route
+that declares a title goes through it — `/`, `/gallery` and the 404 — so there is no page where
+the dev build is indistinguishable from production in the tab strip. Three things about it:
+
+- **Only the `<title>`, never `og:title` or `twitter:title`.** Those are what a link preview
+  renders, and they describe the site rather than the build that served it; a card announcing
+  itself as "… | Dev" would be wrong the moment a preview URL was shared or scraped. Verified in
+  the dev export: the tab reads `Haythem Gataa | Dev` while both card titles stay bare.
+- **`IS_DEV_BRANCH` is shared with the `beta` badge** in `ProfileHeader`, which used to carry its
+  own `=== "dev"` literal. They mark the same thing — *the* dev deploy — so one constant, or they
+  drift.
+- **It tests `=== 'dev'` where `THEME_SWITCH_ENABLED` tests `!== PRODUCTION_BRANCH`**, and the
+  difference is deliberate: the theme switch is a working tool that should exist anywhere that is
+  not production, feature-branch previews and local dev included, while this marks the one deploy
+  that gets looked at alongside the real site. Both are build-time literals, so a
+  `CF_PAGES_BRANCH=main` export contains neither — measured, zero occurrences of `| Dev` anywhere
+  in `out/`.
+
 Two things about the metadata that are easy to get wrong:
 
 - **`alternates.canonical` is declared per route, never in the root layout.** Metadata is

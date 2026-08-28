@@ -1107,34 +1107,49 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
   is already the section's accessible name, and exposing the numeral prepends "01" to every one
   of them.
 
-  Four things about it are load-bearing:
+  Five things about it are load-bearing:
   - **It is absolutely positioned, and the header is its containing block for free** —
     `.sectionHeader` is already `position: sticky`. Out of flow it adds nothing to the header's
-    height, which is not incidental: that figure is 39.59375px, the tab bar parks every title
-    against it, and the Studio's canvas is measured to match `/` on it exactly. Verified
-    unchanged after the fact, on both surfaces.
-  - **The offset is derived from both faces' real metrics, not nudged until it looked right.** The
-    numeral's baseline parks on the title's cap line, which lands at
-    `LH + 0.315 * type-size - 0.132 * section-number-size` above the header's padding box — see
-    `SectionNumber.module.css` for where the two constants come from. Measured against the live
-    page: the baseline lands at 12.484px from the header's top against a computed cap line of
-    12.48px. Both constants are read off the files rather than the `OS/2` fields, which is
-    load-bearing in one place — Switzer's `sCapHeight` says 750 where its capitals actually ink 680.
-  - **A pinned title therefore has to park below `--sticky-top`, not at it.** The numeral overhangs
-    the header's top edge by 8.3px, and the tab bar's sticky wrapper is *exactly* `--sticky-top`
-    tall with an opaque background once stuck — so parked flush, the top third of every numeral sat
-    behind the bar for the whole length of its section. `--sticky-top` itself cannot absorb the
-    offset, because the bar's fade pins to the same value and has to stay flush with the bar;
-    widening it would open a band between the two with no cover and no fade. So
-    `--section-number-headroom` is added to `.sectionHeader`'s `top` alone, which costs no document
-    height. The gallery's filter bar keeps the bare `--sticky-top`: it pins in the same slot but
-    carries no numeral, and `Gallery.tsx` measures its scroll clearance off that value directly.
-  - **The gradient's far stop is the same orange at zero alpha, never `transparent`.**
+    height, which is not incidental: that figure is 39.578px, the tab bar parks every title
+    against it, and the Studio's canvas is measured to match `/` on it exactly. Verified unchanged
+    after the numeral grew to 40px, on both surfaces.
+  - **It is centred on the title's line, not parked on the title's baseline.** That is what leaves
+    numeral above *and* below the heading for the band to cut between; sharing the baseline put
+    nearly all of it above, which was right for a fading 28px ordinal and useless for this. The
+    offset is derived from both faces' real metrics rather than nudged: the title's line-box centre
+    sits exactly `LH` above the header's padding-box bottom (the box is `6px + LH + LH/2` tall, so
+    the 6px cancels), and the numeral's ink centre sits `0.499 * size` above its own box bottom.
+    Measured against the live page: ink centre 17.17px from the header's top against a title line
+    centre of 17.20px.
+  - **Bellina's constants are measured off the file, not read from `OS/2`.** With `TextMetrics` at
+    1000px: baseline `0.132em` up from the box bottom at `line-height: 1`, digits inking
+    `0.7656em` above it and `0.0313em` below — the slant dips just past the baseline. That puts the
+    ink centre within 0.03px of the box's own centre at 40px, which is a fact about this face and
+    not a rule, so the derivation stays rather than collapsing to `50%`.
+  - **The band across the middle is the title's own font box**, `(0.980 + 0.250) * --type-size`,
+    halved either side of the numeral's ink centre — Switzer's real ascent and descent, so it
+    clears every glyph a heading can contain rather than the cap height a lowercase-free title
+    would need. At 14px that is 17.2px, leaving 7.3px of ink standing at each end of a 40px
+    ordinal. Percentages, because a gradient's line length *is* the box height, so the stops track
+    `--section-number-size` on their own. It replaced a downward fade, which had no way to say
+    "here specifically" and whose midpoint at this size competed with the title it sat under.
+  - **A pinned title parks below `--sticky-top`, not at it.** Centred, the numeral no longer
+    overhangs the header at all — its ink stops 1.24px inside the top edge — so
+    `--section-number-headroom` is 4px of daylight rather than the rescue it was: the tab bar's
+    sticky wrapper is exactly `--sticky-top` tall and opaque once stuck, and a numeral stopping
+    1.24px short of it reads as kissing the bar. Measured stuck: 5.24px of clearance.
+    `--sticky-top` itself cannot absorb the offset, because the bar's fade pins to the same value
+    and has to stay flush with the bar; widening it would open a band with no cover and no fade.
+    The gallery's filter bar keeps the bare `--sticky-top`: it pins in the same slot but carries no
+    numeral, and `Gallery.tsx` measures its scroll clearance off that value directly. **The ceiling
+    on the size is now the header rather than the bar**: the ink is `0.797 * size` tall against
+    39.578px, so it reaches both edges at 49.7px.
+  - **The gradient's transparent stops are the same orange at zero alpha, never `transparent`.**
     `transparent` is `rgba(0, 0, 0, 0)`, so interpolating towards it in sRGB drags the midpoint
-    through black — a grey cast down the length of a fade whose whole job is to be clean. The
+    through black — a grey cast on both edges of a band whose whole job is to be clean. The
     orange is the literal `#fb4107` the footer's cursor already wears, for the reason given in
     `FigmaCursor.tsx`: it is a reference to Figma, so it should not follow the page's theme. It
-    carries on both grounds, though the faded end thins out sooner on the dark one.
+    carries on both grounds.
 
 - **Contact is a wrapping row of pills, and it is the one section allowed a shape of its own.**
   Every other section is a year gutter beside a heading, and `sections[]` is homogeneous
@@ -1147,9 +1162,9 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
     `--background-muted` fill, same `1px solid var(--border)`, same `--background-hover` on
     hover — a tab pill and a contact pill are the same object, a raised control on the page's
     ground, and taking the tokens is what stops the two drifting and what saves the dark theme a
-    rule of its own. It differs from the tab bar in height alone: 32px, so the row sits lighter
+    rule of its own. It differs from the tab bar in height alone: 40px, so the row sits lighter
     under a section title than the bar does under the name. `box-sizing: border-box`, so the
-    border eats into the 32 rather than adding to it and the round and wide pills stay exactly as
+    border eats into the 40 rather than adding to it and the round and wide pills stay exactly as
     tall as each other.
   - **The family and the weight are declared on `.contactPill`, not inherited.** One of these
     pills is a `<button>`, and a button does not inherit the page font — the trap
@@ -1198,7 +1213,7 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
     close cross is two real spans rather than two pseudo-elements. The easing overshoots slightly
     (measured: the check passes 1.039 before settling), which is what gives the confirmation its
     small snap. Under `prefers-reduced-motion` the transition is dropped and the swap is instant.
-    The mark is 14px against the envelope's 16 — it is the affordance, not the pill's subject.
+    The mark is 16px against the envelope's 18 — it is the affordance, not the pill's subject.
 
     Two things about the green. It is `--green`, which is why the palette table now lists that
     token as shipping rather than as Studio-only: "it worked" is exactly what it means everywhere
@@ -1241,7 +1256,7 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
   flat, a row too wide for the column fills the first line and strands one lone mark up beside
   the address. `contentTypes.ts` splits the rows into the units that wrap together — each address
   on its own, each stretch of consecutive profiles as one — and `.contacts` lays out one child per
-  unit, so the break lands between the address and the marks. Two things follow:
+  unit, so the break lands between the address and the marks. Four things follow:
   - **It groups consecutive rows rather than hoisting every address to the front**, which is what
     keeps "array order is display order" true here. Reordering in the Studio still moves a pill to
     exactly where the array says, and a document with an address in the middle renders it in the
@@ -1249,6 +1264,22 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
   - **`.contactProfiles` must not be `display: contents`.** That would make the marks flex items
     of `.contacts` again, which is precisely the flat layout this exists to avoid; being one wrap
     unit is the whole job.
+  - **On two lines the runs share an edge, and `width: fit-content` on `.contacts` is the whole
+    mechanism.** Both children take `flex: 1 1 auto`, and the run distributes with
+    `space-between`. When everything fits, `fit-content` resolves to the one-line max-content, so
+    there is *no free space at all* and neither child grows: the row stays packed left exactly as
+    it was, measured at 195.4px + 8px + 232px. When it does not fit, `fit-content` resolves to the
+    available width and both children grow to it — so the address and the marks span the same
+    width and the block reads as one rectangle rather than two ragged lines. There is no
+    breakpoint, no measurement and no magic number in it; the one-line case and the two-line case
+    come out of the same three declarations.
+  - **At 40px the marks are wider than the address, so matching means the address stretching.**
+    Five 40px pills with 8px between them is 232px against the address's 195.4px, and a gap of
+    −1.15px is not available — which is why `.contactAddress` takes `justify-content: center`, so
+    its contents stay a group in the middle of a pill that is now wider than they are. The cost is
+    that the marks' gaps grow with the column: 27.8px at a 311px column (a 375px viewport), 54px
+    at 416px, which is the loosest the wrapped range gets and the one width where they start to
+    read as scattered rather than as a set.
 
 - **`--hover-room` is padding on `.images`, never on `.scrollableArea`.** The hover state paints
   outside a thumbnail's own box (the tilt lifts two corners, the shadow falls further), and

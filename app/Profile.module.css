@@ -160,6 +160,8 @@
   align-items: center;
   gap: 8px;
   margin-top: 24px;
+  width: fit-content;
+  max-width: 100%;
 }
 
 /* One run of profile pills, wrapping internally if even they do not fit. `display: contents`
@@ -170,6 +172,8 @@
   flex-direction: row;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
+  flex: 1 1 auto;
   gap: 8px;
   min-width: 0;
 }
@@ -180,7 +184,7 @@
    contact pill are the same object, a raised control on the page's ground, and the tokens are
    what stop the two drifting apart and what save the dark theme a second rule of its own.
 
-   32px, so the row sits lighter under the section title than the tab bar does under the name.
+   40px, so the row sits lighter under the section title than the tab bar does under the name.
    The compact pills are simply this box at its own height, which is what makes them circles
    with no second radius anywhere. `border-box`, so the border eats into the 32 rather than
    adding to it and the two shapes stay exactly as tall as each other.
@@ -188,7 +192,7 @@
    The glyph follows the palette's own split — `--foreground-secondary` is iconography at rest,
    `--foreground-primary` is a hovered icon. */
 .contactPill {
-  --contact-pill-size: 32px;
+  --contact-pill-size: 40px;
   display: inline-flex;
   align-items: center;
   box-sizing: border-box;
@@ -231,8 +235,10 @@
    and the whole pill is one button that copies it — see `ContactAddress`. Symmetric padding
    again now that there is no second control inset into the right end. */
 .contactAddress {
+  flex: 1 1 auto;
+  justify-content: center;
   gap: 8px;
-  padding: 0 12px;
+  padding: 0 14px;
   max-width: 100%;
   min-width: 0;
   cursor: pointer;
@@ -262,8 +268,8 @@
 }
 
 .contactIcon {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
   transition: color 150ms ease;
 }
@@ -277,10 +283,10 @@
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  /* 14px against the envelope's 16. It is an affordance rather than the pill's subject — the
+  /* 16px against the envelope's 18. It is an affordance rather than the pill's subject — the
      address is — so it sits a step below the mark that opens the row. */
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   color: var(--foreground-tertiary);
   transition: color 150ms ease;
 }
@@ -288,8 +294,8 @@
 .contactCopyGlyph,
 .contactCheckGlyph {
   grid-area: 1 / 1;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   transition: opacity 180ms ease, transform 180ms cubic-bezier(0.2, 0.9, 0.3, 1.3);
 }
 

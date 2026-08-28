@@ -1,5 +1,6 @@
-/* The section ordinal: 28px of Bellina standing behind the title, on the title's own baseline,
-   fading out downwards so what is left at full strength is the part clear above the heading.
+/* The section ordinal: 40px of Bellina standing behind the title, centred on the title's line and
+   cut through the middle by a transparent band, so what is left is the top and the bottom of the
+   digits with the heading running between them.
 
    Absolutely positioned, and that is the whole reason this can exist at all. `.sectionHeader` is
    already `position: sticky`, so it is the containing block here without being given anything —
@@ -8,14 +9,14 @@
    measured to match `/` on it exactly. A numeral in flow would have grown all three. Verified
    unchanged after moving the numeral down onto the baseline and widening its box for the slant.
 
-   Sharing the title's baseline is what keeps it *inside* the header: the digits reach
-   `0.754 * size` above that line against the 22px between it and the header's top edge, so at
-   28px they stop 0.888px short of it. On the title's cap line, where they used to sit, they stood
-   8.3px proud of the box and the tab bar cut them off. `--section-number-headroom` is therefore
-   4px of daylight rather than the 12px of rescue it was — see globals.css, which also carries the
-   ~34.5px ceiling that headroom puts on the size. The numeral does still sit inside the fade the
-   bar casts, which is harmless: the fade is z-index 12 against the header's 15, the same way the
-   titles themselves already paint over it. */
+   Centring is what keeps it *inside* the header now that it is this big: the ink is `0.797 * size`
+   tall, so at 40px it spans 31.9px of a 39.58px header with ~3.8px clear at either edge. It used
+   to share the title's baseline, which put almost all of it above the heading — fine for a fading
+   28px numeral, and useless for a band that has to have numeral on both sides of it.
+   `--section-number-headroom` stays 4px of daylight under the bar — see globals.css, which also
+   carries the ceiling this centring puts on the size. The numeral does still sit inside the fade
+   the bar casts, which is harmless: the fade is z-index 12 against the header's 15, the same way
+   the titles themselves already paint over it. */
 .number {
   position: absolute;
 
@@ -31,8 +32,8 @@
   z-index: -1;
 
   /* Optical, and it costs nothing to get right: Bellina's `0` carries a 0.0933em left side
-     bearing where Switzer's `W` carries 0.038em, so at 28px against 14px the numeral's ink
-     already begins ~2.1px inside the title's. That is the indent the design asks for, so `left`
+     bearing where Switzer's `W` carries 0.038em, so at 40px against 14px the numeral's ink
+     already begins ~3.2px inside the title's. That is the indent the design asks for, so `left`
      is 0 and the two faces' own sidebearings do the work. */
   left: 0;
 
@@ -55,29 +56,26 @@
      `pointer-events: none`, so the wider box catches no press. */
   padding-right: 0.2em;
 
-  /* The numeral's baseline, parked on the title's own baseline — the base of the title, so the
-     two faces sit on one line and the numeral rises behind the heading rather than hovering
-     above it. Derived from both faces' real metrics rather than nudged until it looked right, so
-     it survives a change to `--type-size` or `--line-height`.
+  /* The numeral's **ink centre**, parked on the centre of the title's line box — so the heading
+     runs through the middle of the digits and there is numeral above and below it for the band to
+     cut between. Derived from both faces' real metrics rather than nudged until it looked right,
+     so it survives a change to `--type-size`, `--line-height` or the ordinal's own size.
 
-     Measuring up from the header's padding box, the title's cap line sits
-     `padding-bottom + (LH - capline)` above it, and the numeral's own baseline sits
-     `0.132 * size` above its box bottom. `padding-bottom` is `LH / 2` (see Profile.module.css),
-     and the two halves of LH cancel, which is what leaves this as short as it is:
+     The title's line-box centre is exactly `LH` above the header's padding-box bottom, and that
+     falls out of the header's own padding rather than being a coincidence: the box is
+     `6px + LH + LH/2` tall (see `.sectionHeader`), so the centre of the content, at `6px + LH/2`
+     from the top, is `LH` up from the bottom. The 6px cancels.
 
-       LH + 0.315 * type-size - 0.680 * type-size - 0.132 * section-number-size
-
-     0.315 is Switzer's half font box less the drop from its ascender to its cap height
-     (1.230 / 2 - (0.980 - 0.680)). 0.680 is Switzer's cap height, subtracted to drop the numeral
-     the length of a capital — from the title's cap line, where it used to sit, to the baseline
-     the title actually stands on. 0.132 is where `line-height: 1` puts Bellina's baseline in its
-     own box (1 - 0.986 + (1.236 - 1) / 2). All read off the files, not the OS/2 fields —
-     Switzer's `sCapHeight` says 750 where its capitals actually ink 680. */
+     The numeral's ink centre sits `0.499 * size` above its own box bottom. Measured off the file
+     with `TextMetrics` at 1000px rather than read from `OS/2`: at `line-height: 1` Bellina's
+     baseline is `0.132em` up from the box bottom (1 - 0.986 + (1.236 - 1) / 2), its digits ink
+     `0.7656em` above that line and `0.0313em` below it — the slant dips just past the baseline —
+     so the ink runs 0.1007em to 0.8976em and its centre is the mean of the two. Note that is
+     within 0.03px of the box's own centre at 40px; the derivation is kept because that near-miss
+     is a fact about Bellina, not a rule, and a different face would not repeat it. */
   bottom: calc(
     var(--type-size) * var(--line-height)
-    + var(--type-size) * 0.315
-    - var(--type-size) * 0.680
-    - var(--section-number-size) * 0.132
+    - var(--section-number-size) * 0.499
   );
 
   /* No fallback tail after the variable, deliberately: `localFont`'s `fallback` is already baked
@@ -93,38 +91,47 @@
 
   /* Figma's orange, the literal the footer's cursor already wears rather than a token — and for
      the same reason given in FigmaCursor.tsx: it is a reference, so it should not follow the
-     page's theme. It carries on both grounds; at #191b1f the faded end thins out sooner, which
-     is what a fade is meant to do.
+     page's theme. It carries on both grounds.
 
-     **It fades downward** — full strength at the top of the numeral, gone by the baseline. That
-     direction is what lets the numeral pass behind the title now that the two overlap: the fade
-     is spent exactly where the heading's glyphs are, so the part still at full strength is the
-     part standing clear above them.
+     **Opaque, then nothing, then opaque.** The band is knocked out where the heading crosses, so
+     the numeral reads as one object with the title passing through it rather than as a wash
+     behind the words. It replaced a downward fade, which was the right answer while the numeral
+     sat almost entirely above the heading and is the wrong one now that it is centred on it: a
+     fade has no way to say "here specifically", and at 40px the middle of the ramp was dense
+     enough to compete with the title it sat under.
 
-     The end stops are set against the ink rather than the box, which is why they are 10% and 95%
-     rather than 0 and 100. With `line-height: 1` the digits occupy 11%-87% of the element's
-     height measured from the top, so they put ~0.98 alpha at the top of the numeral and ~0.05 at
-     the baseline — a fade that begins and runs out where the ink does, instead of at edges the
-     glyphs never reach.
+     Every stop is derived, and the two that matter are:
 
-     The 0.3 stop at the halfway mark is what shapes it. A straight two-stop ramp left the middle
-     of the numeral at ~0.51, dense enough to read as a second piece of text competing with the
-     heading it sits behind. Pulling the midpoint down spends most of the fade in the numeral's
-     top third and leaves the rest quiet, so the digits still start solid without crowding the
-     title's own glyphs where the two overlap.
+     - **50% is the ink centre, not the box centre**, and they differ by 0.03px at 40px — see the
+       `bottom` above for why that near-miss is Bellina's rather than a rule. Written as a
+       percentage because a gradient's line length *is* the box height, so the fraction tracks
+       `--section-number-size` on its own.
+     - **The band is the title's own font box**, `(0.980 + 0.250) * --type-size` tall, halved
+       either side of the centre — Switzer's real ascent and descent, so it clears every glyph a
+       heading can contain rather than the cap height a lowercase-free title would need. At 14px
+       that is 17.2px, which leaves 7.3px of ink standing at each end of a 40px ordinal.
 
-     The far stop is the same orange at zero alpha, never `transparent`. `transparent` is
+     `--section-number-cut` is the ramp, and it is short on purpose: long enough not to read as a
+     torn edge, short enough that the band still reads as a cut rather than as the fade this
+     replaced.
+
+     The far stops are the same orange at zero alpha, never `transparent`. `transparent` is
      `rgba(0, 0, 0, 0)`, and interpolating towards it in sRGB drags the midpoint through black —
-     a grey cast down the length of a fade whose whole job is to be clean.
+     a grey cast on both edges of a band whose whole job is to be clean.
 
      `background-image` rather than the `background` shorthand: the shorthand resets
      `background-clip` to `border-box`, which would throw away the text clipping below it and
      paint a rectangle of gradient across the header instead of two digits. */
+  --section-number-band: calc(var(--type-size) * 0.615);
+  --section-number-cut: 3px;
   background-image: linear-gradient(
     to bottom,
-    #fb4107 10%,
-    rgb(251 65 7 / 0.3) 50%,
-    rgb(251 65 7 / 0) 95%
+    #fb4107 0,
+    #fb4107 calc(50% - var(--section-number-band) - var(--section-number-cut)),
+    rgb(251 65 7 / 0) calc(50% - var(--section-number-band)),
+    rgb(251 65 7 / 0) calc(50% + var(--section-number-band)),
+    #fb4107 calc(50% + var(--section-number-band) + var(--section-number-cut)),
+    #fb4107 100%
   );
   -webkit-background-clip: text;
   background-clip: text;

@@ -111,10 +111,14 @@
        `bottom` above for why that near-miss is Bellina's rather than a rule. Written as a
        percentage because a gradient's line length *is* the box height, so the fraction tracks
        `--section-number-size` on its own.
-     - **The band is the title's own font box**, `(0.980 + 0.250) * --type-size` tall, halved
-       either side of the centre — Switzer's real ascent and descent, so it clears every glyph a
-       heading can contain rather than the cap height a lowercase-free title would need. At 14px
-       that is 17.2px, which leaves 7.3px of ink standing at each end of a 40px ordinal.
+     - **The band is the title's cap band**, `(0.680 + 0.250) * --type-size` tall — Switzer's real
+       cap height and descender — halved either side of the centre. At 14px that is 13.0px, and it
+       leaves 9.4px of ink standing at each end of a 40px ordinal. It was the full font box
+       (`0.980 + 0.250`, allowing for the tallest ascender a heading could contain) and that is
+       the wrong thing to measure here: the numeral sits *behind* an opaque title, so the band is
+       a graphic device rather than a legibility clearance, and sized for an ascender it ate more
+       of the ordinal than it needed to. An ascender now crosses the ramp instead of the flat,
+       which is invisible — the title paints over it either way.
 
      **The ramp is derived and eased, and both halves of that are the fix for it reading as
      sharp.** It was 3px of linear interpolation, which is short enough to be an edge rather than
@@ -141,7 +145,7 @@
      `background-image` rather than the `background` shorthand: the shorthand resets
      `background-clip` to `border-box`, which would throw away the text clipping below it and
      paint a rectangle of gradient across the header instead of two digits. */
-  --section-number-band: calc(var(--type-size) * 0.615);
+  --section-number-band: calc(var(--type-size) * 0.465);
   --section-number-ink: calc(var(--section-number-size) * 0.3984);
   --section-number-cut: calc(var(--section-number-ink) - var(--section-number-band));
   background-image: linear-gradient(

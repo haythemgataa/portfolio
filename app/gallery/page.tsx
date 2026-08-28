@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import Gallery from "../Gallery";
 import { loadGalleryItems } from "../lib/galleryLoader";
 import { loadProfileData } from "../lib/contentLoader";
-import { OG_IMAGE, OG_IMAGE_FILE } from "../lib/site";
+import { OG_IMAGE, OG_IMAGE_FILE, pageTitle } from "../lib/site";
 
 /**
  * Whether the card artwork is actually there.
@@ -28,7 +28,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const cv = await loadProfileData();
   const images = await ogImages();
   return {
-    title: `Gallery — ${cv.profile.displayName}`,
+    title: pageTitle(`Gallery — ${cv.profile.displayName}`),
     description: `Selected images and videos by ${cv.profile.displayName}.`,
     // Resolved against `metadataBase` in the root layout. Declared here rather than inherited,
     // or this route would claim / as its canonical and ask to be de-indexed in favour of it.

@@ -562,6 +562,13 @@ const CvCanvas: React.FC = () => {
 
   // One piece of state for the whole canvas, exactly as `Profile.tsx` holds it: every section's
   // control drives it, so collapsing anywhere collapses everywhere.
+  //
+  // **It starts open where the site starts closed**, and that is the fourth deliberate editor
+  // divergence rather than a drift. A description is a field you edit by clicking the words on
+  // the page; behind a collapsed row there are no words to click, so a canvas that opened the way
+  // the site does would hide the longest field in the document behind a control you have to know
+  // about. The control is still here and still collapses everything, which is how you check what
+  // a visitor sees first.
   const [showDetails, setShowDetails] = useState(true);
   const [newSection, setNewSection] = useState<string | null>(null);
 

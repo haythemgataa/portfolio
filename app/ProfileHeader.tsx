@@ -1,6 +1,7 @@
 import Image from "next/image";
 import styles from "./ProfileHeader.module.css";
 import type { MutedSegment } from "./lib/contentTypes";
+import { IS_DEV_BRANCH } from "./lib/site";
 
 type ProfileHeaderProps = {
   profile: {
@@ -40,9 +41,9 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profile }) => {
         <div>
           <h1>
             {profile.displayName}
-            {process.env.NEXT_PUBLIC_GIT_BRANCH === "dev" && (
-              <span className={styles.betaBadge}>beta</span>
-            )}
+            {/* Shares `IS_DEV_BRANCH` with the title's ` | Dev` suffix rather than repeating the
+                branch literal, so the badge and the tab cannot end up marking different things. */}
+            {IS_DEV_BRANCH && <span className={styles.betaBadge}>beta</span>}
           </h1>
           {/* Segments when the loader supplied them, the plain string otherwise — so a caller
               that only has the raw byline still renders, just without the muted runs. */}

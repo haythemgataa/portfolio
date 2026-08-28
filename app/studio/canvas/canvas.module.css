@@ -423,11 +423,18 @@
    shows through any alpha in the photo and covers the wait while it loads. A blanket
    `background: none` here erased it, which on the canvas read as the avatar sitting straight on
    the page. The UA's button background is already overridden by that rule, so there is nothing
-   left to reset. */
+   left to reset.
+
+   **And deliberately no `border` reset now, for exactly the same reason.** `.profilePhoto` grew a
+   `1px solid var(--border)` hairline, and a `border: 0` here took it off the canvas while the
+   page kept it — the one divergence an edit-in-place editor must not have. As with the
+   background, the rule that would need resetting is already overridden by the site's own, so
+   there is nothing to reset; and the two classes are single-class selectors in *different*
+   modules, so which won would have come down to import order, which is not a thing to leave a
+   visible difference resting on. */
 .photoButton {
   position: relative;
   padding: 0;
-  border: 0;
   border-radius: 50%;
   cursor: pointer;
 }

@@ -54,9 +54,23 @@
 /* The well the avatar sits in, showing while the image loads and through any alpha in it. A step
    deeper than the surfaces on the page's own plane, for the same reason the thumbnail mat is:
    this is a recess, not a raised surface. */
+/* The avatar's well. The hairline is `--border`, every other one on the page — the tab pills, the
+   contact pills, the gallery frame — so the ring cannot drift from them and the dark theme needs
+   no second rule: it flips to white at 8% on its own, which is what keeps a photograph from
+   sitting straight on a dark ground with nothing between them.
+
+   `box-sizing: border-box` is what makes the border free. Without it the 1px would be added
+   *outside* the 56px, and 56px is the number the whole header is measured against — the tab bar
+   is sticky and shared, so its resting height is however tall this block is, and a 2px change here
+   moves the bar on both routes. Inside, the photo's own box shrinks to 54px and nothing else does.
+
+   `overflow: hidden` clips the image to the padding box, so the round corner belongs to the
+   border rather than to the picture and the two cannot come apart at the edge. */
 .profilePhoto {
+  box-sizing: border-box;
   width: 56px;
   height: 56px;
+  border: 1px solid var(--border);
   border-radius: 50%;
   flex-shrink: 0;
   background-color: var(--background-muted);

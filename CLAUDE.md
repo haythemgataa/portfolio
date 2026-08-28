@@ -372,6 +372,24 @@ Five things about scaling the treatment, all measured:
 failure when they do not is quiet — a sitemap pointing at the wrong host is still valid XML. It
 feeds `metadataBase` in the root layout, the `Sitemap:` line in robots.txt, and every `<loc>`.
 
+**`pageTitle()` lives beside it, and suffixes the dev deploy's tab with ` | Dev`.** Every route
+that declares a title goes through it — `/`, `/gallery` and the 404 — so there is no page where
+the dev build is indistinguishable from production in the tab strip. Three things about it:
+
+- **Only the `<title>`, never `og:title` or `twitter:title`.** Those are what a link preview
+  renders, and they describe the site rather than the build that served it; a card announcing
+  itself as "… | Dev" would be wrong the moment a preview URL was shared or scraped. Verified in
+  the dev export: the tab reads `Haythem Gataa | Dev` while both card titles stay bare.
+- **`IS_DEV_BRANCH` is shared with the `beta` badge** in `ProfileHeader`, which used to carry its
+  own `=== "dev"` literal. They mark the same thing — *the* dev deploy — so one constant, or they
+  drift.
+- **It tests `=== 'dev'` where `THEME_SWITCH_ENABLED` tests `!== PRODUCTION_BRANCH`**, and the
+  difference is deliberate: the theme switch is a working tool that should exist anywhere that is
+  not production, feature-branch previews and local dev included, while this marks the one deploy
+  that gets looked at alongside the real site. Both are build-time literals, so a
+  `CF_PAGES_BRANCH=main` export contains neither — measured, zero occurrences of `| Dev` anywhere
+  in `out/`.
+
 Two things about the metadata that are easy to get wrong:
 
 - **`alternates.canonical` is declared per route, never in the root layout.** Metadata is
@@ -1090,8 +1108,13 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
   any one of them collapses all of them. "Details" means `item.description` and nothing else
   — media and subheadings are always visible, which is why sections whose items carry no
   description get no control at all (they still follow the shared state, they just have
-  nothing to show). Open by default because the control is intentionally quiet: a reader who
-  never notices it should still get the CV's substance. The collapse animates
+  nothing to show). **Closed by default**, which is a reversal of the original reasoning: it was
+  open because the control is quiet and a reader who never noticed it should still get the CV's
+  substance. Closed, the whole CV *is* its headings — every role, project and award inside a
+  couple of screens, 5,483px of document against 7,607px open — and the prose is one press away
+  for whoever wants it. The Studio's canvas deliberately still starts open: a description is
+  edited by clicking the words on the page, and behind a collapsed row there are none to click.
+  The collapse animates
   `grid-template-rows` from `0fr` to `1fr`, the only way to transition to a
   content-determined height, and uses `inert` rather than `aria-hidden` so links inside a
   closed description leave the tab order too. The button renames itself instead of carrying
@@ -1126,13 +1149,17 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
     `0.7656em` above it and `0.0313em` below — the slant dips just past the baseline. That puts the
     ink centre within 0.03px of the box's own centre at 40px, which is a fact about this face and
     not a rule, so the derivation stays rather than collapsing to `50%`.
-  - **The band across the middle is the title's own font box**, `(0.980 + 0.250) * --type-size`,
-    halved either side of the numeral's ink centre — Switzer's real ascent and descent, so it
-    clears every glyph a heading can contain rather than the cap height a lowercase-free title
-    would need. At 14px that is 17.2px, leaving 7.3px of ink standing at each end of a 40px
-    ordinal. Percentages, because a gradient's line length *is* the box height, so the stops track
-    `--section-number-size` on their own. It replaced a downward fade, which had no way to say
-    "here specifically" and whose midpoint at this size competed with the title it sat under.
+  - **The band across the middle is the title's cap band**, `(0.680 + 0.250) * --type-size` —
+    Switzer's real cap height and descender — halved either side of the numeral's ink centre. At
+    14px that is 13.0px, leaving 9.4px of ink standing at each end of a 40px ordinal. It was the
+    full font box (`0.980 + 0.250`, sized for the tallest ascender a heading could contain), and
+    that is the wrong thing to measure here: the numeral sits *behind* an opaque title, so the
+    band is a graphic device rather than a legibility clearance, and sized for an ascender it ate
+    more of the ordinal than it needed to. An ascender now crosses the ramp instead of the flat,
+    which is invisible either way. Percentages, because a gradient's line length *is* the box
+    height, so the stops track `--section-number-size` on their own. The band replaced a downward
+    fade, which had no way to say "here specifically" and whose midpoint at this size competed
+    with the title it sat under.
   - **The band is dimmed to a quarter alpha, not cut to zero.** At zero the digits came apart into
     two orange fragments with no numeral between them; a quarter keeps the strokes continuous
     through the band, so what reads is one ordinal that the heading passes in front of. It is the

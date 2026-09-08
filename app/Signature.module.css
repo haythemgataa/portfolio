@@ -1,0 +1,90 @@
+/* The drawing's own box. `height: auto` with `max-width: 100%` is what lets it shrink on a
+   narrow window — at 170px it fits the 327px column at 375px wide with room to spare, so this
+   is insurance rather than a working breakpoint, and scaling the whole box scales the nib with
+   it, which is the only way the reveal stays correct. */
+.signature {
+  display: block;
+  /* No width here: the element carries its traced size as presentation attributes, so the
+     generated figure lives in one place and this only has to say how it may shrink. */
+  max-width: 100%;
+  height: auto;
+  /* The four knobs. Every stroke's own duration and delay are derived from these and from the
+     two fractions the generator writes on it, so the whole hand is tuned from here.
+
+     The overlap that keeps the hand continuous is *not* here — it is baked into `start` by the
+     generator, because it has to accumulate and CSS can only see one stroke at a time. See
+     `OVERLAP` in `scripts/gen-signature.mjs`.
+
+     `--signature-min-stroke` is a floor for the contours too short to be seen being drawn. Four
+     of the eighteen are under 1% of the timeline; at 1.4s that is 6–15ms and they pop into
+     existence. 55ms rather than something rounder because it has to lift those four and leave
+     the rest alone — at 90ms it caught thirteen of the eighteen and flattened the
+     length-proportional pacing into a metronome. A floored stroke only ever runs *longer* than
+     its slot, which the overlapping schedule already tolerates, so it cannot open a gap. */
+  --signature-duration: 1.4s;
+  --signature-delay: 0.1s;
+  --signature-min-stroke: 55ms;
+}
+
+/* One pen, one speed.
+
+   `--start` and `--span` are fractions of the animation's timeline (see `app/lib/signature.ts`),
+   so multiplying both by one duration is the whole schedule. `span` is proportional to how far
+   the nib travels through that contour, which is what makes the composite one hand at one speed
+   — a fixed beat per letter would crawl through `t` and sprint through the `H`.
+
+   Each stroke stays `linear`. The shaping is in the schedule, not in a timing function, because
+   a curve applied *per stroke* is eighteen little accelerations rather than one gesture.
+
+   `both` is the load-bearing keyword: it holds the *from* state through the delay, so a stroke
+   that has not started yet is hidden, and holds the *to* state afterwards, so the finished mark
+   survives the animation ending. That is also why this needs no JavaScript and no in-view gate
+   — the signature is the top of the page, it is always in view, and an inert page holds the
+   drawn state on its own. */
+.nib {
+  /* The gap has to exceed the path, or the pattern wraps and the tail of a stroke shows through
+     at `stroke-dashoffset: 1`. Measured with `1 1`: fragments of half a dozen letters sitting
+     on the page before the pen reaches them. */
+  stroke-dasharray: 1 2;
+  animation-name: sign;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+  animation-duration: max(
+    var(--signature-min-stroke),
+    calc(var(--span) * var(--signature-duration))
+  );
+  animation-delay: calc(var(--signature-delay) + var(--start) * var(--signature-duration));
+}
+
+@keyframes sign {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* The signature is the page's title. Drawing it is a flourish; withholding the name until the
+   flourish finishes is not, so under reduced motion it is simply already written. */
+@media (prefers-reduced-motion: reduce) {
+  .nib {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+
+/* The invisible run under the mark. It carries no colour of its own — `fill` is set on the
+   element so it stays with the geometry — and only has to say that it is text you can take.
+
+   `pointer-events: all` rather than the SVG default: the fill is transparent, and under
+   `visiblePainted` a transparent fill is still painted, but `all` says so without depending on
+   how a browser reads that. It is the only hit-testable thing in the SVG, the drawing above it
+   having opted out.
+
+   No `::selection` of its own: the page's own highlight is what should show, and the mark paints
+   over it. */
+.selectable {
+  pointer-events: all;
+  cursor: text;
+}

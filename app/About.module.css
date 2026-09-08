@@ -1,13 +1,15 @@
-/* The gap above pairs with the bar's own `--tab-bar-gap-bottom`, so the air under the tabs is
-   the sum of the two — kept close to the air above them, so the bar reads as sitting between
-   the name and the page rather than being pushed onto either.
+/* No margins at all, and both absences are deliberate.
 
-   The gap below is the step down to whatever the route puts next: the CV's gallery teaser, or
-   the gallery's first row. It is a margin and it collapses with the teaser's (absent) top
-   margin on purpose — see the note in GalleryPreview.module.css. */
+   Above: `.header`'s `margin-bottom` is the step down from the signature, and two adjacent
+   margins collapse to the larger of the pair anyway, so one of them would simply be dead.
+
+   Below: the air above the tab bar is `--tab-bar-gap-top`, padding on the bar's own sticky
+   wrapper, and it is the whole of that gap rather than half of it. A margin here would look
+   identical at rest and wrong the moment the bar sticks — the margin scrolls away and the
+   padding does not, so the pill would sit closer to the top of the window than to the page
+   below it. The bar owns its own air on both sides; see `--tab-bar-gap-top` in globals.css. */
 .about {
-  margin-top: 24px;
-  margin-bottom: 52px;
+  margin-bottom: 0;
 }
 
 .description {
@@ -15,6 +17,16 @@
   display: flex;
   flex-direction: column;
   row-gap: calc((var(--type-size) * var(--line-height)) / 2);
+}
+
+/* The claim the byline used to carry on its own, now the opening of this paragraph. It takes
+   the page's ink and the emphasis weight rather than the browser's `bolder`, which on a
+   variable face resolves to 700 — a step past anything else on the site and, beside 350 body
+   copy, a different voice rather than an emphasis. Declared on the element because `RichText`
+   emits classless markdown; there is no other handle. */
+.description strong {
+  color: var(--foreground-primary);
+  font-weight: var(--weight-emphasis);
 }
 
 /* Derived from the text rather than from a fixed grey, so the rule tracks whatever the link is

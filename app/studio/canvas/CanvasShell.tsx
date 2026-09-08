@@ -5,11 +5,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import About from '../../About.module.css';
 import LastUpdated from '../../LastUpdated';
 import RichText from '../../RichText';
+import Signature from '../../Signature';
 import footer from '../../SiteFooter.module.css';
 import header from '../../ProfileHeader.module.css';
 import layout from '../../layout.module.css';
 import tabs from '../../Tabs.module.css';
 import { splitMuted } from '../../lib/contentTypes';
+import { SIGNATURE } from '../../lib/signature';
 import { useStudio } from '../lib/studioContext';
 import Editable from './Editable';
 import styles from './canvas.module.css';
@@ -125,62 +127,45 @@ const CanvasTabs: React.FC = () => {
   );
 };
 
-/** The avatar, name and byline — the only thing above the bar, exactly as on the site. */
+/**
+ * The photo and the signature, exactly as on the site.
+ *
+ * **The name is not edited here, and that is the split holding rather than an omission.** What a
+ * visitor can read is edited where it sits; the signature is not text a visitor reads but a
+ * drawing traced from a nine-glyph subset of one script face, so there is no string on the page
+ * to click and no way to retype it into a shape this font could set. `displayName` is therefore
+ * a fact about the document — the heading's accessible name, the tab title, the card's
+ * `og:siteName` — and facts about the document live in the inspector. Same move the contact
+ * row's `platform` and `handle` made when they became marks on a pill.
+ *
+ * The real `Signature` component is used rather than restated, so the canvas cannot show a mark
+ * the build does not.
+ */
 const CanvasHeader: React.FC = () => {
-  const { cv, urlFor, select, setProfileField } = useStudio();
+  const { cv, urlFor, select } = useStudio();
   const profile = cv.profile;
-  const bylineSegments = useMemo(() => splitMuted(profile.byline ?? ''), [profile.byline]);
 
   return (
     <header className={header.header}>
-      <div className={header.profileHeader}>
-        <button
-          type="button"
-          className={[header.profilePhoto, styles.photoButton].join(' ')}
-          onClick={() => select({ kind: 'profile' })}
-          title="The photo is swapped on disk — see the inspector"
-        >
-          <Image src={urlFor(profile.photo)} alt="" width={56} height={56} priority />
-        </button>
-        <div>
-          <h1>
-            <Editable
-              value={profile.displayName ?? ''}
-              onChange={(next) => setProfileField('displayName', next)}
-              placeholder="Your name"
-              label="Name"
-              onEdit={() => select({ kind: 'profile' })}
-            />
-          </h1>
-          <div className={header.byline}>
-            <Editable
-              value={profile.byline ?? ''}
-              onChange={(next) => setProfileField('byline', next)}
-              placeholder="Byline"
-              label="Byline"
-              onEdit={() => select({ kind: 'profile' })}
-            >
-              {/* `{braces}` set a run in the lighter grey — the same split the site renders,
-                  so what you type reads the way it will publish. The raw string with its
-                  braces is what the field opens on. */}
-              {bylineSegments.map((segment, i) =>
-                segment.kind === 'muted' ? (
-                  <span key={i} className={header.bylineMuted}>
-                    {segment.text}
-                  </span>
-                ) : (
-                  <span key={i}>{segment.text}</span>
-                )
-              )}
-            </Editable>
-          </div>
-        </div>
-      </div>
+      <button
+        type="button"
+        className={[header.profilePhoto, styles.photoButton].join(' ')}
+        onClick={() => select({ kind: 'profile' })}
+        title="The photo is swapped on disk — see the inspector"
+      >
+        <Image src={urlFor(profile.photo)} alt="" width={48} height={48} priority />
+      </button>
+      <h1
+        className={header.name}
+        style={{ '--signature-pad': `${SIGNATURE.pad}px` } as React.CSSProperties}
+      >
+        <Signature label={profile.displayName ?? ''} />
+      </h1>
     </header>
   );
 };
 
-/** The introduction, below the bar and shared by both tabs — the layout renders it once. */
+/** The introduction, above the bar and shared by both tabs — the layout renders it once. */
 const CanvasAbout: React.FC = () => {
   const { cv, select, setProfileField } = useStudio();
   const about = cv.profile.about ?? '';
@@ -193,7 +178,7 @@ const CanvasAbout: React.FC = () => {
           multiline
           value={about}
           onChange={(next) => setProfileField('about', next)}
-          placeholder="Markdown. Rendered directly under the tabs, on both routes."
+          placeholder="Markdown. Rendered under the signature, above the tabs, on both routes."
           label="About"
           onEdit={() => select({ kind: 'profile' })}
         >
@@ -263,8 +248,8 @@ const CanvasShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <div className={layout.topGradientBand} />
           </div>
           <CanvasHeader />
-          <CanvasTabs />
           <CanvasAbout />
+          <CanvasTabs />
           {children}
           <CanvasFooter />
         </div>

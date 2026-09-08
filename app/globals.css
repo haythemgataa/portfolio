@@ -124,11 +124,20 @@
      less its 1px hairline top and bottom, and `.tab`'s own `4px` of vertical padding around a
      `--type-size` line at `line-height: 1` needs 24px of it. */
   --tab-bar-height: 32px;
-  /* Asymmetric on purpose: the bar carries more air above it than below, so it groups with the
-     content it introduces rather than floating between the two. Both halves are padding on the
-     sticky wrapper, so `--sticky-top` — where section headers park — is the sum of the three. */
-  --tab-bar-gap-top: 16px;
-  --tab-bar-gap-bottom: 8px;
+  /* Equal, and *all* of the bar's air lives in this pair rather than being shared with a
+     neighbour's margin. Both halves are padding on the sticky wrapper, so `--sticky-top` — where
+     every sticky section header and the gallery's filter bar park — is the sum of the three, and
+     a pinned title lands flush under the bar however these change.
+
+     They were 16 and 32, with About's 24px `margin-bottom` making up the difference above, so
+     the bar sat in 40px of air on top and 32px below. Splitting it that way also meant the two
+     states disagreed: at rest the gap above was About's margin plus this padding, but *pinned*
+     the margin has scrolled away and only the padding is left, so the pill sat 16px from the top
+     of the window and 32px off the page beneath it. Owning both halves here is what makes the
+     bar look the same parked as it does at rest — which is the point of the symmetry, not just
+     the resting look. About's `margin-bottom` is therefore 0; the gap above the tabs is this. */
+  --tab-bar-gap-top: 32px;
+  --tab-bar-gap-bottom: 32px;
   /* How strongly the page glow shows on the selected tab's pill. A hue sweep reads much hotter
      over white than over black, so the dark theme dials it back. The pill's own colours are no
      longer tokens of their own: it is filled with the page's ink and labelled in the page's

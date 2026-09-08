@@ -11,8 +11,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   production builds and none outside them. Runs two builds; not part of `npm run build`.
 
 `scripts/` holds `clean-export.mjs` and `fetch-font.mjs`, both of which `npm run build` runs
-(the second via `prebuild`, and also on `postinstall` and `predev`). The one-shot migrations that
-produced the current content model are gone — see git history if you need them.
+(the second via `prebuild`, and also on `postinstall` and `predev`), plus `gen-signature.mjs`,
+which is wired to nothing and is meant to be. The one-shot migrations that produced the current
+content model are gone — see git history if you need them.
+
+- `node scripts/gen-signature.mjs <path to ThePrestigeSignature-Subset.otf>` — re-trace the
+  signature into `app/lib/signature.ts`. Run it by hand, on a machine that has the OTF, when the
+  name or its size changes; see **The signature** below for why the font is neither committed nor
+  served, and therefore why a fresh clone can build without ever having it.
 
 - `npm run fetch:font` — download `app/fonts/Switzer-Variable.woff2` if it is missing or does not
   match the pinned hash. Normally there is no reason to run it by hand; it is wired to the three
@@ -44,12 +50,18 @@ matches `/gallery` to 0.01px across every entry.
 Anything a visitor can read is edited on the canvas. Anything else is a fact about the document
 rather than a thing on it, and gets a panel: a link's *target* (the page shows only an arrow),
 an asset's intrinsic dimensions, its poster frame, the `framed`/`floating` flags, a section's
-machine-facing `key`, and the orphan report.
+machine-facing `key`, `profile.displayName` (the page shows a drawing of it — see **The
+signature**), and the orphan report.
 
 The rule is worth keeping: **a field that appears in both places is a field with two truths on
 screen at once**, and the one not being looked at is the one that will surprise you.
 
-**A contact row is the case where that rule moved a field rather than placing one.** Its
+**Two fields have been *moved* by that rule rather than placed by it, and both are worth knowing
+about.** The name is the shorter story: the heading is a traced signature, so there is no text on
+the page to click and no way to retype it into a shape that face could set — it became a fact
+about the document and moved to the Profile panel. The longer one:
+
+**A contact row is the other case where that rule moved a field rather than placing one.** Its
 `platform` and `handle` were both edited on the canvas while contact was a year-gutter row that
 printed them. As pills they mostly stopped being readable — a compact pill shows a mark and
 nothing else — so for those two the pair became facts about the link and moved to the inspector.
@@ -109,8 +121,8 @@ empty `.details` would leave a phantom 11.2px gap under every item, because
 #### What the canvas restates, and what it reuses
 
 Reused outright: `Attachments` (the whole thumbnail row — the frame arithmetic, the mat, the
-fades, the drag), `GalleryPreview`, `RichText`, `LastUpdated`, `TagIcon`, `Arrow12`, and every
-relevant `.module.css`.
+fades, the drag), `GalleryPreview`, `Signature`, `RichText`, `LastUpdated`, `TagIcon`, `Arrow12`,
+and every relevant `.module.css`.
 
 `Attachments` took **one optional prop, `onSelect`**, which overrides its press from "open the
 lightbox" to "edit this asset". The alternative was a second thumbnail renderer carrying a copy
@@ -992,27 +1004,59 @@ layout overrides it to `0` when the tab bar is not rendered at all.
 
 Three things it depends on:
 
-- **`ProfileHeader.tsx` holds the avatar, name and byline, and deliberately nothing else** —
-  it is the *entire* content above the tab bar. The bar is sticky and shared, so its resting
-  height is however tall that block is; keeping it to the three things that are identical on
-  both routes is what stops the bar landing at a different height per route and jumping when
-  the tabs are switched.
-- **About renders *below* the bar, from the root layout** (`About.tsx`), and this is the second
-  arrangement rather than the original. It used to sit above the bar, with the header, on the
-  reasoning that it read as one introduction — which was fine while it was the only thing that
-  wanted to be up there. It stopped being fine when the CV grew a gallery teaser that
-  `/gallery` has no business showing: CV-only content above the bar moved the bar 500px between
-  routes. Moving About down made the space under the tabs route-free, which is what the teaser
-  now uses. Three things follow:
+- **`ProfileHeader.tsx` holds the photo and the signature, and About sits directly under it** —
+  together they are the *entire* content above the tab bar. The rule the bar imposes is not
+  about which blocks go up there but about whether they are route-dependent: the bar is sticky
+  and shared, so its resting height is however tall everything above it is, and anything that
+  differs between `/` and `/gallery` makes it land at a different height per route and jump when
+  the tabs are switched. The photo, the signature and the introduction are identical on both.
+- **The byline no longer renders anywhere.** It was "Product Designer {& Engineer}" directly
+  under the name, and the description that replaced it opens with the same claim in full a few
+  pixels lower — one sentence said twice, stacked. The *field* stays in `cv.json`, because it was
+  never only a line on the page: it is the site's `description`, `og:description` and
+  `twitter:description`, and a short phrase is worth more there than the paragraph now on screen.
+  So `profile.byline` is now a metadata-only field, which is the one thing to know before
+  wondering why editing it changes nothing visible.
+- **About renders *above* the bar, from the root layout** (`About.tsx`), and this is the third
+  arrangement. It began there, moved below the bar when the CV grew a gallery teaser that
+  `/gallery` has no business showing, and has come back up with the signature — which is fine,
+  because the thing that had to move was never About. CV-only content above the bar moved the bar
+  500px between routes; About is identical on both, so it costs the bar nothing. What the earlier
+  move actually bought was the space *under* the tabs, and the teaser still has it. Three things
+  follow:
   - **The layout renders About, not each page.** The text is identical on both routes, so a
     per-page copy would be two copies of one fact. Anything genuinely per-route goes in the
-    page, below it.
-  - **The air either side of the bar is split across three files** — `.header`'s
-    `margin-bottom`, `--tab-bar-gap-top` / `--tab-bar-gap-bottom`, and `.about`'s `margin-top`.
-    The two sides are deliberately close to even so the bar reads as sitting *between* the name
-    and the page rather than being pushed onto one of them.
+    page, below the bar.
+  - **The bar owns all of its own air, 32px on each side, and nothing else contributes any.**
+    `--tab-bar-gap-top` and `--tab-bar-gap-bottom` are both padding on the sticky wrapper;
+    `.about` has no `margin-bottom` and neither the CV's teaser nor the gallery's list has a
+    `margin-top`. Measured on both routes: 32px above the tabs and 32px below, at rest and
+    pinned alike.
+  - **Symmetry in *both* states is the reason it is arranged that way, not tidiness.** The gaps
+    were 16 above and 32 below, with About's 24px `margin-bottom` making up the difference on
+    top — which looked deliberate at rest and came apart the moment the bar stuck, because the
+    margin scrolls away and the padding does not: the pill sat 16px from the top of the window
+    and 32px off the page beneath it. Air that belongs to the bar has to travel with the bar.
+  - **`--sticky-top` follows for free, and that is why the padding is the right home.** It is the
+    sum of the three, so a pinned section title parks flush under the bar however these change.
+    Margins on the followers could not have done that job either: a margin does not collapse into
+    padding, so `Gallery.module.css`'s `.list` had to give up its own `margin-top: 36px`
+    (invisible for a long time, shadowed by About's larger margin collapsing against it) or the
+    gallery would have started 36px lower than the CV.
+  - **`.sentinel` in `Tabs.module.css` carried a `margin-top: 12px`, and it was a fourth,
+    invisible contributor to the gap above the bar.** The zero-height marker the stick observer
+    watches sits immediately before the wrapper, so its margin is simply more air above the tabs
+    — which is how the gap measured 44px against 32px below while `--tab-bar-gap-top` said 32.
+    Nothing named it and nothing accounted for it. It is gone; removing it does not move the
+    sentinel *relative to* the wrapper, which is the only relationship the observer depends on.
   - It still carries no visible title: a sticky heading would have nothing to pin under, and
     the `<section>` takes its accessible name from `aria-label`.
+  - **`.description strong` is a real rule, not the browser's `bolder`.** The opening claim is
+    `**Product Designer & Engineer**` in the markdown, and left to the UA a variable face
+    resolves `bolder` to 700 — a step past `--weight-emphasis` and, beside 350 body copy, a
+    different voice rather than an emphasis. It takes `--foreground-primary` with it, so the
+    phrase reads as the page's ink and the rest of the sentence as secondary. Declared on the
+    element because `RichText` emits classless markdown; there is no other handle.
 - **`GalleryPreview.tsx` — the 2x2 teaser — is the CV page's first block**, rendered by
   `Profile.tsx` and not by the layout. That is what makes it CV-only without a route test: the
   layout is never told which route it is rendering, so anything conditional up there needs
@@ -1021,10 +1065,12 @@ Three things it depends on:
   - **It must stay below the bar.** Above it, the bar's resting height stops matching
     `/gallery`'s and the jump comes back — measured at 500px, the block's height plus its
     margin.
-  - **`.wrap` deliberately carries no top margin.** `.about` already ends in `margin-bottom:
-    52px`, and adjacent sibling margins collapse, so one declared here would simply be shadowed
-    by the larger of the two — the gap above the teaser is About's, and it is the same gap the
-    gallery's first row gets on the other route.
+  - **`.wrap` deliberately carries no top margin**, though the reason has changed. It used to be
+    that `.about` ended in `margin-bottom: 52px` right above it and adjacent margins collapse, so
+    anything here was shadowed. About has moved above the bar; the gap is now
+    `--tab-bar-gap-bottom`, padding on the bar's sticky wrapper, and a margin here would *add* to
+    it rather than collapse into it — which would leave the teaser lower than the gallery's first
+    row, the one thing this gap exists to keep equal.
   - **The frame's fill and hairline are `--background-muted` and `--border`** —
     the unselected pill's and the thumbnails' own tokens, not literals — so the three surfaces
     cannot drift and the dark theme needs no second rule.
@@ -1043,6 +1089,161 @@ Three things it depends on:
 - `globals.css` uses `overflow-x: clip` (not `hidden`) on `html, body`. `hidden` makes them
   scroll containers, which silently breaks `position: sticky`. `hidden` is still declared
   first as a fallback for browsers without `clip` support.
+
+### The signature
+
+**The name is drawn, not set.** `app/Signature.tsx` renders an inline SVG whose outlines
+`scripts/gen-signature.mjs` traced once from The Prestige Signature (Sigit Dwipa / Nirmana
+Visual) and wrote into `app/lib/signature.ts`; `ProfileHeader.tsx` lays it over the photo. Nothing
+at runtime — on the site or in the Studio — reads a font file, and none is committed.
+
+That is a licensing constraint answered by a technical one, and both point the same way. The face
+is commercial, and the copy here is subset to the nine glyphs of one name, so it can set exactly
+one string: shipping it as a webfont would mean publishing licensed Font Software from a public
+repo (the thing `scripts/fetch-font.mjs` exists to avoid for Switzer) to render a fixed piece of
+artwork. Tracing it is also what makes the mark behave like the rest of this site's chrome — it is
+the `Arrow12.tsx` / `handPaths.ts` rule again: `currentColor` only sees the page's colour when the
+SVG is part of the document, so an inline mark needs no `-dark` sibling and no filter.
+
+The animation is the one spell.sh's Signature component uses, with the two things that make it
+free here changed. It is worth knowing both, because the obvious way to adopt that component
+would have undone them:
+
+- **The paths are precomputed, not parsed in the browser.** spell.sh fetches the OTF at mount and
+  runs `opentype.js` over it — a parser, a font request and a layout pass in front of the first
+  pixel, for a string that cannot change. Traced at build time this is a **server component that
+  ships no JavaScript at all**.
+- **It animates in CSS, not framer-motion**, and that is what keeps the *finished* signature the
+  thing an inert page shows. `animation-fill-mode: both` holds the hidden state through each
+  stroke's delay and the drawn state after it, so with JavaScript off the marks still draw and
+  under `prefers-reduced-motion` they are simply already there. A motion component would have had
+  to render its hidden `initial` state into the server payload and wait for hydration to undo it.
+
+How it draws: the letterforms are painted as an ordinary `fill`, and *masked* by the same outlines
+stroked with a fat round nib whose `stroke-dashoffset` runs 1 → 0. So ink appears exactly where
+the pen has reached, and the resting state is the plain filled letterform. Eight details are
+load-bearing, and most of them were found by rendering the thing and looking:
+
+- **The mask is split per contour and the fill is grouped per glyph, and the two halves want
+  opposite things.** SVG restarts a dash pattern at the start of every subpath, so a `d` carrying
+  a letter's outer contour *and* its counters cannot be revealed progressively as a whole — every
+  contour in it starts at once and the reveal jumps. So the mask gets 18 one-contour elements, in
+  writing order. But winding is a property of a *path*: an `e`'s loop is cut out of the `e` only
+  while the two share one. Filled separately, every counter in the signature came out **solid** —
+  the `e`, the `a`s, the `H`, the `G` all blocked in — which is the bug that split introduced and
+  `GLYPH_PATHS` undoes by re-joining each glyph's contours for the fill alone. Hence `glyph` on
+  every stroke in the generated module.
+- **Per glyph, not one path for the whole name.** These letters overlap: script advances are
+  tight and the side bearings negative. Nonzero winding across the entire string would let one
+  letter's counter punch a hole through its neighbour's stem wherever the two crossed.
+- **The path data therefore appears twice in the markup**, once in `<defs>` for the nib and once
+  as the fill. That costs almost nothing on the wire — it is a byte-identical repeat well inside
+  deflate's window, and the whole SVG gzips to ~4.5 KB either way — so it is not worth a cleverer
+  arrangement. It is stored once: `signature.ts` carries only the contours and the component
+  joins them.
+- **`WEIGHT` is a 0.5-unit `currentColor` stroke on the filled paths, not a scale.** At 40px this
+  script's thinnest connectors land near a pixel, so the mark wanted a hair more body; a stroke
+  grows every stem by half that on each side, counters included, and leaves the letterforms'
+  proportions alone. It lives *inside* the masked group, so the pen reveals it along with the ink
+  it thickens. Small on purpose: at 1 unit the stem very nearly doubles and it reads as a
+  different, bolder script.
+- **`stroke-dasharray: 1 2`, not `1 1`.** With `pathLength="1"` the units are normalised, so `1 1`
+  looks like exactly "one whole contour, then one whole gap" — and it leaks. Measured at
+  `stroke-dashoffset: 1`, which should be blank: fragments of half a dozen letters sitting on the
+  page before the pen reaches them. A gap longer than the path cannot wrap, and is blank.
+- **Butt caps, not round.** Every contour is closed, so the two ends meet and there is nothing for
+  a cap to round — while a round cap on a *zero-length* dash is drawn as a dot, which is a stray
+  blob of ink in the mask before its stroke has started.
+- **The nib is 0.22em, and the figure is a threshold rather than a taste.** The outlines are
+  contours, so the pen runs up one side of a stroke and back down the other; a brush centred on
+  that contour has to reach across the stroke on the way *out* or the letter fills in two passes
+  and reads as a retrace. Checked against a plain filled render: at 8.8px the finished reveal is
+  identical to it, which is the proof that nothing is left behind.
+- **No hairline over the fill.** spell.sh lays a permanent 2px stroke on top of the filled paths.
+  At this face's weights that very nearly doubles the stem — rendered side by side it reads as a
+  different, much bolder script — so it is left out and the mark rests as pure fill.
+- **Timing is a share of contour length, not a share of the letters.** `span` in the generated
+  module is proportional to how far the nib travels through that contour, and
+  `Signature.module.css` multiplies it by one `--signature-duration` (1.4s). A fixed beat per
+  glyph would crawl through `t` and sprint through the `H`; this is one hand at one speed.
+- **The strokes overlap, and the schedule for that is computed in the generator, not in CSS.**
+  Because the nib traces a *contour*, it runs up one side of a stroke and back down the other,
+  and the return reveals nothing the outbound pass has not already covered — so every contour
+  ends in a dead beat of roughly half its length. On an `a` that is invisible; the `H` is a fifth
+  of the signature, and its tail read as the pen stopping mid-name. `OVERLAP` opens each contour
+  when the one before it is 60% done, which is also what a hand does.
+
+  It has to accumulate, which is exactly what CSS cannot do here — a rule sees one stroke's
+  numbers and no others. Expressed per stroke as "start a share of the previous span early", the
+  shift does not carry forward: a short contour pulled back into the `G`'s tail finishes early,
+  and the one after it, whose own predecessor is now short, barely moves. Measured on the union
+  of the eighteen animations, that left a **66ms hole** two thirds of the way through the name.
+  Walking the schedule forward in the generator makes every stroke open before its predecessor
+  ends by construction — re-measured: no holes at all, delays monotonic, the whole hand 0.1s →
+  1.5s.
+- **`--signature-min-stroke` is a floor, and 55ms is not a round number by accident.** Four of
+  the eighteen contours are under 1% of the timeline — 6–15ms — and they pop into existence
+  rather than being drawn. The floor has to lift those and leave the rest alone: at 90ms it
+  caught thirteen of the eighteen and flattened the length-proportional pacing into a metronome.
+  A floored stroke only ever runs *longer* than its slot, which the overlapping schedule already
+  tolerates, so it cannot reopen a gap.
+
+**The name is selectable, and that is an invisible `<text>` under the mark rather than an HTML
+span over it.** A drawing cannot be selected, copied or found with Cmd-F, and a name is a thing
+people reasonably want to take, so the string is in the SVG at `fill="transparent"` with the
+drawing laid over it. Five things:
+
+- **`textLength` with `lengthAdjust="spacingAndGlyphs"` is the whole reason it is SVG text.** It
+  pins the run to the ink's exact width — measured, `getComputedTextLength()` comes back 167.04
+  against an ink width of 167.04 — so the highlight matches the mark whatever font resolves, and
+  goes on matching while Switzer is still loading and Arial is standing in. An HTML overlay would
+  have needed a font-size and a letter-spacing guessed per face.
+- **It is *before* the ink in document order**, because selection paints its background and then
+  the text over it. Under the drawing, the highlight goes behind the letterforms the way it goes
+  behind glyphs; after it, the highlight would cover the signature it is meant to be
+  highlighting.
+- **`fill="transparent"`, never `fill="none"`.** `none` is unpainted, and an unpainted glyph is
+  not hit-testable under the default `visiblePainted` — there would be nothing to start a drag
+  on. The ink above it takes `pointer-events: none` for the same reason: a press that landed on a
+  letterform rather than between two would otherwise begin no selection at all.
+- **The baseline is derived, and the font's own is the wrong line.** In this face the lowercase
+  floats 7.6px above the em box's baseline while the flourishes hang 10-12px below it, so text
+  set on it sits visibly under the word. The generator emits the *median* glyph ink bottom
+  instead — the eight letters resting on the writing line outvote the two capitals and the
+  descenders — which comes out at 31.36 and is robust to whatever string is traced next.
+- **`role="img"` stays on the wrapper.** The role prunes the subtree, so assistive technology
+  reads `aria-label` once rather than meeting the name twice; selection, copy and find-in-page do
+  not care about roles. Verified both ways: a drag across the mark selects and copies
+  `Haythem Gataa`, and the highlight spans the signature edge to edge.
+
+Two things about the box. It is the *ink's* box, not the em square — a script face's ascender and
+descender are enormous and mostly empty — so the SVG's `width`/`height` attributes reserve
+exactly the drawing's space and there is nothing to shift. And `--signature-pad` (1.5px of slack
+for antialiasing at the edges) travels with the data and is cancelled by a negative
+`margin-left` on `.name`, so the first stroke lands on the same column edge as the photo, the
+tabs and About rather than 1.5px inside it. Verified in the browser: ink `x` = the column's `x`.
+
+**The overlap is arithmetic, not a nudge.** The photo is a 48px square with a 6px radius — a
+square specifically because a disc has no bottom edge for a mark to cross, only a tangent. It
+ships at 192x192 (`profile.webp`, 9.3 KB at quality 85), which is 4x for that box, so it holds up
+to a 3x screen with room over. Two things about that file: it does **not** go through Cloudflare —
+the profile photo is a plain `assetUrl`, not a `cloudflareImageUrl` — so its own pixel size is the
+delivered size and `media.json` has to be updated by hand whenever it is swapped; and it is a
+**cutout**, opaque subject on a transparent ground, which is what the well's `--background-muted`
+fill is actually for. The ground behind the photograph is therefore the page's own surface colour
+and follows the theme, so an alpha-preserving encode is not optional here (`alphaQuality: 100`) —
+flattening it would bake the light theme's wash into the picture —
+and `.name`'s `margin-top: -14px` puts the ink's top 12.5px above the photo's lower edge, about a
+quarter of the picture. Enough for the `H`'s flourish to read as crossing it, little enough that
+none of the face is covered.
+
+**The name is no longer edited on the Studio's canvas**, and that is the canvas/inspector split
+holding rather than an omission: what a visitor can read is edited where it sits, and a visitor
+does not read text here, they look at a drawing of one fixed string. `displayName` is therefore a
+fact about the document — the heading's accessible name, every page's `<title>`, the card's
+`og:siteName` — and it has moved to the inspector's Profile panel, the same move
+`platform`/`handle` made when a contact row became a pill. The canvas imports the real
+`Signature` rather than restating it, so it cannot show a mark the build does not.
 
 ### CV interactions
 
@@ -1709,6 +1910,9 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
   policy about the directory when it was only ever a fact about one file's licence, and it
   silently swallowed the next font added beside it: a build that then fails only off a clean
   clone, since the file is present on the machine that added it.
+- Third face, and the reason for the scare quotes: **The Prestige Signature is not shipped as a
+  font at all.** See **The signature** below — it is traced to SVG paths at author time, so there
+  is no `@font-face`, no woff2, and nothing in `app/fonts/` for it.
 - No UI component library — all custom components
 - **Every paragraph of running prose is `text-wrap: pretty`**, declared once on `p` in
   `globals.css` rather than per surface — `RichText` emits classless `<p>`s, so the element is the
@@ -1827,6 +2031,9 @@ borrow the page's foreground and stay legible.
 - `react-scrollbooster` — Horizontal gallery scrolling on desktop
 - `sharp` (dev only) — measures image uploads in the Studio. The build never runs it: dimensions
   are always authored into `media.json`.
+- `opentype.js` (dev only) — read by `scripts/gen-signature.mjs` and by nothing else. Neither the
+  site nor the Studio imports it, and no lifecycle hook runs that script, so it never reaches a
+  bundle and a build with it uninstalled would still succeed.
 
 ### Deployment
 

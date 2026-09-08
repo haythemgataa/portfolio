@@ -111,19 +111,22 @@ export default async function RootLayout({
             <div className={styles.topGradient} aria-hidden="true">
               <div className={styles.topGradientBand} />
             </div>
-            {/* The avatar/name/byline block is the *only* thing above the bar, and that is what
-                keeps the bar at the same height on both routes: it is sticky and shared, so
-                whatever sits above it decides where it rests, and anything route-specific up
-                there makes it jump when the tabs are switched.
+            {/* Everything above the bar has to be identical on both routes, and that is the
+                whole constraint: the bar is sticky and shared, so whatever sits above it decides
+                where it rests, and anything route-specific up there makes it jump when the tabs
+                are switched.
 
-                About is below the bar for exactly that reason. It is identical on both routes,
-                so the layout renders it once here rather than each page carrying a copy. What
-                moving it bought is the space *under* the tabs, where content is free to differ
-                per route — the CV opens with a gallery teaser that `/gallery` has no business
-                showing, and the bar no longer moves because of it. */}
+                The signature block and About both satisfy that — the introduction reads the
+                same on `/` and `/gallery` — so they sit together as one opening, which is what
+                the design asks for. The layout renders About rather than each page for the same
+                reason: the text is one fact, not two.
+
+                What must stay *below* the bar is anything that differs per route, and the CV's
+                gallery teaser is the case that proves it: 500px of CV-only content up here
+                moved the bar by exactly that much between the two tabs. */}
             <ProfileHeader profile={cv.profile} />
-            <Tabs showGallery={showGallery} />
             <About about={cv.profile.about} />
+            <Tabs showGallery={showGallery} />
             {children}
             {/* Below the bar, so unlike the header it does not have to be identical per route —
                 it is here rather than in `Profile.tsx` because it closes the *page*, and the

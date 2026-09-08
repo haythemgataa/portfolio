@@ -10,12 +10,17 @@
    centred in the viewport (`.profile` / `.gallery` are `margin: 0 auto`), so the two halves
    cancel out. Any overhang from the scrollbar's width is clipped by `overflow-x: clip`. */
 /* Zero-height marker sitting exactly where the bar's top rests, watched by an
-   IntersectionObserver: the moment it leaves the viewport, the bar is stuck. It carries the
-   gap above the bar so that its bottom edge and the bar's top edge coincide, making the
-   transition fire precisely on stick rather than a few pixels early. */
+   IntersectionObserver: the moment it leaves the viewport, the bar is stuck. `height: 1px` with
+   `margin-bottom: -1px` is what makes it free — it occupies no space and its top edge coincides
+   with the wrapper's, so the transition fires precisely on stick rather than a few pixels early.
+
+   It used to carry a `margin-top: 12px` as well, and that was a fourth, invisible contributor to
+   the air above the bar: measured, the gap above the pill was 44px against 32px below, and
+   nothing in `--tab-bar-gap-top` or About's margins accounted for the difference. The gap above
+   the bar is `--tab-bar-gap-top` and nothing else now. Removing it does not move the sentinel
+   relative to the wrapper, which is the only relationship the observer depends on. */
 .sentinel {
   height: 1px;
-  margin-top: 12px;
   margin-bottom: -1px;
 }
 

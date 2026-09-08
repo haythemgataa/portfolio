@@ -1,9 +1,10 @@
-/* The gallery teaser, opening the CV under the shared About block.
+/* The gallery teaser, opening the CV directly under the tab bar.
 
-   No top margin on purpose: `.about` already ends in `margin-bottom: 52px`, and adjacent
-   sibling margins collapse, so one declared here would simply be shadowed by the larger of the
-   two — the gap above is About's, and it is the same gap the gallery's first row gets on the
-   other route. The bottom margin is the step down to the CV's first section header. */
+   Still no top margin, but the reason has changed: the gap above used to be About's collapsing
+   `margin-bottom`, and About has moved above the bar. It is now `--tab-bar-gap-bottom`, padding
+   on the bar's own sticky wrapper — which is the right home for it, because the gallery's first
+   row needs exactly the same air on the other route and a margin here would have been that
+   figure written twice. The bottom margin is the step down to the CV's first section header. */
 .wrap {
   margin-bottom: 52px;
 }

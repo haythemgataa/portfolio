@@ -1703,7 +1703,18 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
 - **Client components** (`"use client"`): `Profile.tsx`, `Attachments.tsx`, `Lightbox.tsx`, `Scrollbar.tsx`, `RichText.tsx`, `Gallery.tsx`, `Tabs.tsx`
 - **`SiteFooter.tsx` is in the root layout**, below the bar, so it closes both routes — the gallery
   would otherwise just stop after its last item. It carries the published date at one end and
-  `profile.location` at the other. Four things there:
+  `profile.location` at the other. Five things there:
+  - **It sits on the column's own edge at every width, and carried a narrow-viewport indent
+    until it did.** Below 480px `.experiences` and `.contacts` take `margin-left: 16px` to clear
+    the section title, and the footer used to follow them. That matched the wrong thing: the
+    footer is page chrome closing both routes, not a CV item, and the chrome around it — the
+    avatar, About, the tab bar, every section title, the gallery's list — is all on the column
+    edge. Measured at 375px: all of those at x = 24 and the footer alone at x = 40, so "Last
+    updated" lined up with the CV's item bodies and with nothing whatever on `/gallery`. Only its
+    left edge ever moved, since the row is `space-between` against the column's right edge.
+    One consequence worth knowing: the row is now 16px wider, so the date and the location
+    collide — and therefore stack — at a narrower viewport than before. Measured with the stand-in
+    face rather than Switzer, the flip moved below 320px, where the pair used to stack.
   - Its "Last updated" is `new Date()` at module scope in a *server* component, so it is evaluated
     once during the build and baked into the export. That is what the phrase means for a static
     site, and it is deliberately not a content field: a date that has to be remembered goes stale,

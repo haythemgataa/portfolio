@@ -465,10 +465,16 @@
   white-space: nowrap;
 }
 
-/* The CV indents its bodies past the section title below 480px; the footer follows so its left
-   edge stays on the same line as the content above it. */
-@media (max-width: 480px) {
-  .footer {
-    margin-left: 16px;
-  }
-}
+/* No narrow-viewport indent, and the absence is deliberate.
+
+   This carried `margin-left: 16px` below 480px, to follow the indent `.experiences` and
+   `.contacts` take past the section title. That matched the wrong thing. The footer is not a CV
+   item — it is page chrome closing both routes, like the tab bar and About, and those sit on the
+   column's own edge at every width. Measured at 375px before the change: the column, the avatar,
+   About, the tab bar, every section title and the gallery's list all at x = 24, and the footer
+   alone at x = 40 — so it lined up with the CV's item bodies and with nothing at all on
+   `/gallery`, where the list it follows is at the column edge.
+
+   Only the left edge ever moved: the row is `justify-content: space-between` against the column's
+   right edge, so the location end was already flush and it was the "Last updated" end that read
+   as pushed in. */

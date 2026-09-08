@@ -88,6 +88,11 @@ const Tabs: React.FC<TabsProps> = ({ showGallery = true }) => {
 
   return (
     <>
+      {/* The resting air the pinned bar does not keep. It is the bar's own space — nothing else
+          renders it, and About's `margin-bottom` is still 0 — but it is in flow rather than in
+          the sticky wrapper's padding, so it scrolls away and the parked band is 56px instead of
+          96px. Before the sentinel, or the stick would fire this much early; see `.airTop`. */}
+      <div className={styles.airTop} aria-hidden="true" />
       <div ref={sentinelRef} className={styles.sentinel} aria-hidden="true" />
       <div className={styles.sticky} data-stuck={isStuck}>
         <nav
@@ -175,6 +180,10 @@ const Tabs: React.FC<TabsProps> = ({ showGallery = true }) => {
       {/* Sibling rather than the bar's own pseudo-element, so sticky section headers can
           paint over it — see the comment on `.fade` in Tabs.module.css. */}
       <div className={styles.fade} data-stuck={isStuck} aria-hidden="true" />
+      {/* The other half of the resting air, and it has to come after the fade: the fade pins at
+          `--sticky-top` and its flow position is whatever follows the wrapper, so a spacer
+          between them would delay its pin and expose the band's hard edge. */}
+      <div className={styles.airBottom} aria-hidden="true" />
     </>
   );
 };

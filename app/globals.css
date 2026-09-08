@@ -124,20 +124,38 @@
      less its 1px hairline top and bottom, and `.tab`'s own `4px` of vertical padding around a
      `--type-size` line at `line-height: 1` needs 24px of it. */
   --tab-bar-height: 32px;
-  /* Equal, and *all* of the bar's air lives in this pair rather than being shared with a
-     neighbour's margin. Both halves are padding on the sticky wrapper, so `--sticky-top` — where
-     every sticky section header and the gallery's filter bar park — is the sum of the three, and
-     a pinned title lands flush under the bar however these change.
+  /* The bar's air *at rest*, and equal on both sides. All of it still belongs to the bar rather
+     than to a neighbour's margin — `Tabs.tsx` renders every pixel of it — but it is no longer all
+     in one place, because the resting gap and the pinned gap are now different numbers. See
+     `--tab-bar-gap-stuck` below for the split and why it is drawn where it is.
 
      They were 16 and 32, with About's 24px `margin-bottom` making up the difference above, so
-     the bar sat in 40px of air on top and 32px below. Splitting it that way also meant the two
-     states disagreed: at rest the gap above was About's margin plus this padding, but *pinned*
-     the margin has scrolled away and only the padding is left, so the pill sat 16px from the top
-     of the window and 32px off the page beneath it. Owning both halves here is what makes the
-     bar look the same parked as it does at rest — which is the point of the symmetry, not just
-     the resting look. About's `margin-bottom` is therefore 0; the gap above the tabs is this. */
+     the bar sat in 40px of air on top and 32px below. Splitting it that way meant the two states
+     disagreed by *accident*: at rest the gap above was About's margin plus the bar's padding,
+     but pinned the margin had scrolled away and only the padding was left, so the pill sat 16px
+     from the top of the window and 32px off the page beneath it. Owning both halves here is what
+     made the two states agree; the split below is what makes them differ deliberately.
+     About's `margin-bottom` is therefore still 0. */
   --tab-bar-gap-top: 32px;
   --tab-bar-gap-bottom: 32px;
+  /* How much of that air *travels with the bar* — the gap above and below the pills once the bar
+     is pinned. The rest of it is rendered as two plain spacers either side of the sticky wrapper
+     (`.airTop` / `.airBottom` in Tabs.module.css), so it scrolls away like any other content and
+     the parked bar is a 56px band rather than a 96px one.
+
+     Which pixels are padding and which are spacers is the whole mechanism, and it is the exact
+     inverse of the note above: padding on a sticky element is the air that *cannot* scroll away,
+     so anything the pinned bar should not keep must not be padding. Splitting it this way costs
+     nothing anywhere else — the document's height and the bar's resting position are unchanged
+     to the pixel, because `spacer + padding` is the same total on each side — and it needs no
+     transition, since at rest the wrapper's background is transparent and there is no visible
+     edge to move. */
+  --tab-bar-gap-stuck: 12px;
+  /* What the bar occupies once pinned, which is what every sticky thing below it parks under.
+     Named rather than repeated: `--sticky-top`, `layout.tsx` (which overrides it per route) and
+     the Studio's canvas all need the same figure, and three copies of one sum is three chances
+     to update two of them. */
+  --tab-bar-stuck-height: calc(var(--tab-bar-height) + var(--tab-bar-gap-stuck) * 2);
   /* How strongly the page glow shows on the selected tab's pill. A hue sweep reads much hotter
      over white than over black, so the dark theme dials it back. The pill's own colours are no
      longer tokens of their own: it is filled with the page's ink and labelled in the page's
@@ -166,8 +184,11 @@
     rgb( 52, 181, 240) 66.5%,
     rgb( 39, 207, 255) 75%
   );
-  /* Overridden per route in layout.tsx: 0 when the tab bar is not rendered at all. */
-  --sticky-top: calc(var(--tab-bar-height) + var(--tab-bar-gap-top) + var(--tab-bar-gap-bottom));
+  /* Where a sticky section header or the gallery's filter bar parks: flush under the *pinned*
+     bar, which is the only state either of them can be pinned in — the bar sits above them in
+     flow and is taller than this, so it has always stuck first. Overridden per route in
+     layout.tsx: 0 when the tab bar is not rendered at all. */
+  --sticky-top: var(--tab-bar-stuck-height);
   /* The section ordinal (`SectionNumber.tsx`), and the room a pinned section title leaves above
      itself for it. The two live together because neither is usable without the other.
 

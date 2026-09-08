@@ -1027,18 +1027,47 @@ Three things it depends on:
   - **The layout renders About, not each page.** The text is identical on both routes, so a
     per-page copy would be two copies of one fact. Anything genuinely per-route goes in the
     page, below the bar.
-  - **The bar owns all of its own air, 32px on each side, and nothing else contributes any.**
-    `--tab-bar-gap-top` and `--tab-bar-gap-bottom` are both padding on the sticky wrapper;
-    `.about` has no `margin-bottom` and neither the CV's teaser nor the gallery's list has a
-    `margin-top`. Measured on both routes: 32px above the tabs and 32px below, at rest and
-    pinned alike.
-  - **Symmetry in *both* states is the reason it is arranged that way, not tidiness.** The gaps
-    were 16 above and 32 below, with About's 24px `margin-bottom` making up the difference on
-    top — which looked deliberate at rest and came apart the moment the bar stuck, because the
-    margin scrolls away and the padding does not: the pill sat 16px from the top of the window
-    and 32px off the page beneath it. Air that belongs to the bar has to travel with the bar.
-  - **`--sticky-top` follows for free, and that is why the padding is the right home.** It is the
-    sum of the three, so a pinned section title parks flush under the bar however these change.
+  - **The bar owns all of its own air, and nothing else contributes any.** `.about` has no
+    `margin-bottom` and neither the CV's teaser nor the gallery's list has a `margin-top`;
+    everything between About and the first row is rendered by `Tabs.tsx`. It is **32px on each
+    side at rest and 12px on each side once pinned** — a 96px band collapsed to 56px, which is
+    what the split below buys.
+  - **Which pixels are padding decides which of them survive the stick, and that is the whole
+    mechanism.** Padding on a sticky wrapper is inside the box being pinned, so it cannot scroll
+    away; a bar whose gaps are all padding parks in exactly as much space as it rests in. Only
+    `--tab-bar-gap-stuck` is therefore padding. The remainder — `--tab-bar-gap-top` and
+    `--tab-bar-gap-bottom` less that — is two plain flow boxes either side of the wrapper
+    (`.airTop` / `.airBottom`), which scroll off like any other content. Four things about it:
+    - **Nothing moves, at rest or on the way in.** `spacer + padding` is the same total on each
+      side, so the document's height and the bar's position in it are unchanged to the pixel —
+      verified against the previous build at six widths on both routes, and the resting
+      screenshot at 917px is byte-identical.
+    - **Shrinking the padding on `[data-stuck]` instead is the version that does not work.** It
+      shortens the bar's flow box at the threshold and jumps everything below it up by the
+      difference; animating that is 160ms of relayout on a 5,400px document, with scroll
+      anchoring pulling the other way.
+    - **It needs no transition, because there is no edge to move.** At rest the wrapper's
+      background is transparent — that is what lets the glow and the dot texture run behind it —
+      so where its box ends is invisible until the band fades in, already parked, at 56px.
+    - **`.airBottom` goes *after* `.fade`, not between it and the bar.** The fade pins at
+      `--sticky-top` and its flow position is whatever follows the wrapper, so a spacer in
+      between would delay its pin by that much scroll and leave a strip of unfaded content
+      between the band's hard bottom edge and the top of the fade. Immediately after the
+      wrapper, the two pin on the same pixel, because the wrapper's box *is* `--sticky-top`
+      tall. Measured across the threshold: the band's bottom and the fade's top are equal at
+      every scroll position.
+  - **Symmetry within each state is the rule, not symmetry between them.** The gaps were 16 above
+    and 32 below, with About's 24px `margin-bottom` making up the difference on top — which
+    looked deliberate at rest and came apart the moment the bar stuck, because the margin scrolls
+    away and the padding does not: the pill sat 16px from the top of the window and 32px off the
+    page beneath it. That was an accident of where the air lived. The two states differ
+    deliberately now, and both are even.
+  - **`--sticky-top` is the *pinned* height, `--tab-bar-stuck-height`.** A pinned section title
+    parks flush under the bar however these change, and the resting height is irrelevant to it:
+    the bar sits above those headers in flow and is taller than this, so it has always stuck
+    first — a header cannot pin under an unstuck bar. It is a named token rather than a sum
+    because `layout.tsx` (which overrides it per route) and the Studio's canvas both restate it,
+    and three copies of one calc is three chances to update two of them.
     Margins on the followers could not have done that job either: a margin does not collapse into
     padding, so `Gallery.module.css`'s `.list` had to give up its own `margin-top: 36px`
     (invisible for a long time, shadowed by About's larger margin collapsing against it) or the
@@ -1048,7 +1077,9 @@ Three things it depends on:
     watches sits immediately before the wrapper, so its margin is simply more air above the tabs
     — which is how the gap measured 44px against 32px below while `--tab-bar-gap-top` said 32.
     Nothing named it and nothing accounted for it. It is gone; removing it does not move the
-    sentinel *relative to* the wrapper, which is the only relationship the observer depends on.
+    sentinel *relative to* the wrapper, which is the only relationship the observer depends on —
+    and that relationship is also why `.airTop` goes *before* the sentinel: air between the two
+    would fire the stick that much early.
   - It still carries no visible title: a sticky heading would have nothing to pin under, and
     the `<section>` takes its accessible name from `aria-label`.
   - **`.description strong` is a real rule, not the browser's `bolder`.** The opening claim is
@@ -1746,6 +1777,29 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
   And the steps are flex siblings of the dots rather than pinned to the left and right edges, which
   is what keeps them beside the dots at any item count — the dots' width grows with the number of
   items, so an offset from the centre would have to be recomputed to match.
+  **The cluster spans the viewport and centres its contents**, rather than being a shrink-to-fit box
+  pushed to the middle with `left: 50%` and a counter-translate. Those two are the same thing while
+  it fits, and only one of them has a width for the dots to wrap against: a shrink-to-fit box simply
+  grew past both viewport edges, symmetrically, so the outermost dots were cut off — at the
+  gallery's 30 entries the row is 414px, wider than any phone. Measured before the change at 390px:
+  the first dot at x = -12; at 320px, x = -47. Its 24px gutter is `.lightboxImage`'s own horizontal
+  padding restated, so the cluster stops where the media does. Three consequences:
+  - **It is `pointer-events: none`, with `auto` on the steps and the dots.** The box is now far
+    wider than its contents, and without that the full-width band would swallow every press in the
+    bottom 48px of the backdrop — a click either side of the arrows would stop dismissing the
+    viewer. The dots opt back in because a press on the pager has always landed on them and done
+    nothing, and letting it through instead would make pressing the position indicator close the
+    viewer.
+  - **`min-height: 48px`, not `height`.** A wrapped block has to be able to make the cluster
+    taller than one row, and it grows upwards from `bottom: 0`. Three rows still fit inside the
+    48px `.lightboxImage` already reserves below the media, so nothing has to be measured: 30
+    entries wrap to two rows (22px) at 390px and three (36px) at 320px, both clear of the media.
+    A fourth row would reach into it, which takes ~70 items at phone width.
+  - **`.dots` is the only shrinkable item** (the steps are `flex: 0 0 auto`), so it gives up
+    exactly the overflow: the arrows stay beside it and, at a width where the rows wrap, sit
+    against the gutter with the block between them. `justify-content: center` is what centres
+    every row including the last partial one, and the cluster's `align-items: center` centres a
+    two- or three-row block on the arrows rather than aligning it to either edge.
   The cluster sits at `z-index: 11`, above `.carousel` (10), which matters for the opposite case: on
   a wide image the click-half lands on top of a button and swallows the press, so the step still
   happened but the button never saw its own hover or focus. The halves are `aria-hidden` and out of
@@ -1764,7 +1818,9 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
   alongside the opacity — 25 identical marks with one of them slightly darker did not. Three things:
   - **The 8px *box* is constant; only a `transform: scale()` changes.** The dots are a flex row with
     a fixed gap, so animating `width`/`height` would shift every dot after the one that changed, and
-    a step changes two of them at once. Verified: the pitch stays 14px in every state.
+    a step changes two of them at once. Verified: the pitch stays 14px in every state. Now that the
+    row wraps, that argument is stronger rather than weaker — a size that changed the layout could
+    re-flow which dot lands on which row, so a step would reshuffle the whole block.
   - **The inactive opacity went 0.1 → 0.15.** A 5px dot at 10% of the foreground is very nearly not
     there; the shrink and the fade would otherwise compound.
   - Scale and opacity ride one transition, so the dot growing and the dot shrinking are a single

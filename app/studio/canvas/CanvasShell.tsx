@@ -28,9 +28,12 @@ import styles from './canvas.module.css';
  * files and cannot drift. What is restated is only the shape of the DOM.
  */
 
-/** Where the site's sticky section headers park, restated from `layout.tsx`. */
-const STICKY_TOP =
-  'calc(var(--tab-bar-height) + var(--tab-bar-gap-top) + var(--tab-bar-gap-bottom))';
+/**
+ * Where the site's sticky section headers park, restated from `layout.tsx` — which is now a
+ * single token rather than a sum, because the pinned bar is no longer as tall as the resting one
+ * and the arithmetic belongs beside the numbers it adds up. See `--tab-bar-gap-stuck`.
+ */
+const STICKY_TOP = 'var(--tab-bar-stuck-height)';
 
 /**
  * The site's tab bar, switching the canvas instead of navigating.
@@ -74,6 +77,11 @@ const CanvasTabs: React.FC = () => {
 
   return (
     <>
+      {/* The bar's resting air, the half of it that scrolls away rather than travelling with the
+          pinned bar. Restated from `Tabs.tsx` along with the rest of this markup, and it is
+          measurable, so leaving it out would put the canvas 20px out against `/` on each side of
+          the bar — see `.airTop` in Tabs.module.css. */}
+      <div className={tabs.airTop} aria-hidden="true" />
       <div ref={sentinelRef} className={tabs.sentinel} aria-hidden="true" />
       <div className={tabs.sticky} data-stuck={isStuck}>
         <nav
@@ -123,6 +131,9 @@ const CanvasTabs: React.FC = () => {
         </nav>
       </div>
       <div className={tabs.fade} data-stuck={isStuck} aria-hidden="true" />
+      {/* After the fade, not before it: the fade pins at `--sticky-top` and a spacer between the
+          two would delay that pin. Same order as `Tabs.tsx`. */}
+      <div className={tabs.airBottom} aria-hidden="true" />
     </>
   );
 };

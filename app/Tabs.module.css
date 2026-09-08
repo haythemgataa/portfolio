@@ -1,6 +1,6 @@
 /* Sticky wrapper. The page background is repeated here so content scrolling underneath
-   does not show through the track's rounded corners, and the symmetric vertical padding
-   doubles as the gap below the header when the bar is not yet stuck.
+   does not show through the track's rounded corners, and the symmetric vertical padding is the
+   air the bar keeps once it is pinned — the rest of the resting gap is the two spacers above.
 
    The wrapper is full-bleed: negative margins pull it out to the viewport edges and the
    horizontal padding puts it back to the content column, so the bar stays aligned with the
@@ -17,11 +17,47 @@
    It used to carry a `margin-top: 12px` as well, and that was a fourth, invisible contributor to
    the air above the bar: measured, the gap above the pill was 44px against 32px below, and
    nothing in `--tab-bar-gap-top` or About's margins accounted for the difference. The gap above
-   the bar is `--tab-bar-gap-top` and nothing else now. Removing it does not move the sentinel
-   relative to the wrapper, which is the only relationship the observer depends on. */
+   the bar is `--tab-bar-gap-top` and nothing else now — split between `.airTop` and the
+   wrapper's own padding, but summing to it. Removing that margin does not move the sentinel
+   relative to the wrapper, which is the only relationship the observer depends on — and it is
+   also why the spacer belongs *before* this marker rather than after it: air between the two
+   would fire the stick that much early. */
 .sentinel {
   height: 1px;
   margin-bottom: -1px;
+}
+
+/* The half of the bar's air that does *not* travel with it.
+
+   Padding on the sticky wrapper is air that cannot scroll away — it is inside the box being
+   pinned — so a bar whose gaps are all padding parks in exactly as much space as it rests in.
+   That was the point once and is not any more: 32px above and below a 32px pill is 96px of the
+   window given to two words for as long as the reader is anywhere down the page. Everything past
+   `--tab-bar-gap-stuck` therefore moves out of the wrapper and into these two spacers, which are
+   ordinary flow boxes: they scroll off the top like anything else, and the bar locks with only
+   its own padding around it.
+
+   Three things follow, and the first is why this needs no transition or measurement at all:
+
+   - **Nothing moves.** `spacer + padding` is the same total on each side, so the document's
+     height, the bar's resting position and every gap on screen at rest are unchanged to the
+     pixel. Shrinking the wrapper's padding on `[data-stuck]` instead would have shortened the
+     bar's flow box at the stick threshold and jumped everything below it up by the difference —
+     and animating that is 160ms of relayout on a 5,400px document, fought by scroll anchoring.
+   - **There is no edge to animate.** At rest the wrapper's background is transparent, so where
+     its box ends is invisible; the band only becomes visible as it fades in, already parked, at
+     its stuck size.
+   - **The bottom spacer goes *after* `.fade`, not before it.** The fade pins at `--sticky-top`
+     and its flow position is whatever follows the wrapper, so 20px of spacer between them would
+     delay its pin by 20px of scroll — leaving a strip of unfaded content between the band's hard
+     bottom edge and the top of the fade. Immediately after the wrapper, the two pin on the same
+     pixel: the wrapper's box *is* `--sticky-top` tall. */
+.airTop {
+  height: calc(var(--tab-bar-gap-top) - var(--tab-bar-gap-stuck));
+}
+
+.airBottom {
+  height: calc(var(--tab-bar-gap-bottom) - var(--tab-bar-gap-stuck));
 }
 
 /* The opaque background is only wanted once the bar is pinned and content is passing beneath
@@ -37,7 +73,7 @@
   transition: background-color 160ms ease;
   margin-left: calc(50% - 50vw);
   margin-right: calc(50% - 50vw);
-  padding: var(--tab-bar-gap-top) calc(50vw - 50%) var(--tab-bar-gap-bottom);
+  padding: var(--tab-bar-gap-stuck) calc(50vw - 50%);
 }
 
 .sticky[data-stuck="true"] {

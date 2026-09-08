@@ -98,9 +98,7 @@ export default async function RootLayout({
             // and it is not rendered at all while the gallery is empty — in which case they
             // belong at the very top instead of below a bar that is not there.
             style={{
-              '--sticky-top': showGallery
-                ? 'calc(var(--tab-bar-height) + var(--tab-bar-gap-top) + var(--tab-bar-gap-bottom))'
-                : '0px',
+              '--sticky-top': showGallery ? 'var(--tab-bar-stuck-height)' : '0px',
             } as React.CSSProperties}>
             {/* Drawn in CSS, not loaded. Sized against this column rather than the viewport
                 so the glow lands on the content at every browser width, and nested in two

@@ -312,23 +312,62 @@
    `z-index: 11` puts it above `.carousel` (10). That matters for the steps specifically: on a wide
    image the media reaches almost to the viewport edge, so the click-half over it would land on top
    of a button and swallow the press — the step still happened, but the button never saw its own
-   hover or focus. */
+   hover or focus.
+
+   **It spans the viewport and centres its contents, rather than being a content-width box pushed
+   to the middle with `left: 50%` and a counter-translate.** Those two are the same thing while the
+   cluster fits, and only one of them has a width for the dots to wrap against: a shrink-to-fit box
+   simply grew past both viewport edges, symmetrically, so the outermost dots were cut off — at 30
+   gallery entries the row is 414px, which overflows every phone. Measured before the change at
+   390px: the first dot at x = -12, and at 320px, x = -47.
+
+   The 24px gutter is `.lightboxImage`'s own horizontal padding restated, so the cluster stops
+   where the media does rather than at the glass.
+
+   The box is now much wider than its contents, hence `pointer-events: none` here and `auto` on the
+   two things inside that want a press. Without it the full-width band would swallow every click in
+   the bottom 48px of the backdrop, and a press either side of the arrows would stop dismissing the
+   viewer. */
 .controls {
   position: absolute;
   z-index: 11;
   bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  height: 48px;
+  left: 0;
+  right: 0;
+  /* Not `height`: the dots wrap, and a wrapped block has to be able to make the cluster taller
+     than one row. It grows upwards, being anchored to the bottom. Three rows (36px) still fit
+     inside the 48px `.lightboxImage` already reserves below the media, so nothing has to be
+     measured or reserved for the counts this site can produce — 30 entries wrap to two rows at
+     390px and need 22px. A fourth row would reach into the media's box, which takes ~70 items in
+     a phone-width viewport. */
+  min-height: 48px;
+  padding: 0 24px;
   display: flex;
   align-items: center;
+  justify-content: center;
   column-gap: 12px;
+  pointer-events: none;
 }
 
+/* Wraps, and every row is centred — including the last, partial one, which is the whole visible
+   difference between this and a row that simply runs off the edges.
+
+   It is the only shrinkable item in the cluster (the steps are `flex: 0 0 auto`), so it gives up
+   exactly the overflow and no more: the arrows stay beside it, and at a width where the dots wrap
+   they end up against the gutter with the rows filling the space between. `align-items: center`
+   on the cluster then centres a two- or three-row block on the arrows rather than aligning it to
+   either edge.
+
+   `pointer-events` is re-enabled because the cluster's is not: a press on the pager has always
+   landed on this box and done nothing, and letting it fall through to the backdrop instead would
+   make a press on the position indicator close the viewer. */
 .dots {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  column-gap: 6px;
+  justify-content: center;
+  gap: 6px;
+  pointer-events: auto;
 }
 
 /* The pager now reads as one full dot among smaller quiet ones, so the size carries the state as
@@ -414,6 +453,9 @@
   background-color: var(--background-muted);
   color: var(--foreground-secondary);
   cursor: pointer;
+  /* The cluster around it is click-through so the backdrop stays dismissable across the whole
+     bottom band; a button in it has to opt back in. */
+  pointer-events: auto;
   transition:
     background-color 150ms ease,
     color 150ms ease;

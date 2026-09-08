@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import Arrow12 from '../../Arrow12';
 import Attachments from '../../Attachments';
+import CaseStudies from '../../CaseStudies';
 import GalleryPreview from '../../GalleryPreview';
 import RichText from '../../RichText';
 import {
@@ -15,7 +16,7 @@ import {
 import profile from '../../Profile.module.css';
 import type { ContactItem, CvItem, CvSection, ResolvedMedia } from '../../lib/contentTypes';
 import { groupContactRows, isAddressContact } from '../../lib/contentTypes';
-import { resolveHeading, resolveMedia, silent } from '../../lib/resolveContent';
+import { resolveCaseStudy, resolveHeading, resolveMedia, silent } from '../../lib/resolveContent';
 import { sameSelection, useStudio } from '../lib/studioContext';
 import { useDragHandlers } from '../lib/useDragHandlers';
 import Editable from './Editable';
@@ -36,6 +37,18 @@ import SectionNumber from '../../SectionNumber';
  *   and wrong here: a section you just created has to be visible to put the first item in.
  * - **Pressing a thumbnail selects its asset** instead of opening the lightbox, via the one
  *   optional prop `Attachments` takes for it.
+ *
+ * The case studies block is **read-only** here: it renders, so the editor is not showing a page
+ * the site does not have, but it carries no ring, no toolbar and no `Editable`. `content/cv.json`
+ * is edited by hand. Two consequences of that:
+ *
+ * - `CaseStudies` is reused outright with `as="static"`, which swaps its `<Link>` for a `<span>`
+ *   — the same escape hatch `Attachments` gets from `onSelect`, and for the same reason: a copy
+ *   of that component here would drift, and a press would navigate out of the Studio.
+ * - **The canvas shows every authored case study, including one the site drops.** `contentLoader`
+ *   omits a study whose `content/case-studies/<slug>.md` is missing, and that check needs disk —
+ *   the one thing `resolveContent` cannot do. For a read-only view that is the better failure: a
+ *   missing markdown file is an authoring error worth seeing rather than hiding.
  */
 
 /** Icon-only buttons, so the glyph and the accessible name are declared together. */
@@ -295,7 +308,10 @@ const CanvasItem: React.FC<ItemProps> = ({
 
 const CanvasSection: React.FC<{
   section: CvSection;
+  /** Position in `cv.sections` — what every reorder addresses. */
   index: number;
+  /** Position in the *numbered* sequence, which the pinned case studies block shifts. */
+  ordinal: number;
   total: number;
   showDetails: boolean;
   onToggleDetails: () => void;
@@ -306,6 +322,7 @@ const CanvasSection: React.FC<{
 }> = ({
   section,
   index,
+  ordinal,
   total,
   showDetails,
   onToggleDetails,
@@ -340,8 +357,12 @@ const CanvasSection: React.FC<{
       >
         {/* The site's ordinal, same component and same stylesheet. It is derived from position
             there too, so dragging a section here renumbers it on the canvas exactly as the
-            rebuilt page will show it. */}
-        <SectionNumber index={index} />
+            rebuilt page will show it.
+
+            `ordinal` is separate from `index` because a block pinned ahead of `sections[]` shifts
+            the numbering without being part of the array — `index` still addresses the array, and
+            reusing it here would print numbers the rebuilt page disagrees with. */}
+        <SectionNumber index={ordinal} />
         <h2 className={styles.sectionTitleSlot}>
           <Editable
             value={section.label}
@@ -595,6 +616,18 @@ const CvCanvas: React.FC = () => {
 
   const contactSelected = sameSelection(selection, { kind: 'contact' });
 
+  // Resolved with the same function the build uses, bound to the Studio's plain `/media/` URL —
+  // the whole point of `resolveContent` being filesystem-free. `silent`, because an author
+  // mid-edit produces broken intermediate references constantly.
+  const caseStudies = useMemo(
+    () => (cv.caseStudies?.items ?? []).map((entry) => resolveCaseStudy(entry, assets, urlFor, silent)),
+    [cv.caseStudies?.items, assets, urlFor]
+  );
+
+  // The same derivation `Profile.tsx` makes, and it has to stay the same one: the ordinals here
+  // are a claim about what the rebuilt page will show.
+  const ordinalOffset = caseStudies.length > 0 ? 1 : 0;
+
   return (
     <>
       {teaser.length > 0 ? (
@@ -615,11 +648,25 @@ const CvCanvas: React.FC = () => {
         </div>
       ) : null}
 
+      {caseStudies.length > 0 ? (
+        <section className={profile.profileSection}>
+          <div className={profile.sectionHeader}>
+            <SectionNumber index={0} />
+            <h2>{cv.caseStudies?.label ?? 'Case Studies'}</h2>
+          </div>
+          {/* `as="static"` renders each card as a `<span>`: on the site the card is a real
+              `<Link>` to the case study, which here would navigate out of the Studio mid-edit —
+              the same problem the teaser above solves by cancelling its press. */}
+          <CaseStudies items={caseStudies} as="static" />
+        </section>
+      ) : null}
+
       {cv.sections.map((section, index) => (
         <CanvasSection
           key={section.key}
           section={section}
           index={index}
+          ordinal={index + ordinalOffset}
           total={cv.sections.length}
           showDetails={showDetails}
           onToggleDetails={() => setShowDetails((open) => !open)}
@@ -677,7 +724,7 @@ const CvCanvas: React.FC = () => {
             select({ kind: 'contact' });
           }}
         >
-          <SectionNumber index={cv.sections.length} />
+          <SectionNumber index={cv.sections.length + ordinalOffset} />
           <h2 className={styles.sectionTitleSlot}>
             <Editable
               value={cv.contact?.label ?? 'Contact'}

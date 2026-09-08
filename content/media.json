@@ -80,6 +80,26 @@
       "width": 1980,
       "height": 1620
     },
+    "deeppcb-board-viewer-v0.webp": {
+      "width": 1920,
+      "height": 1080
+    },
+    "deeppcb-board-viewer-v1.webp": {
+      "width": 2560,
+      "height": 1440
+    },
+    "deeppcb-board-viewer-v2.webp": {
+      "width": 2560,
+      "height": 1440
+    },
+    "deeppcb-board-viewer-v3.webp": {
+      "width": 2560,
+      "height": 1440
+    },
+    "deeppcb-board-viewer-v4.webp": {
+      "width": 2560,
+      "height": 1440
+    },
     "deeppcb-loading-animation-poster.webp": {
       "width": 720,
       "height": 720
@@ -92,6 +112,26 @@
     "deeppcb-stickers.webp": {
       "width": 1360,
       "height": 1200
+    },
+    "deeppcb-v4-explorer.webp": {
+      "width": 2172,
+      "height": 1652,
+      "framed": false
+    },
+    "deeppcb-v4-panel-states.webp": {
+      "width": 2338,
+      "height": 1838,
+      "framed": false
+    },
+    "deeppcb-v4-top-bar.webp": {
+      "width": 2658,
+      "height": 1570,
+      "framed": false
+    },
+    "deeppcb-v4-viewer-switcher.webp": {
+      "width": 2432,
+      "height": 1238,
+      "framed": false
     },
     "design-ruler-alignment-guides-poster.webp": {
       "width": 1600,

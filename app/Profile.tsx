@@ -11,6 +11,7 @@ import {
   hasPlatformIcon,
 } from "./ContactIcon";
 import { groupContactRows } from "./lib/contentTypes";
+import CaseStudies from "./CaseStudies";
 import GalleryPreview from "./GalleryPreview";
 import SectionNumber from "./SectionNumber";
 import styles from "./Profile.module.css";
@@ -58,6 +59,13 @@ const Profile: React.FC<ProfileProps> = ({
   const [showDetails, setShowDetails] = useState(false);
   const toggleDetails = () => setShowDetails(open => !open);
 
+  // Ordinals are positional everywhere in this content model — see `SectionNumber`. Pinning a
+  // section *ahead* of `sections[]` therefore shifts every number after it, so the shift is
+  // derived from whether that block renders at all rather than being a constant that would be
+  // silently wrong the day the CV has no case studies.
+  const hasCaseStudies = cv.caseStudies.items.length > 0;
+  const ordinalOffset = hasCaseStudies ? 1 : 0;
+
   return (
     <>
       {/* Opens the CV, directly under the shared About the layout renders above it. It lives
@@ -65,6 +73,17 @@ const Profile: React.FC<ProfileProps> = ({
           told which route it is rendering, so anything conditional up there needs a pathname
           test, whereas down here being on the CV *is* the condition. */}
       <GalleryPreview items={cv.profile.galleryPreview} />
+
+      {hasCaseStudies ?
+        <section className={styles.profileSection}>
+          {/* Pinned first rather than living in `sections`, so it takes ordinal `01` and the
+              timeline sections start at `02`. The `<section>` and the header stay here, exactly
+              as contact's do, which keeps the sticky-title geometry every section depends on in
+              one file. */}
+          <SectionHeader label={cv.caseStudies.label} index={0}/>
+          <CaseStudies items={cv.caseStudies.items}/>
+        </section>
+      : null}
 
       {cv.sections.map((section, sectionIndex) => (
         <Section
@@ -74,19 +93,23 @@ const Profile: React.FC<ProfileProps> = ({
           onToggleDetails={toggleDetails}
           // Only the first item of the first section is on screen when the page loads, so it
           // is the only thumbnail row whose images should skip the browser's viewport logic.
+          // The case studies block sits above it and pushes it down, but it carries no
+          // `Attachments` row of its own — its covers are their own small eager request — so the
+          // first row here is still the first one a reader meets.
           // The decision has to be made here: a row renders per item, so from inside one an
           // index says nothing about where it sits in the document — testing that index was
           // what put the first few thumbnails of *every* section into the initial fetch.
           priority={sectionIndex === 0}
-          index={sectionIndex}
+          index={sectionIndex + ordinalOffset}
         />
       ))}
 
       {cv.contact.items.length > 0 ?
         <section className={styles.profileSection}>
           {/* Contact is pinned last rather than living in `sections`, so its ordinal continues
-              the sequence from the end of that array instead of being counted with it. */}
-          <SectionHeader label={cv.contact.label} index={cv.sections.length}/>
+              the sequence from the end of that array instead of being counted with it — plus the
+              case studies block ahead of it, when there is one. */}
+          <SectionHeader label={cv.contact.label} index={cv.sections.length + ordinalOffset}/>
           {/* Grouped rather than laid out flat, so a row too wide for the column breaks between
               the address and the marks instead of stranding one lone mark up beside it — see
               `groupContactRows`. Every run is still in array order. */}

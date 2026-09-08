@@ -1,9 +1,11 @@
 import type {
+  CaseStudy,
   ContactItem,
   CvItem,
   CvProfile,
   HeadingSegment,
   MediaAsset,
+  ResolvedCaseStudy,
   ResolvedItem,
   ResolvedMedia,
   ResolvedProfile,
@@ -197,6 +199,60 @@ export function resolveProfile(
       .map((file) => resolveMedia(file, assets, urlFor, 'cv.json: profile.galleryPreview', warn))
       .filter((media): media is ResolvedMedia => media !== null),
   };
+}
+
+/**
+ * A colour that is safe to hand to an SVG `fill`.
+ *
+ * The value is authored free text, and the failure it guards against is quiet rather than loud:
+ * a malformed hex does not throw, it silently paints the folder black. So an unrecognised value
+ * warns and falls back to the page's own ink, which reads as deliberate rather than broken.
+ *
+ * Hex only. The folder's colour is a brand fact — one flat value per product — and accepting
+ * arbitrary CSS colour syntax here would widen what a content file can inject into an attribute
+ * for no authoring benefit.
+ */
+const HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+
+/** The fill a case study falls back to when its colour cannot be read. */
+export const FALLBACK_FOLDER_COLOR = 'var(--foreground-primary)';
+
+/**
+ * One case study, with its logo and cover resolved through the registry.
+ *
+ * The logo comes back as a bare URL: it is painted as a CSS mask, so nothing downstream wants
+ * its intrinsic size. It still goes *through* `resolveMedia` rather than straight through
+ * `urlFor`, because that is what checks the file is actually registered — an unregistered name
+ * would otherwise reach the stylesheet as a `url()` that quietly masks everything away, leaving
+ * a blank flap and no warning.
+ *
+ * A video cover is rejected. The sheet peeking out of the folder is a page, and nothing on this
+ * card would ever play it.
+ */
+export function resolveCaseStudy(
+  entry: CaseStudy,
+  assets: Record<string, MediaAsset>,
+  urlFor: AssetUrlFn,
+  warn: WarnFn = console.warn
+): ResolvedCaseStudy {
+  const { logo, cover, ...rest } = entry;
+  const referrer = `cv.json caseStudies/${entry.slug}`;
+
+  const logoMedia = logo ? resolveMedia(logo, assets, urlFor, referrer, warn) : null;
+
+  let coverMedia = cover ? resolveMedia(cover, assets, urlFor, referrer, warn) : null;
+  if (coverMedia && coverMedia.type !== 'image') {
+    warn(`${referrer}: cover "${cover}" is a video, and the folder's sheet is a still — skipping`);
+    coverMedia = null;
+  }
+
+  let color = entry.color;
+  if (!HEX_COLOR.test(color ?? '')) {
+    warn(`${referrer}: color "${color}" is not a hex value, falling back to the page's ink`);
+    color = FALLBACK_FOLDER_COLOR;
+  }
+
+  return { ...rest, color, logoUrl: logoMedia?.url ?? null, cover: coverMedia };
 }
 
 /** Contact rows carry no media and no tokens, so they pass through untouched. */

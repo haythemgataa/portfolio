@@ -46,6 +46,19 @@ Two things that follow from that, worth stating because they are easy to assume:
     "photo": "profile.webp",
     "galleryPreview": ["invoices-page.webp", "clicky.webp", "stolen-from-a-bento.webp"]
   },
+  "caseStudies": {
+    "label": "Case Studies",
+    "items": [
+      {
+        "slug": "deeppcb",
+        "title": "DeepPCB (AI EDA Tool for PCB layout)",
+        "subtitle": "Full Product Ownership / UI / Motion / AI-assisted Dev",
+        "color": "#F4741B",
+        "logo": "deeppcb-logo.svg",
+        "cover": "board-viewer-evolution-2023-2026-poster.webp"
+      }
+    ]
+  },
   "sections": [
     {
       "key": "workExperience",
@@ -215,6 +228,108 @@ at the cursor, so the filename never has to be typed. A file dropped into
 `public/media/` by hand is *unregistered* until it has a `media.json` entry, and
 unregistered files are unusable and absent from the picker.
 
+### `caseStudies`
+
+A column of cards above the first numbered section, each one a folder in the
+study's own colour with a page from it peeking out and the product's mark on the
+front flap. It is pinned rather than living in `sections[]` for the reason the
+next section gives: that array is homogeneous by construction, and this renders
+nothing like a timeline row.
+
+| Field | Required | What it is |
+|---|---|---|
+| `slug` | yes | Names `content/case-studies/<slug>.md` and the route `/<slug>` |
+| `title` | yes | The card's first line |
+| `subtitle` | no | The card's second line |
+| `color` | yes | The folder's fill, as a hex literal |
+| `logo` | no | Pool filename for the mark on the front flap |
+| `cover` | no | Pool filename for the page peeking out |
+
+Six things worth knowing:
+
+- **`slug` is the identity; there is no `id`.** It already has to be unique (it
+  names a file in a flat directory) and stable (it is the URL), so it is the
+  React key too. A second `"id": "deeppcb"` beside it would write the same word
+  twice — see "Dropped fields" below for the same argument applied to `role` and
+  `org`. Uniqueness is enforced among slugs only: a case study and a CV item
+  sharing a word collides in nothing.
+- **A study whose markdown file is missing is dropped, with a warning.** The card
+  would otherwise link to a 404. Adding the entry and writing the file are two
+  steps and the order does not matter; the card appears when both are done.
+- **Reserved slugs are refused at build time.** `app/[slug]` is a catch-all at the
+  *root*, so `gallery`, `studio`, `robots.txt`, `sitemap.xml` and
+  `__placeholder__` can never resolve to a case study. A collision throws rather
+  than silently rendering a card that goes somewhere else.
+- **`color` is hex only, and a bad value warns rather than throwing.** It reaches
+  an SVG `fill`, where a malformed string does not fail — it silently paints the
+  folder black. The fallback is the page's own ink, which reads as deliberate.
+  Hex rather than arbitrary CSS colour syntax because one flat brand value is all
+  this ever needs.
+- **`logo` and `cover` are pool references**, so both are counted by
+  `collectReferences()` and mirrored in the Studio's `cvUses`. Missing either
+  would have the sweep report a mark that is on screen as an orphan.
+- **The logo is painted as a white CSS mask**, so the file's own colours are
+  discarded and any logo works on any folder. It needs no `-dark` sibling: the
+  folder is a brand colour on both themes, and white holds on it either way.
+
+**The Studio renders this block read-only.** It is edited in `content/cv.json` by
+hand. The canvas also cannot apply the missing-markdown filter above — that check
+needs disk — so it shows every authored study, including one the site drops.
+
+#### How the markdown is read
+
+`content/case-studies/<slug>.md` is a plain document, but the page does not render
+it as one flat block: `parseCaseStudy` splits it into the numbered, sticky-titled
+sections the CV uses. What that expects of the file:
+
+- **An `h1` for the title, and one `h2` per section.** Nothing else is
+  interpreted; each section's body goes to `RichText` verbatim, so lists, bold
+  runs and links all behave as they do in a CV description.
+- **The `h1` is not what the page prints.** `caseStudies[].title` is, because the
+  page has to agree with the card the reader pressed. The `h1` is parsed out so it
+  is not rendered twice, and is used only as a fallback for a file with no entry
+  pointing at it.
+- **Do not number your own headings.** The ordinal is derived from position, the
+  same as a CV section's. A leading `1. ` is stripped from the label, so an older
+  draft still reads correctly, but there is no reason to write one.
+- **`---` between sections is dropped.** The section headers are the dividers; a
+  rule left at the top or bottom of a body would draw a line right under the title
+  that already separates them. A `---` *inside* a section survives.
+- A file with no `h2` at all still renders, as one untitled block.
+
+#### Images in a case study
+
+Standard markdown image syntax, with a **bare pool filename** as the source:
+
+```markdown
+![A description of what the picture shows](deeppcb-board-viewer-v4.webp)
+![Old sidebar and new, side by side](deeppcb-v4-explorer.webp "Display Settings became an explorer")
+```
+
+- **`alt` is the accessible description; a `title` is the visible caption.** Two
+  jobs, kept apart — printing the alt text under every picture would say the same
+  thing twice to anyone reading the page aloud. The caption is optional; most
+  pictures do not need one.
+- **The file must be registered in `media.json`,** like every other pool
+  reference. That is where the dimensions come from, and they are what hold the
+  row's height before the image loads.
+- **It is reference-counted.** `caseStudyImageFiles()` parses these out and
+  `readDoc` gathers them onto `Doc.caseStudyImages`, which `collectReferences`
+  takes as an argument — it cannot read disk, and this is the one kind of
+  reference that does not live in the JSON. Verified by removing a reference and
+  watching the file appear in the orphan report.
+- Only bare filenames count. An absolute or `https://` source is somebody else's
+  file: it renders as a plain `<img>` and nothing tries to protect it.
+- An unresolved filename renders as a broken `<img>` with a build warning, rather
+  than vanishing — the same call a heading's `[token]` makes.
+- **Every picture opens in the lightbox**, and the arrow keys step through them in
+  the order they appear in the document.
+- **`framed` controls the mat here too**, exactly as it does for a CV thumbnail:
+  omitted means matted, and only an explicit `false` opts out. An app screenshot
+  wants the mat — its own near-white background would otherwise dissolve into the
+  page. Artwork that already carries its own margin, like an annotated explainer,
+  sets `framed: false` so it is not matted twice.
+
 ### Fixed vs. orderable sections
 
 The sections do not all render the same way, and the ones that differ are the
@@ -226,6 +341,7 @@ drag them anywhere and hope, the document makes position structural:
 | Header — photo, name, byline | always first | no | `profile` |
 | About | always second, directly below the tab bar; renders untitled | no | `profile.about` |
 | Gallery teaser — a 2x2 grid | always third, below About; **CV route only** | no | `profile.galleryPreview` |
+| Case studies — a column of folder cards | always fourth, above the first numbered section; **CV route only** | no | `caseStudies` |
 | Work Experience, Education, Awards, Speaking, … | between | **yes** | `sections[]` |
 | Contact | always last | no | `contact` |
 | Footer — published date and location | below both routes, outside the CV | no | `profile.location` |

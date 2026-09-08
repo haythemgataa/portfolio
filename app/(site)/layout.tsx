@@ -1,20 +1,22 @@
 import type { Metadata } from "next";
-import "./globals.css";
-import styles from "./layout.module.css";
-import About from "./About";
-import ProfileHeader from "./ProfileHeader";
-import SiteFooter from "./SiteFooter";
-import Tabs from "./Tabs";
-import ThemeScript from "./ThemeScript";
-import ThemeSwitch from "./ThemeSwitch";
-import { switzer } from "./lib/font";
-import { loadProfileData } from "./lib/contentLoader";
-import { hasGalleryItems } from "./lib/galleryLoader";
-import { SITE_URL, pageTitle } from "./lib/site";
-import { THEME_SWITCH_ENABLED } from "./lib/theme";
+import "../globals.css";
+import styles from "../layout.module.css";
+import About from "../About";
+import ProfileHeader from "../ProfileHeader";
+import SiteFooter from "../SiteFooter";
+import Tabs from "../Tabs";
+import ThemeScript from "../ThemeScript";
+import ThemeSwitch from "../ThemeSwitch";
+import { switzer } from "../lib/font";
+import { loadProfileData } from "../lib/contentLoader";
+import { hasGalleryItems } from "../lib/galleryLoader";
+import { ogImages } from "../lib/ogImage";
+import { SITE_URL, pageTitle } from "../lib/site";
+import { THEME_SWITCH_ENABLED } from "../lib/theme";
 
 export async function generateMetadata(): Promise<Metadata> {
   const cv = await loadProfileData();
+  const images = await ogImages();
   return {
     // The site had no idea what its own origin was. `metadataBase` is what resolves every
     // relative URL the metadata layer emits — canonicals here, and whatever a social card
@@ -28,22 +30,26 @@ export async function generateMetadata(): Promise<Metadata> {
     // the card blocks below are left bare.
     title: pageTitle(cv.profile.displayName),
     description: cv.profile.byline || '',
-    // The card's text. Its *image* is deliberately not named here: `app/opengraph-image.png` is
-    // a file convention, so Next emits `og:image` and `twitter:image` for this segment along
-    // with the type, the real pixel dimensions read off the file, and a cache-busting hash —
-    // none of which a hand-written `images` entry would carry. A child that overrides this block
-    // loses the image and has to name it again; `/gallery` does, via `OG_IMAGE`.
+    // The card's image is named here, and it did not used to be. `app/opengraph-image.png` is a
+    // file convention, and a convention attaches to the *segment* it sits in — which used to be
+    // this layout's own, so declaring `openGraph` here still got the image for free. Splitting the
+    // routes into `(site)` and `(study)` root layouts moved `/` into a group and ended that: the
+    // home page silently lost its `og:image` while `/gallery`, which names the file by hand, kept
+    // one. Every route that declares this block now goes through `ogImages()`, which derives the
+    // dimensions, the alt text and a cache-busting hash from the bytes — see the note there.
     openGraph: {
       type: 'website',
       url: '/',
       siteName: cv.profile.displayName,
       title: cv.profile.displayName,
       description: cv.profile.byline || '',
+      images,
     },
     twitter: {
       card: 'summary_large_image',
       title: cv.profile.displayName,
       description: cv.profile.byline || '',
+      images,
     },
   };
 }

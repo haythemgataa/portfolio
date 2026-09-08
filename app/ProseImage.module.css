@@ -1,0 +1,111 @@
+/* An image in prose. No margin of its own: every block in a case study body is spaced by the
+   parent's `row-gap`, so a margin here would add to it rather than replace it. */
+.figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  row-gap: 8px;
+}
+
+/* Transcribed from `.frame` in `Gallery.module.css` rather than shared, the same trade `.srOnly`
+   and the gallery's Clear button make — a CSS module cannot export a selector. A picture in a case
+   study and a picture in the gallery are the same object and should not drift, so if that one
+   changes this follows by hand.
+
+   The first shadow layer is a spread rather than a blur, so it reads as a crisp outer edge doing
+   the job an outer hairline would — which is why the frame carries no border of its own and
+   `.frame::after` supplies the inner one. It is a light-theme treatment: on the dark ground the
+   ring resolves to about 1.02:1 and effectively disappears, leaving the inner hairline — which is
+   `--border`, so it has already flipped to white — to carry the edge.
+
+   **No `overflow: hidden` here, deliberately.** The mount below does the clipping, because the
+   frame is the mat and there is nothing at its edge to clip; and a clip on this element would be
+   the WebKit trap `Attachments.module.css` documents if a filter is ever added to it. */
+.frame {
+  position: relative;
+  width: 100%;
+  border-radius: 12px;
+  background-color: var(--background-muted);
+  box-shadow:
+    0 0 0 0.5px rgba(2, 6, 23, 0.08),
+    0 2px 8px 0 rgba(2, 6, 23, 0.04);
+}
+
+/* The mat: a band of the wash held around the print, so a screenshot whose own background is
+   near-white reads as a print on the page rather than as a region of it. It is the CV thumbnail's
+   treatment at page scale, chosen by the same per-asset `framed` flag — see `ProseImage.tsx`. */
+.frame[data-matted='true'] {
+  padding: var(--mat);
+}
+
+.frame::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  border: 1px solid var(--border);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* The picture's own box, carrying the media's ratio. It clips, so the print's corner belongs to
+   this element and the mat's belongs to the frame. */
+.mount {
+  position: relative;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+/* Unmatted, the picture *is* the frame's content, so it takes the frame's corner instead of a
+   print's. A pixel under 12 so the two curves do not fight at the join. */
+.frame[data-matted='false'] .mount {
+  border-radius: 11px;
+}
+
+/* The edge between the mat and the print. Unconditional in both themes, like the thumbnail's:
+   the mat needs an inside whichever colour it is wearing. */
+.frame[data-matted='true'] .mount::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  border: 1px solid var(--border);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* The button is the press target and nothing else — every visible property belongs to the frame
+   around it or the mount inside it, so a matted and an unmatted picture measure identically
+   whether or not they open. */
+.trigger {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-in;
+  border-radius: inherit;
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+/* The box already has the media's own ratio, so `cover` and `contain` agree to within rounding.
+   `cover` is the one that absorbs the half-pixel, the same call `Attachments` makes for an
+   unmatted thumbnail. */
+.image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* The gallery's caption treatment, and `text-wrap: pretty` by hand: this is a `<figcaption>`, so
+   the `p` rule in `globals.css` does not reach it — the same exception `.caption` in
+   `Gallery.module.css` and `.description ul li` already carry. */
+.caption {
+  font-size: var(--secondary-type-size);
+  line-height: var(--line-height);
+  color: var(--foreground-tertiary);
+  text-wrap: pretty;
+}

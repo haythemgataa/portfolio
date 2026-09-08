@@ -1,0 +1,166 @@
+/* The list. `margin-top` matches `.experiences` so the first card sits where a timeline
+   section's first row would, under a header of identical height. */
+.list {
+  display: flex;
+  flex-direction: column;
+  row-gap: 12px;
+  margin-top: 24px;
+}
+
+/* The card borrows `.contactPill`'s token set outright rather than approximating it — the muted
+   fill, the `--border` hairline, the `--background-hover` step. A case study card, a contact pill
+   and a tab are the same object: a raised control on the page's ground. Taking the tokens is what
+   stops the three drifting, and it is why the dark theme needs no rule here at all.
+
+   No indent below 480px, unlike `.experiences` and `.contacts`. This is a wide surface sitting
+   directly beneath the gallery teaser, which takes the whole column at every width; indenting one
+   and not the other reads as a misalignment between two adjacent surfaces rather than as rhythm. */
+.card {
+  display: flex;
+  align-items: center;
+  column-gap: 16px;
+  box-sizing: border-box;
+  /* 64px on the nose, and the arithmetic is worth stating because every term is load-bearing:
+     two 14px lines at the `.title`/`.subtitle` leading below (42px), 10px of padding either side,
+     and the two 1px hairlines. Change any one of them and the card is no longer 64.
+
+     `min-height` rather than `height`, because the height has to be a floor and not a promise. A
+     card whose title wraps — which "DeepPCB (AI EDA Tool for PCB layout)" does below ~600px — is
+     three lines, not two, and a fixed height would clip it. It also keeps a card with no subtitle
+     from coming out shorter than the rest of the column. */
+  min-height: 64px;
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background-color: var(--background-muted);
+  color: var(--foreground-secondary);
+  /* Declared, not inherited. The Studio renders this same card as a `<span>` and the site as an
+     `<a>`, and neither inherits the page font reliably — the trap `Tabs.module.css` documents,
+     where `.tab` set a size and a weight but no family and the Studio's `<button>` twin fell back
+     to Arial while the site's `<a>` stayed Switzer. */
+  font-family: inherit;
+  font-size: var(--type-size);
+  text-decoration: none;
+  transition: background-color 150ms ease;
+}
+
+/* Only the `:hover` half is gated, never the rest state — the split `.contactPill` documents. On
+   touch `:hover` sticks after a tap, and this card navigates, so a reader coming back would find
+   one still lit with nothing to clear it. */
+@media (hover: hover) {
+  .card:not([data-static]):hover {
+    background-color: var(--background-hover);
+  }
+
+  /* The sheet rises a little further out of the folder's mouth. It is a `translate` on a group
+     whose clip is a static ancestor, so the paper moves inside a window that does not — which is
+     what keeps the lower edge hidden behind the front flap. `transform-box: fill-box` is required:
+     without it an SVG group resolves the transform against the viewport rather than its own box. */
+  .card:not([data-static]):hover .sheet {
+    transform: translate(0, -1.5px);
+  }
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.sheet {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 160ms cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+/* The folder is a fixed box, so the card's height does not depend on the artwork resolving. */
+.folder {
+  position: relative;
+  flex-shrink: 0;
+  display: block;
+  width: var(--folder-size);
+  height: var(--folder-size);
+}
+
+.folderArt {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* The mark on the front flap.
+
+   A mask filled white rather than the file itself, because the pool's logos are drawn in their own
+   colours and this one has to read on the folder — see the note in `CaseStudyFolder.tsx` for why
+   this cannot happen inside the SVG.
+
+   Every number is a percentage of the folder's box, so the mark tracks `--folder-size` with nothing
+   to re-tune: the front flap spans y 11.87 → 44.87 in the artwork's 48-unit grid, so its centre is
+   at 59.2%, and the mark is 36% of the folder wide.
+
+   The perspective is the "slightly rotated to match the folder" half. `translate` has to come first
+   in the list — transform functions apply right to left, so the glyph is rotated and projected in
+   place and only then centred on the flap. */
+.folderLogo {
+  position: absolute;
+  left: 50%;
+  top: 59.2%;
+  width: 36%;
+  aspect-ratio: 1;
+  background-color: #fff;
+  transform: translate(-50%, -50%) perspective(60px) rotateX(14deg);
+
+  -webkit-mask-image: var(--logo-url);
+  mask-image: var(--logo-url);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  /* The card is a flex row and this is the growing child, so it needs a floor of its own or a long
+     title refuses to wrap — the same `min-width: 0` `.experienceContent` carries. */
+  min-width: 0;
+}
+
+/* **Both lines are set at 1.5, not the page's 1.6, and no row gap separates them.**
+
+   These are labels rather than prose — the same distinction that leaves `text-wrap: pretty` off
+   the titles and the byline in `globals.css`. Prose leading is set for a paragraph you read
+   across; a two-line label is a block you take in at once, and at 1.6 with a gap the two lines
+   drifted apart enough to read as two separate things rather than as a name and its subtitle.
+
+   It is also what makes the card 64px: 2 × 14 × 1.5 = 42, which is the content box exactly. The
+   leading still clears the face — a 21px line box around 14px type leaves 3.5px between the
+   descender of one line and the cap of the next — so the gap has nothing left to do. */
+.title,
+.subtitle {
+  line-height: 1.5;
+}
+
+.title {
+  color: var(--foreground-primary);
+  font-weight: var(--weight-emphasis);
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  color: var(--foreground-secondary);
+  font-weight: var(--weight-base);
+}
+
+/* The lift is the only thing that moves; the fill still steps, because that is what says which
+   card the pointer is on. */
+@media (prefers-reduced-motion: reduce) {
+  .sheet {
+    transition: none;
+  }
+
+  .card:not([data-static]):hover .sheet {
+    transform: none;
+  }
+}

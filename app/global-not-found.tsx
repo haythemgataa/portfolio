@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import layout from "./layout.module.css";
 import styles from "./NotFound.module.css";
+import Analytics from "./Analytics";
 import ThemeScript from "./ThemeScript";
 import ThemeSwitch from "./ThemeSwitch";
 import { switzer } from "./lib/font";
@@ -52,7 +53,7 @@ export async function generateMetadata(): Promise<Metadata> {
  * and the page does not scroll), which is why `experimental.globalNotFound` is enabled in
  * `next.config.ts`.
  *
- * The cost of stepping outside the layout is that four things it normally provides have to be
+ * The cost of stepping outside the layout is that five things it normally provides have to be
  * named here — and each of them is imported rather than restated, because a second copy is the
  * failure mode:
  *
@@ -63,6 +64,8 @@ export async function generateMetadata(): Promise<Metadata> {
  *   the one page that ignores it.
  * - **the glow and the dot texture**, which are `layout.module.css`'s own elements. They are what
  *   make this read as this site rather than as a generic error screen, and they cost no request.
+ * - **the analytics tag**, for the same reason — otherwise this is the one page whose visits are
+ *   never counted, and a 404 is arguably the page you most want to know about.
  *
  * What it does *not* re-create is the header, the tab bar, About or the footer. That is the point
  * of the file, not an omission.
@@ -87,6 +90,10 @@ export default async function GlobalNotFound() {
     >
       <head>
         <ThemeScript />
+        {/* The fifth thing this file has to re-declare because it replaces the layout rather than
+            rendering inside it, and the reason it is worth the line: a 404 is a page worth
+            counting, and it is the one page the layout can never reach. See Analytics.tsx. */}
+        <Analytics />
       </head>
       <body>
         <main className={styles.page}>

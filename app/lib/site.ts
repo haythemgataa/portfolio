@@ -48,6 +48,25 @@ export const OG_IMAGE_FILE = 'opengraph-image.png';
 export const IS_DEV_BRANCH = process.env.NEXT_PUBLIC_GIT_BRANCH === 'dev';
 
 /**
+ * Whether this build is the real, public site.
+ *
+ * It gates the two things that must happen on exactly one deploy and nowhere else: being indexed
+ * by search engines, and being counted by analytics. Set from the git branch in `next.config.ts`,
+ * so like the constants around it this is a build-time literal — the production export contains no
+ * trace of the `noindex` tag, and no other export contains the analytics script.
+ *
+ * **Three constants in this file now test the branch, and all three ask different questions.**
+ * `IS_DEV_BRANCH` tests `=== 'dev'` and marks *the* dev deploy, the one at a known URL that gets
+ * looked at beside the real site. `THEME_SWITCH_ENABLED` tests `!== PRODUCTION_BRANCH`, because a
+ * tool for checking themes belongs anywhere that is not production, feature-branch previews and
+ * local dev included. This one tests `=== PRODUCTION_BRANCH`, which is that comparison negated —
+ * and it is deliberately its own name rather than `!THEME_SWITCH_ENABLED`, because the two agree
+ * only by coincidence. Loosening the theme switch later must not quietly put a preview deploy back
+ * in the index, which is the failure this was added to fix.
+ */
+export const IS_PRODUCTION_DEPLOY = process.env.NEXT_PUBLIC_IS_PRODUCTION === 'true';
+
+/**
  * A page's `<title>`, suffixed on the dev deploy so a tab is identifiable at a glance when it is
  * open beside the real site.
  *

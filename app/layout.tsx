@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import styles from "./layout.module.css";
 import About from "./About";
+import Analytics from "./Analytics";
 import ProfileHeader from "./ProfileHeader";
 import SiteFooter from "./SiteFooter";
 import Tabs from "./Tabs";
@@ -11,7 +12,7 @@ import { switzer } from "./lib/font";
 import { faviconIcons } from "./lib/chromeAsset";
 import { loadProfileData } from "./lib/contentLoader";
 import { hasGalleryItems } from "./lib/galleryLoader";
-import { SITE_URL, pageTitle } from "./lib/site";
+import { IS_PRODUCTION_DEPLOY, SITE_URL, pageTitle } from "./lib/site";
 import { THEME_SWITCH_ENABLED } from "./lib/theme";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -33,6 +34,20 @@ export async function generateMetadata(): Promise<Metadata> {
     // script — the same reason a heading's `-dark` icon goes through `<picture>`. See
     // `faviconIcons`, which both this and the 404 read so the pair cannot drift.
     icons: faviconIcons(),
+    // **Keeps every non-production deploy out of search.** Verified live before this existed:
+    // `dev.haythem.cv` served `User-Agent: * / Allow: /`, no `X-Robots-Tag` and no robots meta,
+    // so the whole preview was crawlable and indexable.
+    //
+    // Declared here rather than per route because metadata is inherited *per field*: `/` and
+    // `/gallery` each override `alternates` and `openGraph` without touching this, so both pick it
+    // up. `global-not-found.tsx` deliberately declares none — Next already injects `noindex` into
+    // that route, and a second, competing tag is a bug its comment records.
+    //
+    // `undefined` on production rather than an explicit `index: true`: a page with nothing to say
+    // about indexing is the normal case, and emitting `all` would be one more tag to keep honest.
+    // `robots.txt` stays permissive on every branch precisely so this tag can be read — see the
+    // note in `app/robots.ts`.
+    robots: IS_PRODUCTION_DEPLOY ? undefined : { index: false, follow: false },
     // The card's text. Its *image* is deliberately not named here: `app/opengraph-image.png` is
     // a file convention, so Next emits `og:image` and `twitter:image` for this segment along
     // with the type, the real pixel dimensions read off the file, and a cache-busting hash —
@@ -94,6 +109,9 @@ export default async function RootLayout({
             rather than a literal here because `global-not-found.tsx` bypasses this layout and has
             to emit the same script itself, and two copies of one string is one copy too many. */}
         <ThemeScript />
+        {/* Production only, and a component rather than the tag inline because the 404 bypasses
+            this layout and has to emit the same thing — see Analytics.tsx. */}
+        <Analytics />
       </head>
       <body>
         <div className={styles.page}>

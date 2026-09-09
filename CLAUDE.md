@@ -10,7 +10,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run check:cdn` — Assert the Cloudflare image gate emits `/cdn-cgi/image/` URLs for
   production builds and none outside them. Runs two builds; not part of `npm run build`.
 
-`scripts/` holds `clean-export.mjs` and `fetch-font.mjs`, both of which `npm run build` runs
+`scripts/` holds `branch.mjs` — which is where `PRODUCTION_BRANCH` and the `CF_PAGES_BRANCH`
+lookup live, read by both `next.config.ts` and `clean-export.mjs` so the two cannot come to
+disagree about what "production" is — plus `clean-export.mjs` and `fetch-font.mjs`, both of which `npm run build` runs
 (the second via `prebuild`, and also on `postinstall` and `predev`), plus `gen-signature.mjs`,
 which is wired to nothing and is meant to be. The one-shot migrations that produced the current
 content model are gone — see git history if you need them.
@@ -2335,6 +2337,54 @@ stopped existing when `content/` moved out of `public/` to keep the JSON off the
 media pool had been served uncached, silently, since that migration. Extension rules are the
 backstop and `.webm` was missing from them, which is the pattern to watch: a new media type needs
 adding in both places or it inherits no cache policy at all.
+
+**Only the production branch is indexed, and until this existed none of that was true.** Verified
+live rather than reasoned about: `dev.haythem.cv/robots.txt` ended in `User-Agent: * / Allow: /`
+with a `Sitemap:` line pointing at production, `curl -I` returned no `X-Robots-Tag`, and `/` carried
+no robots meta — so the whole preview was crawlable and indexable, and its `sitemap.xml` handed any
+crawler that read it the *real* site's two URLs (because `SITE_URL` is hardcoded). Cloudflare's
+injected Managed Content block above our directives bars a handful of AI crawlers — `GPTBot`,
+`ClaudeBot`, `CCBot`, `Google-Extended` — and not `Googlebot`, so it was never doing this job.
+
+`NEXT_PUBLIC_IS_PRODUCTION` in `next.config.ts` feeds `IS_PRODUCTION_DEPLOY` in `lib/site.ts`, and
+three things read it. Five things about the arrangement:
+
+- **`robots.txt` still says `Allow: /` on every branch, and that is the deliberate, load-bearing
+  half.** `Disallow: /` is the obvious move for a preview host and the wrong one: a path a crawler
+  is forbidden to fetch is a path whose `noindex` it can never read, so anything already listed
+  keeps its stale entry indefinitely. Serving `noindex` on a *crawlable* page is the documented
+  removal path. What does change per branch is the `Sitemap:` line, which is omitted — a preview
+  has no sitemap worth submitting, and the one it would advertise is production's.
+- **The `robots` meta tag is declared once, in the root layout**, because metadata is inherited
+  *per field*: `/` and `/gallery` override `alternates` and `openGraph` without touching it, so
+  both pick it up. `global-not-found.tsx` still declares none — Next injects `noindex` into that
+  route itself, and a second competing tag is the bug its own comment records. Measured on a dev
+  export: one tag on `/`, one on `/gallery`, exactly one on `404.html`.
+- **`X-Robots-Tag: noindex, nofollow` is injected into `out/_headers` by
+  `scripts/clean-export.mjs`**, and it is not a duplicate of the meta tag — it reaches what a meta
+  tag cannot. `sitemap.xml`, `404.html` and every file in the pool are indexable URLs with nowhere
+  to put a `<meta>`. Confirmed against the live deploy that the `/*` block does reach `/`:
+  `Referrer-Policy`, `X-Frame-Options` and `Permissions-Policy` are all present on it.
+- **The line goes *inside* the existing `/*` block, not into a second one**, so it does not rest on
+  whether Cloudflare Pages applies every matching rule cumulatively or stops at the first match.
+  The script **throws** when that block is missing: the file's shape is the contract, and a rewrite
+  that quietly wrote nothing is the exact failure being guarded against. Both branches of that were
+  tested by hand, including the throw.
+- **A dev page's canonical still points at production**, which is the one thing that was already
+  right — `SITE_URL` is hardcoded, so a crawler that reaches a preview is told where the real page
+  is. That is why it stays hardcoded rather than becoming per-branch.
+
+**Simple Analytics is gated on the same constant** (`app/Analytics.tsx`). It is a component rather
+than the tag written inline for `ThemeScript`'s reason: `global-not-found.tsx` bypasses the layout
+and has to emit the same thing, and a 404 is arguably the page most worth counting. React 19 hoists
+`<script async src>` into `<head>` and dedupes by `src`, so rendering it from a component lands it
+once — verified in the export, one script tag per page, in `<head>`. Two things worth knowing:
+**dev traffic is the author's own**, so counting it would corrupt the numbers rather than add to
+them, which is why this is branch-gated and not merely `localhost`-excluded; and
+**`data-collect-dnt="true"` is a real choice**, not boilerplate — it opts *into* counting visitors
+with Do Not Track set. The argument for it is that what is collected is the same either way, no
+cookie and no cross-site identifier, so honouring DNT would discard page views without withholding
+anything personal. Drop the attribute to exclude them.
 
 **Every pool URL therefore carries a `?v=<hash>` content hash, built in `assetUrl()`** — the one
 place a `/media/` URL is constructed, so item media, posters, item icons, dark variants and the

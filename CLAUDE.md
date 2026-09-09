@@ -1913,10 +1913,10 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
 ### Component Patterns
 
 - **Server components** (async): `layout.tsx`, `page.tsx`, `[slug]/page.tsx` — handle data loading
-- **Client components** (`"use client"`): `Profile.tsx`, `Attachments.tsx`, `Lightbox.tsx`, `Scrollbar.tsx`, `RichText.tsx`, `Gallery.tsx`, `Tabs.tsx`
+- **Client components** (`"use client"`): `Profile.tsx`, `Attachments.tsx`, `Lightbox.tsx`, `Scrollbar.tsx`, `RichText.tsx`, `Gallery.tsx`, `Tabs.tsx`, `LastUpdated.tsx`, `LocalTime.tsx`, `Colophon.tsx`
 - **`SiteFooter.tsx` is in the root layout**, below the bar, so it closes both routes — the gallery
-  would otherwise just stop after its last item. It carries the published date at one end and
-  `profile.location` at the other. Five things there:
+  would otherwise just stop after its last item. It is a stack against a control: the place above
+  the published date at one end, and the colophon at the other. Eight things there:
   - **It sits on the column's own edge at every width, and carried a narrow-viewport indent
     until it did.** Below 480px `.experiences` and `.contacts` take `margin-left: 16px` to clear
     the section title, and the footer used to follow them. That matched the wrong thing: the
@@ -1925,9 +1925,122 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
     edge. Measured at 375px: all of those at x = 24 and the footer alone at x = 40, so "Last
     updated" lined up with the CV's item bodies and with nothing whatever on `/gallery`. Only its
     left edge ever moved, since the row is `space-between` against the column's right edge.
-    One consequence worth knowing: the row is now 16px wider, so the date and the location
-    collide — and therefore stack — at a narrower viewport than before. Measured with the stand-in
-    face rather than Switzer, the flip moved below 320px, where the pair used to stack.
+    One consequence worth knowing: the row got 16px wider, which used to mean the date and the
+    location collided — and therefore stacked — at a narrower viewport than before. **That no
+    longer applies**: the two are stacked unconditionally now (see the next bullet), so the row's
+    two children are a two-line block and a button, and measured at 375px they occupy about 200px
+    of a 335px column. It does not wrap at any width the site supports.
+
+  - **The place sits *above* the date, and that order is the cursor's constraint rather than a
+    preference.** The Figma cursor's sequence ends below the date and the hand hangs some 61px
+    past it — which is what `.footer`'s `padding-bottom: 60px` reserves — so whatever is under the
+    date is something the hand lands on top of. `.row` used to express this with
+    `flex-wrap: wrap-reverse`, which hoisted the location above the date *only* once the two
+    collided; `.stack` states it in the markup instead, so it holds at every width. **The
+    reversal had to go rather than merely become redundant**: left in place it would have put the
+    colophon button above the stack the moment the row wrapped, which is the same bug aimed at a
+    different pair.
+
+    **`.row` is `align-items: last baseline`, which sits the colophon button on the *date's* line
+    rather than the place's, and plain `baseline` is the trap worth naming.** A flex item's
+    baseline is its *first* line's, so against a column-flex `.stack` that resolves to the place —
+    the top line, the one thing this must not align to. `last baseline` asks for the stack's final
+    line, which is the date. `flex-end` is declared first as the fallback, the same shape as
+    `overflow-x: hidden` before `clip`; it is a near miss rather than a different design, because
+    the stack's bottom edge *is* the date's line box. Measured both: `last baseline` puts the two
+    baselines 0px apart, `flex-end` 1px. `.colophon` carries no `align-self` for this reason — it
+    had `flex-start` while the button sat on the place's line, and that would now silently win.
+
+    Measured at 375 / 480 / 843px: the colophon's baseline and the date's are identical at every one,
+    place and colophon flush to the column's own edges, 4px between the two stacked lines, footer
+    126.8px on both routes, no horizontal overflow, and 22.5–23.3px of clear space below the
+    cursor's lowest frame at the end of the document.
+
+  - **Hovering, focusing or pressing the place swaps `{(GMT+1)}` for the actual time there**
+    (`LocalTime.tsx`). Five things:
+    - **It is a `<button>` reset to inherit the line it used to be.** Hover alone would make this
+      invisible on every phone and to every keyboard, which is the same argument that makes the
+      contact row's address pill a button rather than a link. The element changed and the
+      appearance deliberately did not — the only chrome it gains is a focus ring. `font: inherit`
+      is load-bearing: a `<button>` inherits neither the family nor the size, the trap `.tab`
+      already hit where the Studio's `<button>` twin fell back to Arial.
+    - **The resting render is the authored label, on the server and on the hydrating client's
+      first render alike**, and the clock is only ever read inside an event handler. So there is no
+      hydration mismatch and — the half that matters — no build-time `new Date()` leaking onto the
+      page. That is the same boundary `LastUpdated` exists to hold, now running both ways in one
+      footer: the date must stay the build's, and this must be the visitor's *now*.
+    - **`Africa/Tunis`, not a fixed `+01:00`.** Tunisia has not observed DST since 2008, so the
+      offset is right today — and that is exactly the kind of fact that goes stale unnoticed, where
+      an IANA zone cannot.
+    - **24-hour, which is a measurement rather than a taste**: `(17:54)` is exactly as many
+      characters as the `(GMT+1)` it replaces, where `(5:54 PM)` is two longer and visibly
+      stretches the line under the pointer that asked for it. The run still narrows ~11px (digits
+      are tighter than those letters), and nothing moves: measured, the colophon button's left edge
+      and the date line's top are pixel-identical across the swap, because it is pinned to the
+      column's far edge by `space-between` and the change is absorbed by the gap. `.locationMuted`
+      carries `tabular-nums` so the minute rolling over cannot jiggle the string either.
+    - **The accessible name renames itself instead of carrying `aria-pressed`** — both would make
+      a screen reader announce the state twice, the argument the CV's Show/Hide Details control
+      already makes. An `.srOnly` span says what a press would do next ("Show local time" /
+      "Show time zone") while the visible text says what is on screen now.
+    - The press is filtered by `pointerType`. A mouse press would otherwise *cancel* the reveal
+      that the pointer arriving had just produced, so it reads as the feature refusing to work;
+      touch and pen toggle, because Safari does not focus a button on press and there is no hover
+      there to fall back on. `pointerleave` also declines to hide anything while the button still
+      holds focus, or a mouse user who clicks and moves away is left with a focus ring around a
+      reverted label.
+
+  - **The colophon button opens `Colophon.tsx`, and the list it shows lives in `app/lib/colophon.ts`.**
+    Named for the publishing sense of the word — the note at the back of a book naming the
+    typefaces, the materials and the people — which is both what the panel contains and where it
+    sits. It was "Credits", which is the label anything would carry: it says a list exists without
+    saying what kind, where this one names a shut-down platform, a signature face and a hosting
+    edge in one breath. The cost is a reader who has to open it to learn the word, which on a
+    footer link is a small price and arguably the invitation.
+    Four things:
+    - **A quiet text button, not a pill.** `.detailsToggle`'s treatment, borrowed for the third
+      time (the gallery's Clear was the second): resolving to nothing at rest and to
+      `--foreground-primary` under the pointer. A filled `--background-muted` pill here would be
+      the loudest thing in the footer for the whole length of the page's ending. It is set at
+      `--type-size` rather than `.detailsToggle`'s `--secondary-type-size`, because the register it
+      has to match is the footer's 14px text, not the CV header's 12px labels.
+    - **The list is code, not content.** `content/` is authored through the Studio and
+      reference-counted against `media.json`; credits are neither, so this is the `TAG_MARKS` /
+      `PLATFORM_MARKS` shape — a hand-authored closed vocabulary with an honest empty case, and a
+      fourth content file avoided. **It carries no version numbers**, because nothing would keep
+      them honest against `package.json`; that is the social card's hand-written dimensions and a
+      video's `media.json` measurements again. `href` is omitted where there is no address worth
+      sending a reader to — Read.cv's domain answers 402 — so that one renders as a plain name.
+    - **It credits what a reader could not infer, and nothing else.** TypeScript and CSS Modules
+      were listed and are gone: naming them says nothing a developer looking at a 2026 Next.js
+      site does not already assume, and a list padded with the obvious is one nobody reads to the
+      end of. The test for an entry is whether someone would be surprised to learn it. Two
+      consequences of applying it: **`Foundation` leads the list**, holding Read.cv alone — the
+      one entry that is not a tool, since everything else is something the site is built *with*
+      and that is what it is built *after* — and the brand-marks disclaimer that used to sit under
+      `Icons` is gone, because that claim is load-bearing in `LICENSE-CONTENT` and was only UI copy
+      here. `CreditGroup` lost its `note` field with it rather than keeping an unused one.
+    - **A credit line is inline flow, not flex, and it was flex once** — the call
+      `Gallery.module.css` documents for its date-and-tags line, made here for a reason of its own.
+      As a wrapping flex row, a note too long for the remaining width was pushed onto a line of its
+      own flush under the name (measured: two of the eleven were), and a full-width tertiary line
+      directly beneath an entry reads as *another entry*. Inline, the note continues the line and
+      wraps mid-phrase like the prose it is — and gets baseline alignment for free, which the flex
+      version needed `align-items: baseline` to buy back.
+    - **The dialog is structurally the lightbox's**, which is the only shippable overlay this
+      codebase has (the Studio's `AskDialog` is not a precedent: no portal, no scroll lock, no Tab
+      trap, because the Studio already owns the screen). Reused: the `window`-level key handler
+      with its `!root.contains(active)` recovery branch, the focus round trip, the shared
+      `useScrollLock`, the backdrop-as-sibling layering — which is what saves the content a
+      `stopPropagation` — and the close button's two-span cross. It portals without a mount guard
+      for the lightbox's reason: it is only reachable from state a press sets, so it is never part
+      of a server render. `z-index: 990`, deliberately below the lightbox's 999.
+    - **The backdrop veils rather than replaces**, and it is `--backdrop`'s first shipping use —
+      the palette table above had listed that token as Studio-only, exactly as it had `--green`
+      before the contact row's check. The lightbox's opaque `--background-primary` is right for a
+      total takeover of the gallery and wrong for a panel over a page still being read. The sheet
+      takes `max-height: calc(100dvh - 48px)`; `dvh` and not `vh`, or mobile Safari's toolbar
+      covers the last group.
   - Its "Last updated" is `new Date()` at module scope in a *server* component, so it is evaluated
     once during the build and baked into the export. That is what the phrase means for a static
     site, and it is deliberately not a content field: a date that has to be remembered goes stale,
@@ -2155,11 +2268,19 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
 - **`aria-modal` is a promise, so Tab is trapped.** The key handler cycles focus within the portal
   root; without it one Tab off the close button walked into the page behind the backdrop, where
   Enter on a thumbnail opened a *second* lightbox over the first.
-- **The scroll lock is reference-counted at module scope.** Each instance used to save the inline
-  values it found and restore them on unmount, which is right for one lightbox and destructive for
-  two: the second captures the *locked* values, and whichever unmounts last writes
-  `overflow: hidden` and the gutter padding back onto the document — an unscrollable page with
-  nothing open and no recovery but a reload.
+- **The scroll lock is reference-counted at module scope, and it lives in `useScrollLock.ts`
+  rather than here.** Each instance used to save the inline values it found and restore them on
+  unmount, which is right for one lightbox and destructive for two: the second captures the
+  *locked* values, and whichever unmounts last writes `overflow: hidden` and the gutter padding
+  back onto the document — an unscrollable page with nothing open and no recovery but a reload.
+
+  **That counter is module state, which is what makes the hook mandatory rather than tidy.** A
+  second copy of the file gets a second counter and a second saved snapshot, and the bug above
+  comes straight back — silently, and only for a reader who has opened both overlays in one
+  session. There are two callers now, this and the footer's colophon; a third must import it.
+  Verified after the extraction: opening and closing the colophon, then a lightbox, leaves
+  `document.body.style.overflow` empty and `overflow-x` still computing to `clip` from
+  `globals.css` (an inline `unset` overriding that is the *other* trap the hook documents).
 - **Opening the lightbox reserves the scrollbar's width as `padding-right` on `<html>`.** Locking
   the scroll takes the scrollbar away, which widens the viewport by its width and slides the
   centred content column sideways by half of that — 7.5px at a 15px scrollbar — then back again on
@@ -2231,7 +2352,8 @@ that cut it is worth knowing about before adding anything back.
 | `--foreground-tertiary` | `#9499a3` | `#868d99` | Dates, quiet text, the scrollbar thumb |
 | `--blue` | `#0788f5` | — | Links and every focus ring |
 | `--green` | `#10a530` | — | The contact row's copied check, and the Studio |
-| `--backdrop`, `--red` | | | Studio only; these ship nowhere |
+| `--backdrop` | `rgb(0 0 0 / .3)` | `rgb(0 0 0 / .5)` | The veil behind the footer's colophon, and the Studio's dialogs |
+| `--red` | | | Studio only; this one ships nowhere |
 
 Plus two values derived from `--overlay-ink` (`#000` light, `#fff` dark), which is not a palette
 colour so much as the direction "away from the ground":

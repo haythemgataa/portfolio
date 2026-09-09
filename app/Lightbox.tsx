@@ -6,6 +6,7 @@ import useResizeObserver from "use-resize-observer";
 import ReactDOM from 'react-dom';
 import isMobile, { useIsMobile } from './isMobile';
 import { useHasHover } from './useHasHover';
+import { useScrollLock } from "./useScrollLock";
 import { usePrefersReducedMotion } from './usePrefersReducedMotion';
 import { cloudflareImageUrl } from './lib/cloudflareImage';
 import styles from './Lightbox.module.css';
@@ -100,18 +101,6 @@ const formatTime = (seconds: number) => {
 };
 
 /**
- * The scroll lock is reference-counted at module scope rather than per instance.
- *
- * Each instance used to save the inline values it found and put them back on unmount, which is
- * correct for one lightbox and destructive for two: the second saves the *locked* values, and
- * whichever unmounts last writes `overflow: hidden` and the gutter padding back onto the
- * document — leaving the page unscrollable with nothing open and no way to recover but a reload.
- * Counting means the values are captured once, on the way in, and restored once, on the way out.
- */
-let scrollLocks = 0;
-let lockedStyles: { body: string; html: string; padding: string } | null = null;
-
-/**
  * The transport glyphs, at the size the badge over the media wants them.
  *
  * The triangle's points put its centroid a shade right of the box's centre — a play triangle
@@ -183,55 +172,11 @@ const Lightbox: React.FC<LightboxProps> = ({
     }
   }, [isMobileNow, startingIndex]);
 
-  // Restore the previous inline values rather than writing 'unset'. globals.css
-  // sets `overflow-x: hidden` on html/body, and an inline `overflow: unset`
-  // overrides it — so clearing that way leaves the page horizontally scrollable
-  // after the lightbox closes.
-  //
-  // The padding is what stops the page jumping. Locking the scroll takes the
-  // scrollbar away, which widens the viewport by its width and slides the centred
-  // content column sideways by half of that — 7.5px here — then back again on
-  // close, which is the visible snap as the scrollbar returns. Reserving the same
-  // width as padding on the element that lost it keeps every box exactly where it
-  // was, so nothing reflows in either direction.
-  //
-  // `scrollbar-gutter: stable` would be the declarative version of this and does
-  // not work: the gutter is dropped as soon as `overflow` becomes `hidden`
-  // (measured — `clientWidth` still jumps the full 15px), so the width has to be
-  // measured and put back by hand. It measures 0 with overlay scrollbars, which is
-  // exactly right — nothing was taken away, so nothing is added.
-  //
-  // Reference-counted at module scope — see `scrollLocks` above for why saving
-  // and restoring per instance is the half of this that breaks.
-  useEffect(() => {
-    const html = document.documentElement;
-
-    if (scrollLocks === 0) {
-      lockedStyles = {
-        body: document.body.style.overflow,
-        html: html.style.overflow,
-        padding: html.style.paddingRight,
-      };
-
-      const gutter = window.innerWidth - html.clientWidth;
-
-      document.body.style.overflow = 'hidden';
-      html.style.overflow = 'hidden';
-      if (gutter > 0) {
-        html.style.paddingRight = `${gutter}px`;
-      }
-    }
-    scrollLocks += 1;
-
-    return () => {
-      scrollLocks -= 1;
-      if (scrollLocks > 0 || !lockedStyles) { return }
-      document.body.style.overflow = lockedStyles.body;
-      html.style.overflow = lockedStyles.html;
-      html.style.paddingRight = lockedStyles.padding;
-      lockedStyles = null;
-    };
-  }, []);
+  // Holds the page still while the lightbox is open, restoring it — and the scrollbar's width as
+  // padding, so nothing shifts sideways — on the way out. Reference-counted at module scope in the
+  // hook, which is also why it is a hook: a second copy of that counter is the bug it exists to
+  // fix. See useScrollLock.ts.
+  useScrollLock();
 
   // Move focus into the dialog on open and hand it back to the trigger on close,
   // so keyboard users are not left tabbing the page behind the lightbox.

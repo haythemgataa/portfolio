@@ -384,13 +384,28 @@
 /* A `{...}` run — see `splitMuted` in lib/contentTypes.ts. Same grey as `.updated`, so the
    offset and the label it faces sit at one level.
 
-   `tabular-nums` because this is the run the clock replaces, and the clock ticks: with
-   proportional figures the minute rolling from `(17:59)` to `(18:00)` changes the string's width
-   under a pointer that is resting on it. It costs the authored `(GMT+1)` nothing — it has one
-   digit. */
+   **Monospaced, which is what makes "nothing moves" a guarantee rather than an observation.**
+   This is the run the clock replaces, and it is replaced by way of a scramble that cycles
+   arbitrary glyphs through every position on the way (see `scrambleText.ts`). With a proportional
+   face the box would be a different width for `(GMT+1)`, for `(17:54)`, and for every frame of
+   noise in between — the string is the same seven characters throughout, so one advance per glyph
+   makes all three identical by construction. It replaces a `tabular-nums` that only ever fixed the
+   narrower problem of a minute rolling over, which monospacing subsumes.
+
+   A system stack, so it costs no request and no `@font-face` — the site self-hosts exactly one
+   face and this is not worth a second. `monospace` last is the generic that guarantees *some*
+   fixed-pitch face wherever the named ones are absent, which is what the guarantee above rests on.
+
+   The size is stepped down from the 14px it inherits, and the step is measured rather than
+   eyeballed: a mono face carries a large cap for its nominal size, so at a matched 14px this one's
+   cap comes to 10.39px against the place's 10.08px — *larger* than the primary text it is an aside
+   to, which is the wrong way round. At 13px it is 9.65px, 96% of the place, and the x-heights land
+   at the same ratio. The baseline is shared exactly and the line box is untouched at 22.4px, so
+   the step costs the row nothing. */
 .locationMuted {
   color: var(--foreground-tertiary);
-  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
 }
 
 /* The colophon control, at the row's other end.

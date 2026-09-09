@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { scrambleText } from "./scrambleText";
+import { usePrefersReducedMotion } from "./usePrefersReducedMotion";
 import styles from "./SiteFooter.module.css";
 import type { MutedSegment } from "./lib/contentTypes";
 
@@ -15,9 +17,10 @@ import type { MutedSegment } from "./lib/contentTypes";
 const TIME_ZONE = "Africa/Tunis";
 
 /**
- * 24-hour, which is not a stylistic preference: `(17:54)` is exactly as many characters as the
- * `(GMT+1)` it replaces, where `(5:54 PM)` is two longer and visibly stretches the line under the
- * pointer that asked for it.
+ * 24-hour, and the character count is the point rather than the style: `(17:54)` is exactly as
+ * long as the `(GMT+1)` it replaces, where `(5:54 PM)` is two longer. Paired with the monospaced
+ * `.locationMuted`, equal length is equal width — so the swap and the scramble that performs it
+ * cannot resize anything.
  *
  * `en-GB` rather than the visitor's locale for the same reason — a locale that resolves to
  * `h:mm a` would put the length back whatever `hour12` says on some engines.
@@ -40,7 +43,8 @@ type LocalTimeProps = {
 };
 
 /**
- * Where the author is, and — on hover, focus or a press — what time it is there.
+ * Where the author is, and — on hover, focus or a press — what time it is there, the offset
+ * scrambling into the clock.
  *
  * **A `<button>`, not a span with pointer handlers.** Hover alone would make this invisible on
  * every phone and to every keyboard, and the reveal is a real if small action, which is the same
@@ -48,7 +52,7 @@ type LocalTimeProps = {
  * inherit the surrounding type — no pill, no border, no fill — so the footer's line reads exactly
  * as it did; the only chrome it gains is a `:focus-visible` ring.
  *
- * Four things about it:
+ * Six things about it:
  *
  * - **The resting render is the authored label**, on the server and on the hydrating client's
  *   first render alike. The clock is only ever read inside an event handler, so there is no
@@ -56,26 +60,40 @@ type LocalTimeProps = {
  *   into the page. That is the same boundary `LastUpdated` exists to hold: this is a client
  *   component beside a server one precisely so that "last updated" stays the build's date while
  *   this one is the visitor's *now*.
- * - **It replaces the muted run, not the whole line.** `{(GMT+1)}` is what the reveal is an answer
- *   to, and "Tunisia" is true either way. With more than one `{...}` run every one of them would
- *   swap, which is a shape the authored string does not currently have and would read oddly if it
- *   did — worth knowing before adding a second brace pair to `profile.location`.
- * - **Nothing to its right moves.** The run narrows a little on reveal (digits are tighter than
- *   `GMT+1`'s letters even at equal character count), and the colophon button beside it is pinned
- *   to the column's far edge by `space-between`, so the change is absorbed by the gap. The muted
- *   run also carries `tabular-nums`, so the minute rolling over cannot jiggle the string.
- * - **The name renames itself instead of carrying `aria-pressed`.** Both would make a screen
- *   reader announce the state twice — the argument the CV's Show/Hide Details control already
- *   makes. So an `.srOnly` span says what a press would do next, and the visible text says what
- *   is on screen now.
- *
- * No transition on the swap. A crossfade would need both strings stacked in one grid cell, which
- * means reserving the wider of the two forever; the swap moves nothing, so there is nothing to
- * smooth over.
+ * - **It swaps the first muted run and leaves any others alone.** `{(GMT+1)}` is what the reveal
+ *   answers, and "Tunisia" is true either way. Addressing the *first* `{...}` rather than every
+ *   one of them means a second brace pair added to `profile.location` later keeps its own text,
+ *   which is right — it would not be the timezone.
+ * - **Nothing resizes, and that is now structural rather than lucky.** `.locationMuted` is
+ *   monospaced, so every glyph — the label's, the clock's, and every character the scramble
+ *   cycles through — has one advance. Equal character count is therefore equal width, through the
+ *   whole animation and not merely at its two ends.
+ * - **The transition scrambles; the clock ticking does not.** A press or a pointer arriving runs
+ *   `scrambleText`; the once-a-second catch-up writes the new value straight in, and only while no
+ *   scramble is running. Re-scrambling on a minute rollover would fire at an arbitrary moment
+ *   under a reader's eye, which is a distraction rather than an effect.
+ * - **`prefers-reduced-motion` skips the animation, not the feature.** The value swaps instantly;
+ *   what it says is the information, and the resolve is the ornament.
+ * - **The accessible name renames itself instead of carrying `aria-pressed`.** Both would make a
+ *   screen reader announce the state twice — the argument the CV's Show/Hide Details control
+ *   already makes. So an `.srOnly` span says what a press would do next, and the visible text says
+ *   what is on screen now. It is driven by the *intent* rather than by the animating string, so it
+ *   never announces a frame of noise.
  */
 const LocalTime: React.FC<LocalTimeProps> = ({ segments }) => {
-  const [time, setTime] = useState<string | null>(null);
-  const timer = useRef<ReturnType<typeof setInterval>>(undefined);
+  /** True from the moment the reveal is asked for, whatever the animation is currently showing. */
+  const [shown, setShown] = useState(false);
+  /**
+   * What the muted run renders. `null` means "whatever the document authored", which is what keeps
+   * the resting markup identical to the server's and out of the animation's hands entirely.
+   */
+  const [display, setDisplay] = useState<string | null>(null);
+  const prefersReducedMotion = usePrefersReducedMotion();
+
+  const tick = useRef<ReturnType<typeof setInterval>>(undefined);
+  const cancelScramble = useRef<(() => void) | null>(null);
+  /** Read by the scramble as its starting string, so it always begins from what is on screen. */
+  const displayRef = useRef<string | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   /**
    * What kind of pointer opened the last press. A press *toggles* on touch and pen, where there is
@@ -85,20 +103,58 @@ const LocalTime: React.FC<LocalTimeProps> = ({ segments }) => {
    */
   const pressPointer = useRef<string>("mouse");
 
-  // The interval is started by the handlers below rather than by an effect, because it should only
-  // exist while the time is on screen. This is the safety net for an unmount mid-reveal.
-  useEffect(() => () => clearInterval(timer.current), []);
+  const label = segments?.find((s) => s.kind === "muted")?.text ?? "";
+
+  const write = (value: string | null) => {
+    displayRef.current = value;
+    setDisplay(value);
+  };
+
+  /** Cancels any run in flight first: two scrambles writing the same span would fight each other. */
+  const animateTo = (to: string, resting: string | null) => {
+    cancelScramble.current?.();
+    cancelScramble.current = null;
+
+    if (prefersReducedMotion) {
+      write(resting);
+      return;
+    }
+
+    const from = displayRef.current ?? label;
+    cancelScramble.current = scrambleText(from, to, write, () => {
+      // Clearing the ref here is load-bearing, not tidiness: the tick below treats a non-null
+      // cancel as "a run owns the span", so leaving it set would silence the clock permanently
+      // after the first reveal.
+      cancelScramble.current = null;
+      // Hand the span back to its resting value — `null` on the way out, so the authored segment
+      // renders itself again rather than the component holding a copy of the document's text.
+      write(resting);
+    });
+  };
 
   const show = () => {
-    setTime(localTime());
-    clearInterval(timer.current);
-    timer.current = setInterval(() => setTime(localTime()), TICK_MS);
+    setShown(true);
+    const now = localTime();
+    animateTo(now, now);
+    clearInterval(tick.current);
+    tick.current = setInterval(() => {
+      // Silent. A scramble in flight owns the span until it lands, and re-scrambling on a minute
+      // rollover would interrupt a reader mid-glance.
+      if (cancelScramble.current) return;
+      write(localTime());
+    }, TICK_MS);
   };
 
   const hide = () => {
-    clearInterval(timer.current);
-    setTime(null);
+    setShown(false);
+    clearInterval(tick.current);
+    animateTo(label, null);
   };
+
+  useEffect(() => () => {
+    clearInterval(tick.current);
+    cancelScramble.current?.();
+  }, []);
 
   /**
    * Hover leaving does not un-reveal something the keyboard is still pointing at. A mouse user who
@@ -112,7 +168,7 @@ const LocalTime: React.FC<LocalTimeProps> = ({ segments }) => {
 
   if (!segments?.length) return null;
 
-  const shown = time !== null;
+  const mutedIndex = segments.findIndex((s) => s.kind === "muted");
 
   return (
     <button
@@ -137,12 +193,14 @@ const LocalTime: React.FC<LocalTimeProps> = ({ segments }) => {
       {segments.map((segment, i) =>
         segment.kind === "muted" ? (
           <span key={i} className={styles.locationMuted}>
-            {shown ? time : segment.text}
+            {i === mutedIndex && display !== null ? display : segment.text}
           </span>
         ) : (
           <span key={i}>{segment.text}</span>
         ),
       )}
+      {/* Driven by the intent rather than by the animating string, so a frame of noise is never
+          what a screen reader is told the control does. */}
       <span className={styles.srOnly}>
         {shown ? "Show time zone" : "Show local time"}
       </span>

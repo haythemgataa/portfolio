@@ -1974,11 +1974,40 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
       an IANA zone cannot.
     - **24-hour, which is a measurement rather than a taste**: `(17:54)` is exactly as many
       characters as the `(GMT+1)` it replaces, where `(5:54 PM)` is two longer and visibly
-      stretches the line under the pointer that asked for it. The run still narrows ~11px (digits
-      are tighter than those letters), and nothing moves: measured, the colophon button's left edge
-      and the date line's top are pixel-identical across the swap, because it is pinned to the
-      column's far edge by `space-between` and the change is absorbed by the gap. `.locationMuted`
-      carries `tabular-nums` so the minute rolling over cannot jiggle the string either.
+      stretches the line under the pointer that asked for it.
+    - **`.locationMuted` is monospaced, and that turns "nothing moves" from an observation into a
+      guarantee.** Proportionally set, the run narrowed ~11px on the swap — harmless, because
+      nothing sits to its right, but the scramble below cycles arbitrary glyphs through every
+      position and each frame would have been its own width. One advance per glyph plus one
+      character count makes the label, the clock and every frame between them identical by
+      construction. Measured across a full reveal: **110 consecutive frames, one distinct width**
+      for the run, for the button and for the colophon's left edge. It replaces a `tabular-nums`
+      that only ever fixed the narrower case of a minute rolling over, which monospacing subsumes.
+
+      A system stack (`ui-monospace` first), so it costs no request — the site self-hosts exactly
+      one face and this is not worth a second. **The size steps down to 13px, and that is measured
+      rather than eyeballed**: a mono face carries a large cap for its nominal size, so at a
+      matched 14px its cap comes to 10.39px against the place's 10.08px — *larger* than the primary
+      text it is an aside to. At 13px it is 9.65px, 96% of the place, with the x-heights at the
+      same ratio, the baseline shared exactly and the line box untouched at 22.4px.
+    - **The transition scrambles into place (`scrambleText.ts`); the clock ticking does not.** A
+      380ms resolve, staggered left to right. Four things about the driver: a position whose
+      character is the same at both ends never scrambles, which is what holds the parentheses
+      still without a special case for them; glyphs re-roll on a ~34% chance per frame rather than
+      every frame, because ~23 fresh characters in 380ms is a strobe; the pool is uppercase letters
+      and digits, the two classes the real endpoints are drawn from, after punctuation read as line
+      noise; and it is a plain function returning its own cancel rather than a hook, because it is
+      driven from event handlers and there is no render to synchronise with.
+
+      **The once-a-second catch-up writes the new value straight in, and only while no run owns the
+      span.** Re-scrambling on a minute rollover would fire at an arbitrary moment under a
+      reader's eye. That gate is also the one place this can break badly: the completion callback
+      has to clear the cancel ref, or the tick sees a run that never ended and the clock freezes
+      permanently after the first reveal. Verified across a real rollover — `(19:50)` → `(19:51)`,
+      no scramble, one width throughout.
+    - **`prefers-reduced-motion` drops the animation, not the feature.** The value swaps instantly;
+      what it says is the information and the resolve is the ornament. Verified by forcing the
+      branch: 86 frames, zero of them noise.
     - **The accessible name renames itself instead of carrying `aria-pressed`** — both would make
       a screen reader announce the state twice, the argument the CV's Show/Hide Details control
       already makes. An `.srOnly` span says what a press would do next ("Show local time" /

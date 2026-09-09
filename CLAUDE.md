@@ -2000,8 +2000,20 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
       position and each frame would have been its own width. One advance per glyph plus one
       character count makes the label, the clock and every frame between them identical by
       construction. Measured across a full reveal: **110 consecutive frames, one distinct width**
-      for the run, for the button and for the colophon's left edge. It replaces a `tabular-nums`
-      that only ever fixed the narrower case of a minute rolling over, which monospacing subsumes.
+      for the run, for the button and for the colophon's left edge.
+
+      **It is not there because Switzer lacks tabular figures — Switzer's figures are already
+      tabular, and the `tabular-nums` it replaced was a no-op.** Measured with the real face
+      loaded: all ten digits are 8.0703px at 14px, and neither `font-variant-numeric` nor
+      `font-feature-settings: 'tnum' 1` moves one advance, because there is no proportional figure
+      set to switch away from. Monospacing answers a requirement tabular figures cannot reach:
+      **this swap trades letters for digits, not digits for digits.** `(GMT+1)` is 55.336px in
+      Switzer against `(17:54)`'s 44.133px — the 11.2px the run used to narrow by — and the
+      scramble is worse, since its A–Z plus 0–9 pool has **24 distinct widths spanning 11.368px**
+      in Switzer (`I` 3.398px, `W` 14.766px), so every frame of every position would be its own
+      width. In the mono face all 36 share one width and both strings measure 54.789px. Keeping
+      Switzer would mean pinning the box and letting the glyphs shift inside it, which is the one
+      thing a resolve-in-place effect must not do.
 
       A system stack (`ui-monospace` first), so it costs no request — the site self-hosts exactly
       one face and this is not worth a second. **The size steps down to 13px, and that is measured

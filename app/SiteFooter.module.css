@@ -389,8 +389,19 @@
    arbitrary glyphs through every position on the way (see `scrambleText.ts`). With a proportional
    face the box would be a different width for `(GMT+1)`, for `(17:54)`, and for every frame of
    noise in between — the string is the same seven characters throughout, so one advance per glyph
-   makes all three identical by construction. It replaces a `tabular-nums` that only ever fixed the
-   narrower problem of a minute rolling over, which monospacing subsumes.
+   makes all three identical by construction.
+
+   **It is not here because Switzer lacks tabular figures. Switzer's figures are already tabular,
+   and the `tabular-nums` this replaced was a no-op.** Measured in the browser with the real face
+   loaded: all ten digits are 8.0703px at 14px, and neither `font-variant-numeric: tabular-nums`
+   nor `font-feature-settings: 'tnum' 1` moves a single advance — there is no proportional figure
+   set to switch away from. So monospacing is not an upgrade to that declaration; it answers a
+   requirement tabular figures cannot reach, because **this swap trades letters for digits, not
+   digits for digits.** In Switzer `(GMT+1)` is 55.336px against `(17:54)`'s 44.133px — the 11.2px
+   the run used to narrow by — and the scramble is worse still: its pool of A–Z plus 0–9 has **24
+   distinct widths spanning 11.368px** in Switzer, from `I` at 3.398px to `W` at 14.766px, so every
+   frame of every position would be its own width. In the mono face those 36 characters have one
+   width and both strings measure 54.789px.
 
    A system stack, so it costs no request and no `@font-face` — the site self-hosts exactly one
    face and this is not worth a second. `monospace` last is the generic that guarantees *some*

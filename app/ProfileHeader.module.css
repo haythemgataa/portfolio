@@ -1,41 +1,32 @@
-/* Everything above the tab bar, which is now only the avatar, name and byline.
-
-   The gap below is the step down to the bar, and it pairs with the bar's own
-   `--tab-bar-gap-top` — the air above the tabs is the sum of the two, and About's matching
-   `margin-top` under the bar is what keeps the two sides of it close to even. */
+/* The photo and the signature. About follows immediately below, in the same space above the tab
+   bar, so the gap here is the step from the name to the introduction rather than to the bar. */
 .header {
-  margin-bottom: 16px;
-}
-
-.profileHeader {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  column-gap: 16px;
   margin-top: 24px;
+  margin-bottom: 12px;
 }
 
-/* The gap down to the byline is half-leading, not margin — neither element has one. At the
-   body's 1.6 that is ~6px of empty box under a 20px name, which read as a bigger step than the
-   two lines of one introduction want. 1.2 closes it without touching either element's box.
-   The beta badge is `inline-block` and taller than the text it sits in, so it would grow the
-   line box back if this went much tighter. */
-.profileHeader h1 {
-  font-size: 20px;
-  font-weight: var(--weight-emphasis);
-  letter-spacing: -0.04em;
-  line-height: 1.2;
-}
+/* The signature crosses the photo instead of clearing it, which is the whole shape of this
+   block: a mark laid over a print rather than a name beside an avatar.
 
-.byline {
-  color: var(--foreground-secondary);
-}
+   Both offsets are arithmetic on the traced box, not nudges. `--signature-pad` is the slack the
+   generator leaves around the ink so antialiasing at the box edge has somewhere to go, and
+   pulling exactly that back out is what lands the first stroke on the column's edge — the same
+   edge the photo, the tab bar and About all start from.
 
-/* A `{...}` run in the byline — see `splitByline` in lib/contentTypes.ts. `--foreground-tertiary` is the
-   lightest of the three text greys, and the same one the year column and the details toggle
-   use, so the byline's second half sits at an established level rather than a new one. */
-.bylineMuted {
-  color: var(--foreground-tertiary);
+   The vertical figure is the overlap itself: the photo is 48px tall, so `-14px` puts the box top
+   at 34px and the ink top at 35.5px, 12.5px above the photo's lower edge. That is roughly a
+   quarter of the picture, which is enough for the `H`'s flourish to read as crossing it and
+   little enough that nothing of the face is covered.
+
+   `line-height: 0` because the SVG is a block-level replaced element and the `h1`'s own line box
+   would otherwise reserve a strut under it that nothing draws in. */
+.name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: -14px;
+  margin-left: calc(-1 * var(--signature-pad, 0px));
+  line-height: 0;
 }
 
 .betaBadge {
@@ -43,36 +34,39 @@
   font-weight: var(--weight-emphasis);
   line-height: 1;
   padding: 3px 6px;
-  margin-left: 8px;
   border-radius: 6px;
   background-color: var(--background-muted);
   color: var(--foreground-tertiary);
-  vertical-align: middle;
   letter-spacing: 0.02em;
+  /* A flex item, so it needs no `vertical-align` and cannot grow the row it sits in. */
+  flex-shrink: 0;
 }
 
-/* The well the avatar sits in, showing while the image loads and through any alpha in it. A step
-   deeper than the surfaces on the page's own plane, for the same reason the thumbnail mat is:
-   this is a recess, not a raised surface. */
-/* The avatar's well. The hairline is `--border`, every other one on the page — the tab pills, the
-   contact pills, the gallery frame — so the ring cannot drift from them and the dark theme needs
-   no second rule: it flips to white at 8% on its own, which is what keeps a photograph from
-   sitting straight on a dark ground with nothing between them.
+/* The well the photo sits in — a square with a small radius now, not a disc, and 48px rather
+   than 56. It reads as a print with the signature laid across it, which a circle cannot: a disc
+   has no bottom edge for a mark to cross, only a tangent.
+
+   The fill shows while the image loads and through any alpha in it. `--background-muted` is
+   every other raised surface on the page — the tab pills, the contact pills, the gallery frame,
+   the thumbnail mat — so this cannot drift from them.
+
+   The hairline is `--border`, the same one those surfaces wear, so the dark theme needs no
+   second rule: it flips to white at 8% on its own, which is what keeps a photograph from sitting
+   straight on a dark ground with nothing between them.
 
    `box-sizing: border-box` is what makes the border free. Without it the 1px would be added
-   *outside* the 56px, and 56px is the number the whole header is measured against — the tab bar
-   is sticky and shared, so its resting height is however tall this block is, and a 2px change here
-   moves the bar on both routes. Inside, the photo's own box shrinks to 54px and nothing else does.
+   *outside* the 48px, and 48px is a number the block above the bar is measured against — the bar
+   is sticky and shared, so a 2px change here moves it on both routes. Inside, the photo's own box
+   shrinks to 46px and nothing else does.
 
-   `overflow: hidden` clips the image to the padding box, so the round corner belongs to the
+   `overflow: hidden` clips the image to the padding box, so the rounded corner belongs to the
    border rather than to the picture and the two cannot come apart at the edge. */
 .profilePhoto {
   box-sizing: border-box;
-  width: 56px;
-  height: 56px;
+  width: 48px;
+  height: 48px;
   border: 1px solid var(--border);
-  border-radius: 50%;
-  flex-shrink: 0;
+  border-radius: 6px;
   background-color: var(--background-muted);
   overflow: hidden;
 }
@@ -82,5 +76,3 @@
   height: 100%;
   object-fit: cover;
 }
-
-/* `.about` and `.description` moved to About.module.css when About moved below the tab bar. */

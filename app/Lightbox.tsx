@@ -409,7 +409,9 @@ const Lightbox: React.FC<LightboxProps> = ({
           Grouped with the dots rather than pinned to the left and right edges so the arrows sit
           beside the thing they move through. Laying them out as flex siblings is what keeps that
           true at any count: the dots' width grows with the number of items, and an offset from the
-          centre would have to be recomputed to match.
+          centre would have to be recomputed to match. Past the width where they no longer fit the
+          dots wrap into centred rows and the arrows stay beside the block — see `.controls`, which
+          spans the viewport for exactly that reason and is click-through because of it.
           They carry the accessible names; the halves are decoration for the pointer. */}
       {attachments && attachments.length > 1 ?
         <motion.div

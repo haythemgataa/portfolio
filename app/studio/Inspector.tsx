@@ -345,10 +345,26 @@ const Inspector: React.FC = () => {
             <h3 className={styles.panelTitle}>Profile</h3>
             <p className={styles.path}>content/cv.json → profile</p>
             <p className={styles.hint}>
-              Name, byline, About and the footer location are edited on the page. Braces set a run
+              The byline, About and the footer location are edited on the page. Braces set a run
               in the lighter grey — <code>Software Designer {'{& Engineer}'}</code> — and are
               stripped from the search-result and social-card description.
             </p>
+            {/* The one profile string that is *not* edited on the canvas, because the canvas no
+                longer shows it: the name renders as a traced signature, a drawing of one fixed
+                string rather than text this face could set. So it is a fact about the document —
+                the heading's accessible name, the tab title, the card's site name — and that is
+                what this panel is for. */}
+            <Row
+              label="Name"
+              hint="Read out for the signature, and the title of every page. The drawing itself is traced by scripts/gen-signature.mjs and does not follow this."
+            >
+              <input
+                className={styles.input}
+                type="text"
+                value={cv.profile.displayName ?? ''}
+                onChange={(event) => setProfileField('displayName', event.target.value)}
+              />
+            </Row>
             <Row
               label="Photo"
               hint="The one field with no picker: the pool protects this filename, so the photo changes by replacing the file on disk."
@@ -360,7 +376,7 @@ const Inspector: React.FC = () => {
           <section className={styles.panel}>
             <h3 className={styles.panelTitle}>Gallery teaser</h3>
             <p className={styles.hint}>
-              The 2×2 grid under About, on the CV only. Pool filenames, in display order.
+              The 2×2 grid opening the CV under the tab bar, on that route only. Pool filenames, in display order.
             </p>
             <ul className={styles.mediaList}>
               {preview.map((file, index) => (

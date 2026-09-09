@@ -1,15 +1,30 @@
 import type { MetadataRoute } from 'next';
-import { SITE_URL } from './lib/site';
+import { IS_PRODUCTION_DEPLOY, SITE_URL } from './lib/site';
 
 /**
- * robots.txt, generated so the `Sitemap:` line cannot drift from the origin the sitemap
- * actually uses — both read `SITE_URL`.
+ * robots.txt.
  *
- * Nothing is disallowed, and that is correct rather than lazy: the export contains exactly the
- * routes in the sitemap plus the media pool they reference. The Studio is not part of a
- * production build at all — its files are named `page.studio.tsx` / `route.studio.ts` and only
- * resolve as routes under the dev-only `pageExtensions` — so there is no `/studio` to hide, and
- * naming one here would advertise a path that does not exist.
+ * **Nothing is disallowed on any branch, and on a non-production build that is the deliberate,
+ * load-bearing half of keeping it out of the index.** The obvious move for a preview host is
+ * `Disallow: /`, and it is the wrong one: a path a crawler is forbidden to fetch is a path whose
+ * `noindex` it can never read, so anything already listed keeps its stale entry indefinitely.
+ * Serving `noindex` on a *crawlable* page is the documented removal path, so the directives stay
+ * permissive and the work is done by the two things that actually deindex — a `robots` meta tag
+ * from `layout.tsx` and an `X-Robots-Tag` header injected into `out/_headers` by
+ * `scripts/clean-export.mjs`, which is what covers `sitemap.xml`, `404.html` and the media pool,
+ * none of which a meta tag can reach.
+ *
+ * On production there is nothing to hide either: the export contains exactly the routes in the
+ * sitemap plus the media pool they reference. The Studio is not part of a production build at all
+ * — its files are named `page.studio.tsx` / `route.studio.ts` and only resolve as routes under the
+ * dev-only `pageExtensions` — so there is no `/studio` to hide, and naming one here would
+ * advertise a path that does not exist.
+ *
+ * **The `Sitemap:` line is the one thing that does change per branch.** `SITE_URL` is hardcoded to
+ * the production origin (deliberately — it is also what makes a dev page's canonical point at the
+ * real one), so a dev robots.txt would otherwise invite every crawler that read it to go and
+ * re-fetch production's sitemap from a host that must not be indexed at all. Omitted rather than
+ * rewritten to the preview's own origin, because a preview has no sitemap worth submitting.
  */
 /**
  * Required by `output: 'export'`. A metadata route is a Route Handler underneath, and the
@@ -25,6 +40,6 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: '*',
       allow: '/',
     },
-    sitemap: `${SITE_URL}/sitemap.xml`,
+    ...(IS_PRODUCTION_DEPLOY ? { sitemap: `${SITE_URL}/sitemap.xml` } : {}),
   };
 }

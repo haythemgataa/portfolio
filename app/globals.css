@@ -109,12 +109,19 @@
   --foreground-tertiary: #9499a3;
   --foreground-tertiary: light-dark(#9499a3, #868d99);
 
-  /* Accent and semantics. The blue is links and every focus ring; red and green
-     are the Studio's destructive and success states and ship nowhere. All three
-     hold on both grounds, so none of them needs a `light-dark()`. */
+  /* Accent and semantics. The blue is links and every focus ring; red is the Studio's
+     destructive state and ships nowhere; green is its success state *and* the contact row's
+     copied check, which is the one place a semantic token reaches the site. All three hold on
+     both grounds, so none of them needs a `light-dark()`.
+
+     The green was `#32bd64` and is deeper now. That trades contrast between the two themes
+     rather than only improving it, so it was measured: against the pill's own `--background-muted`
+     it goes 2.22:1 → 2.96:1 in light and 5.57:1 → 4.18:1 in dark. Both ends stay clear, and the
+     light half is the one that needed it — a mid green on a near-white wash was the weaker of
+     the two by a wide margin. */
   --blue: #0788f5;
   --red: #f04b4b;
-  --green: #32bd64;
+  --green: #10a530;
   --backdrop: rgba(0, 0, 0, .3);
   --backdrop: light-dark(rgba(0, 0, 0, .3), rgba(0, 0, 0, .5));
   /* The tab bar's own geometry, kept here because two other things are measured against
@@ -149,8 +156,19 @@
      nothing anywhere else — the document's height and the bar's resting position are unchanged
      to the pixel, because `spacer + padding` is the same total on each side — and it needs no
      transition, since at rest the wrapper's background is transparent and there is no visible
-     edge to move. */
-  --tab-bar-gap-stuck: 12px;
+     edge to move.
+
+     **8px, down from 12.** This is the number that sets how much air sits above a pinned section
+     title or the gallery's filter bar, because both park at `--sticky-top` and this is two thirds
+     of it — so it is the lever for "the parked bar is holding the page too far down", not the
+     header's own padding, which is load-bearing for the 39.59375px height everything is measured
+     against. Measured on the CV: the gap from the pills' bottom edge to a pinned title's cap went
+     22px → 14px, of which 4px came from here and 4px from retiring the ordinal's headroom below.
+     It stays equal on both sides, which is the whole point of the split above — a parked bar with
+     8px over the pills and 12px under would be the accidental asymmetry that note describes. The
+     resting geometry is untouched: `.airTop`/`.airBottom` grow to 24px each, so `spacer + padding`
+     is still 32px a side and the document's height does not move. */
+  --tab-bar-gap-stuck: 8px;
   /* What the bar occupies once pinned, which is what every sticky thing below it parks under.
      Named rather than repeated: `--sticky-top`, `layout.tsx` (which overrides it per route) and
      the Studio's canvas all need the same figure, and three copies of one sum is three chances
@@ -184,6 +202,45 @@
     rgb( 52, 181, 240) 66.5%,
     rgb( 39, 207, 255) 75%
   );
+  /* The second fill on a section title's glyphs — the mark's orange laid over the heading's ink
+     and gone within a couple of characters. Drawn by `.sectionHeader:has(.sectionIcon) h2`, which
+     is where the mechanism is explained; these are here because the strength needs the
+     `[data-theme]` treatment further down and the two read as one setting.
+
+     24px is a little under two characters at `--type-size` 14 with the titles' -0.02em tracking,
+     so what carries the tint is the first word's opening letters and nothing else. In px rather
+     than `em` deliberately: the intent is a fixed run of *ink* next to a fixed 16px mark, not a
+     share of the type — if `--type-size` changed, a tint measured in em would grow away from the
+     mark it is supposed to belong to.
+
+     **This replaced a glow, and the object was the mistake rather than the numbers.** A soft
+     ellipse behind the header lights the whole band — the gap, the page around the words, the row
+     under it — so at any strength that made it visible it read as a highlighted stripe across the
+     column. Tinting the glyphs themselves has nothing to light but the letters. */
+  --section-title-tint-width: 24px;
+  /* How much of the orange goes over the heading's ink: **45% in light, 30% in dark**. It is a
+     *number*, so it joins `--overlay-strength` and `--tab-reflection-opacity` in the
+     `[data-theme]` rules below rather than riding a `light-dark()`.
+
+     **The asymmetry runs the opposite way to the alpha, and the reason is chroma, not contrast.**
+     It was 0.3 light / 0.42 dark, which read too subtle on the light theme and too loud on the
+     dark one — and neither of the obvious metrics explains that. ΔE from the untinted ink says
+     light was already the stronger of the two (0.157 against 0.132). What matches the eye is how
+     much *colourfulness* the tint adds, because the two inks do not start from the same place:
+     `#111827` already carries a blue cast (OKLab chroma 0.032), so orange over it spends its
+     first share of alpha cancelling that before it begins adding warmth, while `#e9ebef` is very
+     nearly neutral (0.006) and every bit of alpha lands as visible colour on a bright glyph.
+     Measured, composited in sRGB as the browser paints it: the old pair added 0.046 of chroma in
+     light against 0.091 in dark — twice as much on the theme that needed less. At 0.45 / 0.30 it
+     is 0.084 against 0.061, which leaves light slightly ahead, and that is deliberate: a hue
+     shift on a bright glyph against a dark ground is more conspicuous than the same shift on a
+     near-black glyph, so parity on paper still reads loud in dark.
+
+     Note this is the second time on this treatment that the tidy metric has been the wrong
+     instrument — see the glow it replaced, where ΔE from the *ground* argued for an alpha at
+     which the effect was invisible. Composite in sRGB, compare added chroma, then look at it. */
+  --section-title-tint-strength: 0.45;
+
   /* Where a sticky section header or the gallery's filter bar parks: flush under the *pinned*
      bar, which is the only state either of them can be pinned in — the bar sits above them in
      flow and is taller than this, so it has always stuck first. Overridden per route in
@@ -197,14 +254,18 @@
      between. Centred, its ink is *inside* the header at any size the header can hold: at 40px
      the digits span 31.9px of a 39.58px header and stop 1.7px short of its top edge.
 
-     What is left is air rather than rescue. The tab bar's sticky wrapper is exactly
-     `--sticky-top` tall with an opaque background once stuck, so at zero headroom the numeral's
-     top would stop 1.7px short of it and read as kissing the bar. 4px buys visible daylight.
-     `--sticky-top` itself still cannot absorb it: the fade below the bar pins to the same offset
-     and has to stay flush with it, so widening it opens an uncovered band. Only the CV's headers
-     take the offset, since the gallery's filter bar pins in the same slot but carries no numeral
-     (and `Gallery.tsx` measures its scroll clearance off `--sticky-top` directly). It costs no
-     document height either way.
+     What is left is air rather than rescue: the tab bar's sticky wrapper is exactly `--sticky-top`
+     tall with an opaque background once stuck, so at zero headroom the numeral's top would stop
+     1.7px short of it and read as kissing the bar, and 4px buys visible daylight.
+
+     **Nothing applies it today.** `.sectionHeader` takes the bare `--sticky-top`, the same as the
+     gallery's filter bar, because the 16px mark that replaced the numeral overhangs nothing — so
+     the only thing the offset was still doing was holding the CV's titles 4px lower than the
+     gallery's, which was never a design. It is kept here with the rest of the ordinal's
+     arithmetic rather than deleted, for the same reason `SectionNumber.tsx` is. If the numeral
+     returns, this is the offset it needs and `--sticky-top` still cannot absorb it: the fade
+     below the bar pins to that same value and has to stay flush with it, so widening it opens an
+     uncovered band. It costs no document height either way.
 
      The ceiling is now the header itself rather than the bar. Centred, the ink is
      `0.797 * size` tall against the header's 39.58px, so it reaches the top and bottom edges
@@ -216,6 +277,51 @@
      background and the unselected pills, so the whole surface changes as one thing rather than
      the pills snapping while the page eases. */
   --ground-fade: 320ms;
+
+  /* The page's own left and right padding — `.page` in `layout.module.css` — and, below 480px,
+     the indent the CV's rows take inside it.
+
+     **Both are here rather than at their one obvious use site, because a third file is measured
+     against them.** `Attachments.module.css`'s mobile rule bleeds the thumbnail row out past the
+     content column to the viewport's edges, and the offsets it needs *are* these two: the left
+     bleed is the gutter plus the indent, the right bleed is the gutter alone, and the first
+     child's compensating margin puts it back on the column edge by the same sum. They were three
+     hardcoded copies of `24px` and `16px`, which happened to agree — and would have stopped
+     agreeing the moment either number moved, silently, in the one place nobody would look.
+
+     `--content-indent` is 0 at wide widths rather than being scoped to a media query, which is
+     what lets `.experiences` and `.contacts` declare `margin-left` once and unconditionally.
+     Nothing else in the content column carries an indent — About's was dropped when it moved
+     above the tab bar. */
+  --page-gutter: 24px;
+  --content-indent: 0px;
+
+  /* The gap between a section's mark and its heading, halved below 480px. Both values live in
+     this file, next to each other, rather than the override sitting in `Profile.module.css`'s
+     mobile block — the same arrangement the gutter and the indent above take. */
+  --section-title-gap: 8px;
+}
+
+/* The narrow-viewport values. 20px of gutter with a 20px indent inside it, against 24 and 16 —
+   so the page edge comes in by 4px and the rows' own indent goes out by 4px. Their *sum* is
+   unchanged at 40px, which is what the attachment row's left bleed is derived from, so that
+   construction lands exactly where it did. Verified rather than assumed: the row still reaches
+   both viewport edges and its first thumbnail still sits on the column edge.
+
+   480px is the breakpoint the rest of the site already uses — `.experience` stacks here and the
+   attachment row starts bleeding here — so this introduces no second idea of what "narrow"
+   means. */
+@media (max-width: 480px) {
+  :root {
+    --page-gutter: 20px;
+    --content-indent: 20px;
+    /* Half the wide gap. The column is at its narrowest here and the mark is the one thing in a
+       section header that cannot shrink, so the 8px between it and the heading is the cheapest
+       4px on the row — and tighter, the mark reads as belonging to the title rather than sitting
+       beside it. The header's own 16px before the Show/Hide control is left alone: that gap
+       separates two things which genuinely are separate. */
+    --section-title-gap: 4px;
+  }
 }
 
 /* The explicit theme override, and the only thing the switch touches.
@@ -229,22 +335,28 @@
   color-scheme: light;
 }
 
-/* The two themed values `light-dark()` cannot carry, because both are numbers rather than
+/* The three themed values `light-dark()` cannot carry, because all three are numbers rather than
    colours. The glow sweep reads much hotter over the dark theme's white pill than over the light
-   theme's black one, so the reflection is dialled back; and the overlay is stronger here because
-   white over a near-black surface bites less than black over a near-white one.
+   theme's black one, so the reflection is dialled back; the overlay is stronger here because
+   white over a near-black surface bites less than black over a near-white one; and the section
+   title's second fill goes the *other* way from the overlay above — more alpha in light, less in
+   dark — because the light theme's ink already carries a blue cast for the orange to cancel
+   before it starts adding warmth, where the dark theme's is neutral and every bit of it lands as
+   visible colour. See `--section-title-tint-strength` for the measurement.
    Duplicated across the two rules below rather than factored out — CSS has no way to share a
-   declaration block, and a third indirection to avoid four lines would cost more than it saves. */
+   declaration block, and a third indirection to avoid six lines would cost more than it saves. */
 :root[data-theme="dark"] {
   color-scheme: dark;
   --tab-reflection-opacity: 0.18;
   --overlay-strength: 8%;
+  --section-title-tint-strength: 0.3;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --tab-reflection-opacity: 0.18;
     --overlay-strength: 8%;
+    --section-title-tint-strength: 0.3;
   }
 }
 

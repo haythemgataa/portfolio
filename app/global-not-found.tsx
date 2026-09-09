@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import "./globals.css";
 import layout from "./layout.module.css";
 import styles from "./NotFound.module.css";
+import Analytics from "./Analytics";
 import ThemeScript from "./ThemeScript";
 import ThemeSwitch from "./ThemeSwitch";
 import { switzer } from "./lib/font";
+import { faviconIcons } from "./lib/chromeAsset";
 import { loadProfileData } from "./lib/contentLoader";
 import { SITE_URL, pageTitle } from "./lib/site";
 import { THEME_SWITCH_ENABLED } from "./lib/theme";
@@ -22,6 +24,11 @@ export async function generateMetadata(): Promise<Metadata> {
     // tab would just read the site's name, which is not wrong but says nothing about where you
     // have landed.
     title: pageTitle(`Not found — ${cv.profile.displayName}`),
+    // Also declared rather than inherited, and for the same reason as `metadataBase` above: this
+    // route replaces the layout, so without this the 404 is the one page in the export with no
+    // themed favicon — the same trap the pre-paint theme script and the font already document
+    // here. Imported rather than restated, because a second copy of the pair is what goes stale.
+    icons: faviconIcons(),
     // No `robots` entry, and that is checked rather than assumed: Next injects
     // `<meta name="robots" content="noindex">` into this route at build time, so it is already in
     // `out/404.html` even though a static export has no server deciding a status. Declaring one
@@ -46,7 +53,7 @@ export async function generateMetadata(): Promise<Metadata> {
  * and the page does not scroll), which is why `experimental.globalNotFound` is enabled in
  * `next.config.ts`.
  *
- * The cost of stepping outside the layout is that four things it normally provides have to be
+ * The cost of stepping outside the layout is that five things it normally provides have to be
  * named here — and each of them is imported rather than restated, because a second copy is the
  * failure mode:
  *
@@ -57,6 +64,8 @@ export async function generateMetadata(): Promise<Metadata> {
  *   the one page that ignores it.
  * - **the glow and the dot texture**, which are `layout.module.css`'s own elements. They are what
  *   make this read as this site rather than as a generic error screen, and they cost no request.
+ * - **the analytics tag**, for the same reason — otherwise this is the one page whose visits are
+ *   never counted, and a 404 is arguably the page you most want to know about.
  *
  * What it does *not* re-create is the header, the tab bar, About or the footer. That is the point
  * of the file, not an omission.
@@ -81,6 +90,10 @@ export default async function GlobalNotFound() {
     >
       <head>
         <ThemeScript />
+        {/* The fifth thing this file has to re-declare because it replaces the layout rather than
+            rendering inside it, and the reason it is worth the line: a 404 is a page worth
+            counting, and it is the one page the layout can never reach. See Analytics.tsx. */}
+        <Analytics />
       </head>
       <body>
         <main className={styles.page}>

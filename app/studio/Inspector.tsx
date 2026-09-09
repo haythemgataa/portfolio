@@ -493,6 +493,44 @@ const Inspector: React.FC = () => {
                 onChange={(e) => setItemField(section.key, item.id, 'url', e.target.value)}
               />
             </Row>
+            {/* The 40px app icon beside the heading and subheading. It is a fact about the
+                document rather than something a visitor reads, so it is here and not on the
+                canvas — the same split `platform`/`handle` and the profile's name make. */}
+            <Row
+              label="Icon"
+              hint="One pool image, drawn at 40px to the left of the heading and subheading. A `-dark` sibling in the pool is picked up automatically. Clear to remove the key."
+            >
+              <div className={styles.panelActions}>
+                <button
+                  type="button"
+                  className={styles.ghostButton}
+                  onClick={() =>
+                    pickAsset({
+                      title: "Choose this item's icon",
+                      imagesOnly: true,
+                      used: item.icon ? new Set([item.icon]) : undefined,
+                      onPick: (file) => setItemField(section.key, item.id, 'icon', file),
+                    })
+                  }
+                >
+                  {item.icon ?? 'Choose an icon'}
+                </button>
+                {item.icon ? (
+                  <button
+                    type="button"
+                    className={styles.ghostButton}
+                    // Detach, not delete: `mergePatch` drops a key patched with `''`, so this
+                    // removes the reference and leaves the file in the pool — where it surfaces
+                    // as an orphan until something else names it. Nothing is destroyed, so there
+                    // is no confirm, the same call the thumbnail row's `×` makes.
+                    title="Remove the icon — the file stays in the pool"
+                    onClick={() => setItemField(section.key, item.id, 'icon', '')}
+                  >
+                    Clear
+                  </button>
+                ) : null}
+              </div>
+            </Row>
             <div className={styles.panelActions}>
               <button
                 type="button"

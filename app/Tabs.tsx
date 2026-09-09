@@ -74,8 +74,13 @@ const Tabs: React.FC<TabsProps> = ({ showGallery = true }) => {
     return () => observer.disconnect();
   }, []);
 
+  // **"Home", not "CV".** The label was "CV" and named the *document* where its neighbour names
+  // a place — so the pair read as one category label beside one destination, and on `/gallery`
+  // the way back was labelled with a genre rather than with somewhere to go. Both are routes, so
+  // both are places. It costs the pill nothing: tabs are `flex: 1 1 0`, so the geometry is
+  // derived from the count and never from a label's width.
   const tabs = [
-    { href: "/", label: "CV" },
+    { href: "/", label: "Home" },
     ...(showGalleryTab ? [{ href: "/gallery", label: "Gallery" }] : []),
   ];
 
@@ -97,7 +102,12 @@ const Tabs: React.FC<TabsProps> = ({ showGallery = true }) => {
       <div className={styles.sticky} data-stuck={isStuck}>
         <nav
           className={styles.tabs}
-          aria-label="Sections"
+          // "Pages", not "Sections" — which followed from the rename rather than being a separate
+          // idea. The CV's own sticky headings are the sections; a bar that switches between two
+          // routes announcing itself as section navigation sent a screen reader looking for
+          // headings. It was already loose when the tabs read "CV"/"Gallery"; naming them as
+          // places made it plainly wrong.
+          aria-label="Pages"
           // The two numbers the pill's geometry is derived from. Everything else about it
           // lives in the stylesheet; these are the only parts that depend on runtime state.
           style={{

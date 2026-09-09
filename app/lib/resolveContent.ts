@@ -4,6 +4,7 @@ import type {
   CvProfile,
   HeadingSegment,
   MediaAsset,
+  ResolvedIcon,
   ResolvedItem,
   ResolvedMedia,
   ResolvedProfile,
@@ -86,6 +87,43 @@ export function resolveMedia(
 }
 
 /**
+ * A pool filename as an icon: a picture with no poster, no mat and no lightbox, plus whichever
+ * `-dark` sibling the registry happens to hold.
+ *
+ * Both sizes of item icon go through here — the 20px one a `[filename]` token puts inline in a
+ * heading, and the 40px one `item.icon` stands beside the heading and subheading — which is what
+ * keeps the `-dark` convention, the "must be an image" rule and the missing-dimensions rule from
+ * being stated twice. Returns null for anything unrenderable; the caller decides what to show
+ * instead, because those two differ: a token falls back to its own literal text, and an item
+ * simply draws no icon.
+ */
+export function resolveIcon(
+  file: string,
+  assets: Record<string, MediaAsset>,
+  urlFor: AssetUrlFn,
+  referrer: string,
+  warn: WarnFn = console.warn
+): ResolvedIcon | null {
+  const resolved = resolveMedia(file, assets, urlFor, referrer, warn);
+  if (!resolved) return null;
+  if (resolved.type !== 'image') {
+    warn(`${referrer}: "${file}" is not an image, skipping`);
+    return null;
+  }
+
+  // The dark sibling is looked up in the registry rather than probed on disk, so an
+  // unregistered file is correctly treated as absent: it could not be served anyway.
+  const dark = darkVariant(file);
+
+  return {
+    url: resolved.url,
+    width: resolved.width,
+    height: resolved.height,
+    darkUrl: dark && assets[dark] ? urlFor(dark) : null,
+  };
+}
+
+/**
  * Turn a heading's `[filename]` tokens into inline icons, and produce the plain string
  * alongside — the latter is what accessible names and the attachment row's label use, since
  * neither wants markup or a literal filename in it.
@@ -121,30 +159,13 @@ export function resolveHeading(
       continue;
     }
 
-    const resolved = resolveMedia(part.file, assets, urlFor, `${referrer} heading icon`, warn);
-    if (!resolved) {
-      pushText(`[${part.file}]`);
-      continue;
-    }
-    if (resolved.type !== 'image') {
-      warn(`${referrer}: heading icon "${part.file}" is not an image, skipping`);
+    const icon = resolveIcon(part.file, assets, urlFor, `${referrer} heading icon`, warn);
+    if (!icon) {
       pushText(`[${part.file}]`);
       continue;
     }
 
-    // The dark sibling is looked up in the registry rather than probed on disk, so an
-    // unregistered file is correctly treated as absent: it could not be served anyway.
-    const dark = darkVariant(part.file);
-
-    segments.push({
-      kind: 'icon',
-      icon: {
-        url: resolved.url,
-        width: resolved.width,
-        height: resolved.height,
-        darkUrl: dark && assets[dark] ? urlFor(dark) : null,
-      },
-    });
+    segments.push({ kind: 'icon', icon });
   }
 
   // Collapse the whitespace the removed tokens leave behind, so a label does not carry a
@@ -152,7 +173,7 @@ export function resolveHeading(
   return { segments, plain: plain.replace(/\s{2,}/g, ' ').trim() };
 }
 
-/** One item in an orderable section, with its media and heading icons resolved. */
+/** One item in an orderable section, with its media, its heading icons and its own icon resolved. */
 export function resolveItem(
   item: CvItem,
   assets: Record<string, MediaAsset>,
@@ -160,14 +181,23 @@ export function resolveItem(
   sectionKey: string,
   warn: WarnFn = console.warn
 ): ResolvedItem {
-  const { media, ...rest } = item;
+  // `icon` is destructured out for the same reason `media` is: both are authored as bare
+  // filenames, and `...rest` is spread verbatim, so leaving either in place would hand the
+  // component a string where it expects a resolved shape.
+  const { media, icon, ...rest } = item;
   const referrer = `cv.json ${sectionKey}/${item.id}`;
   const attachments = (media ?? [])
     .map((file) => resolveMedia(file, assets, urlFor, referrer, warn))
     .filter((m): m is ResolvedMedia => m !== null);
 
   const { segments, plain } = resolveHeading(item.heading, assets, urlFor, referrer, warn);
-  return { ...rest, heading: plain, attachments, headingSegments: segments };
+  return {
+    ...rest,
+    heading: plain,
+    attachments,
+    headingSegments: segments,
+    icon: icon ? resolveIcon(icon, assets, urlFor, `${referrer} icon`, warn) : null,
+  };
 }
 
 /**

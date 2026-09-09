@@ -75,6 +75,22 @@ export type CvItem = {
   description?: string;
   /** Filenames in the public/media/ pool; array order is display order. */
   media?: string[];
+  /**
+   * One pool filename, drawn at 40px to the left of the heading *and* the subheading — an app
+   * icon standing beside the two lines that name the thing, where a `[filename]` token in the
+   * heading puts a 20px logo inline in the words themselves. Optional and omitted where absent.
+   *
+   * Deliberately a field on the item and **not** a section-level setting, though only Personal
+   * Projects uses it today. `sections[]` is homogeneous precisely so reordering it is safe, and a
+   * treatment that switched on which section an item was in would be the `kind` discriminator
+   * this content model already replaced with a shape. An item either names an icon or it does
+   * not, in any section.
+   *
+   * It is a *new kind* of pool reference, so it has to be counted in `collectReferences` (and
+   * mirrored in the Studio's `cvUses`) or the sweep will report these as orphans and delete them
+   * while the CV is still showing them.
+   */
+  icon?: string;
 };
 
 /** A row in the pinned contact section. */
@@ -226,13 +242,23 @@ export type HeadingSegment =
   | { kind: 'text'; text: string }
   | { kind: 'icon'; icon: ResolvedIcon };
 
-export type ResolvedItem = Omit<CvItem, 'media'> & {
+export type ResolvedItem = Omit<CvItem, 'media' | 'icon'> & {
   attachments: ResolvedMedia[];
   /**
    * `heading` with the icon tokens removed — the plain string, for accessible names and the
    * attachment row's label. `headingSegments` is what actually renders.
    */
   headingSegments: HeadingSegment[];
+  /**
+   * `icon` resolved through the registry — the same `ResolvedIcon` a heading token produces, so
+   * the two sizes of item icon share one shape and one `-dark` convention. Null when the item
+   * names none, or names one that does not resolve.
+   *
+   * `icon` is stripped from the authored half of this type rather than left to pass through: it
+   * carries a bare filename, and `resolveItem` spreads the rest of the item verbatim, so leaving
+   * it in place would hand the component a string where every other resolved field is a URL.
+   */
+  icon: ResolvedIcon | null;
 };
 
 export type ResolvedSection = {

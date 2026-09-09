@@ -24,18 +24,136 @@
    construction here, since there is no longer a background that needs to reach the edges. */
 .sectionHeader {
   position: sticky;
-  /* Not `--sticky-top` alone: the ordinal overhangs this box's top edge, and the tab bar's
-     wrapper is exactly `--sticky-top` tall and opaque once stuck, so a title parked flush
-     against it had the top third of its numeral cut off for the whole length of the section.
-     See `--section-number-headroom` in globals.css for why the offset is here rather than in
-     `--sticky-top`, which the bar's fade also pins to. */
-  top: calc(var(--sticky-top) + var(--section-number-headroom));
+  /* `--sticky-top` bare, exactly as the gallery's filter bar takes it — so the two pin on the
+     same pixel and there is one rule rather than two that can disagree.
+
+     It used to be `calc(--sticky-top + --section-number-headroom)`. That began as a rescue: the
+     40px ordinal overhung this box's top edge, and the tab bar's wrapper is exactly
+     `--sticky-top` tall and opaque once stuck, so a pinned title had the top of its numeral cut
+     off for the length of the section. Once the numeral was centred the offset had already
+     decayed into 4px of plain daylight, and the 16px mark that replaced it overhangs nothing at
+     all — so the last thing the offset was doing was holding the CV's titles 4px lower than the
+     gallery's, which was never a design. The token still exists in globals.css beside the rest
+     of the ordinal's arithmetic, for whenever the numeral comes back. */
+  top: var(--sticky-top);
   z-index: 15;
   display: flex;
   align-items: center;
   justify-content: space-between;
   column-gap: 16px;
   padding: 6px 0 calc((var(--type-size) * var(--line-height)) / 2);
+}
+
+/* The mark and the heading as one flex item of the header, so `space-between` still has exactly
+   two things to push apart and the header's own 16px `column-gap` stays the gap between the title
+   and the Show/Hide control rather than becoming the mark's gap too.
+
+   `min-width: 0` for the reason `.experienceContent` carries it: without it a flex item's
+   automatic minimum is its content's, so a long section title could force the header wider than
+   the column instead of letting the heading shrink. */
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  /* 8px, and 4px below 480px — both values are in globals.css, so nothing reads this rule and
+     assumes 8px is the whole story. */
+  column-gap: var(--section-title-gap);
+  min-width: 0;
+}
+
+/* A second fill on the section title's own glyphs: the mark's orange laid over the heading's ink
+   and gone within a couple of characters, so the first letters read as tinted by the thing beside
+   them.
+
+   **It is a fill on the text, not a glow behind it.** That was the first attempt — a soft ellipse
+   on `.sectionTitle::before`, anchored on the mark — and it was the wrong object: at any strength
+   that made it visible it read as a highlighted band across the column, because a wash behind
+   *the header* lights the whole band including the gap, the page around the words and the row
+   below. Clipping the paint to the glyphs means only the letters can carry it, so there is no
+   band to read.
+
+   **Two background layers, and the order is the whole mechanism.** The bottom layer is the
+   heading's ink as a solid gradient, the top is the orange fading out; `background-clip: text`
+   confines both to the glyphs and `color: transparent` gets the UA's own fill out of the way, so
+   what paints is orange composited over ink. This is `SectionNumber.module.css`'s trick with one
+   more layer — and the reason `color` cannot simply stay opaque is that a background paints
+   *behind* the text colour, so an opaque fill would hide the orange completely.
+
+   Note the consequence: the ink now arrives from a `var()` inside a gradient rather than from
+   `color`. That is safe because `--foreground-primary` is always defined, but it is the one thing
+   to check if a section title ever renders invisible — an invalid `background-image` leaves
+   `color: transparent` standing on its own.
+
+   **Selection was the other thing to check, and it is fine.** `color: transparent` is exactly how
+   text disappears under a selection highlight, and unlike the ordinal — which sidesteps the
+   question with `user-select: none` — this is a real heading a reader may well want to copy.
+   Verified in the browser: a section title selects, copies as its plain string, and the glyphs
+   stay visible, because the clipped background paints over the highlight rather than under it.
+
+   **`background-image`, never the `background` shorthand**, which resets `background-clip` to
+   `border-box` and would paint two rectangles across the header instead of tinting two letters.
+   The same note `SectionNumber.module.css` carries.
+
+   **The far stop is the same hue at zero alpha, never `transparent`.** `transparent` is
+   `rgb(0 0 0 / 0)`, so a ramp toward it passes through black — here it would dirty the handover
+   from tinted to plain ink. The trap the ordinal's band documents, and why the literal is spelled
+   twice.
+
+   **`:has(.sectionIcon)` scopes it to a section that actually has a mark.** `SECTION_MARKS` is a
+   closed vocabulary with an honest empty case, so a newly created section renders no mark — and a
+   title tinted by nothing is just a title in the wrong colour. The gallery's filter bar restates
+   `.sectionHeader`'s box but not this class, so it takes none either.
+
+   One known limit, accepted rather than missed: the gradient is positioned against the element's
+   box, so a title long enough to wrap would tint the first 24px of its *second* line too. Section
+   labels are two words at most and none wraps at any width the site supports — measured down to
+   375px — so there is nothing to fix yet. A `background-size` in `em` would not help; it would
+   need the tint to follow the text's flow, which no background can do.
+
+   The orange is the literal `#fb4107` again, for the reason `.sectionIcon` gives: it is a
+   reference to Figma and should not follow the page's theme. */
+.sectionHeader:has(.sectionIcon) h2 {
+  background-image:
+    linear-gradient(
+      90deg,
+      rgb(251 65 7 / var(--section-title-tint-strength)) 0,
+      rgb(251 65 7 / 0) var(--section-title-tint-width)
+    ),
+    linear-gradient(var(--foreground-primary), var(--foreground-primary));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* The section's mark, in place of the ordinal that used to stand behind the title.
+
+   **It adds nothing to the header's height, and that figure is load-bearing**: 39.59375px is what
+   the tab bar parks every pinned title against and what the Studio's canvas is measured to match
+   `/` on exactly. The box is 6px + the h2's line box + half of it again, so any child shorter
+   than that line box is free — at `--type-size` 14 and `--line-height` 1.6 the line box is 22.4px
+   against this 16px. Verified after the swap: the header measures 39.59375px on all nine and the
+   h2's top still sits exactly on the 6px padding edge, so neither the box nor the title moved.
+   `.sectionTitle` measures 22.3984px — the h2's own height — which is what says the wrapper is
+   contributing nothing of its own.
+
+   No `vertical-align` and nothing to tune. This is the `.filterTag` case in `Gallery.module.css`:
+   the mark is a flex item of a container with `align-items: center`, so it is *placed* rather than
+   aligned on the baseline, and `vertical-align` has no effect at all on it — the trap is that
+   `.metaIcon`'s -3px sits a few lines away and invites the arithmetic. Measured across all nine
+   headers, the ink centre lands between 0.55px above and 0.46px below the title's cap-band
+   centre — and the spread is the point: every glyph has its own ink bounds inside the same 16
+   grid, so there is no single offset to apply. Centring the box is the only rule that is right
+   for all of them.
+
+   `flex-shrink: 0`, or a heading long enough to wrap squeezes the mark instead of itself.
+
+   Figma's orange as a literal, not a token, and for the reason `FigmaCursor.tsx` gives: it is a
+   reference, so it should not follow the page's theme. It carries on both grounds. It is declared
+   as `color` rather than a `fill` in the component because every mark in `DuotoneMark.tsx` paints
+   `currentColor` — which is what keeps the section marks the same kind of object as the tag and
+   platform marks instead of the one family that hardcodes its own fill. */
+.sectionIcon {
+  flex-shrink: 0;
+  color: #fb4107;
 }
 
 .profileSection h2 {
@@ -232,7 +350,20 @@
    again now that there is no second control inset into the right end. */
 .contactAddress {
   gap: 8px;
-  padding: 0 14px;
+  /* Asymmetric on purpose: 14px before the envelope, 10px after the copy mark.
+     The two ends are *not* a symmetric pair. The envelope opens the pill and is part of its
+     subject; the copy mark is a trailing affordance, and a trailing action reads as belonging to
+     the edge rather than floating inside it. Measured at a symmetric 14px, the optical gaps were
+     16.13px on the left (14 plus the envelope's 1.13px ink inset) against 17px on the right —
+     near-identical, which is exactly what made the right side look loose: the mark had the same
+     air as the glyph that anchors the other end. At 10px the right measures 13px optical against
+     the left's 16.13px, and the pill comes in from 196.7px to 192.7px.
+
+     Note the two `.srOnly` spans in this pill contribute nothing to either end. They are
+     `position: absolute`, so they are out of flow and the 8px `gap` never applies around them —
+     without that, the name before the envelope and the live region after the copy mark would each
+     have added 8px, which is the trap a `clip`-only visually-hidden helper would have set. */
+  padding: 0 10px 0 14px;
   max-width: 100%;
   min-width: 0;
   cursor: pointer;
@@ -462,6 +593,72 @@
   min-width: 0;
 }
 
+/* The item's icon and the two lines that name it, as one row — the App Store arrangement, which
+   is the right one because these *are* app icons: mark, name, and a line of subtitle under the
+   name, with the prose and the screenshots running full width below rather than indented behind
+   a hanging icon.
+
+   It wraps the title and subheading unconditionally, whether or not an icon is authored, and that
+   costs nothing at rest: with no icon this is a flex container holding one block child, which
+   lays out identically to the two blocks it replaces. Measured across every section — an item
+   with no icon has the same title baseline and the same content height as before. Making the
+   wrapper conditional would have meant two markup paths through the row and two for the Studio's
+   canvas to keep matching.
+
+   `align-items: center` centres the icon on the pair of lines. With no subheading the row is one
+   22.4px line and the 40px icon is what sets the height — the icon dominates rather than
+   overflowing, which is the honest failure and not a broken one. */
+.itemHeader {
+  display: flex;
+  align-items: center;
+  column-gap: 12px;
+}
+
+/* `min-width: 0` for the reason `.experienceContent` carries it: a flex item's automatic minimum
+   is its content's, so without this a long unbroken heading would push the row wider than the
+   column instead of wrapping. `flex: 1 1 auto` so the text takes whatever the icon leaves. */
+.itemHeading {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* 40px, which is a little over the 44.8px the two lines occupy at `--type-size` 14 and
+   `--line-height` 1.6 — enough for the icon to read as the row's anchor and small enough that it
+   does not set the row's height. Double the 20px a `[filename]` token draws inline in a heading,
+   which is what makes the two read as different kinds of thing rather than two sizes of one.
+
+   `--item-icon-size` arrives from `Profile.tsx`, which derives the Cloudflare request from the
+   same number — see the constant there, and `.titleIcon` below for the same arrangement.
+
+   No border and no radius. These are app icons: the artwork already carries its own squircle on
+   transparency, so a frame would trace an edge it has not got and a radius would clip the one it
+   has. That is the `floating` argument from `media.json`, applied to a box that is always this
+   kind of picture rather than sometimes. */
+/* **The `<picture>` is the flex item, not the `<img>`, and both halves of that bit.** A
+   `<picture>` blockifies to a block box whose content is an *inline* replaced element sitting on
+   the text baseline — so its line box was the image's 40px plus the inherited 22.4px strut's
+   descent below that baseline, and every icon row measured 46.4px against the 44.8px its two
+   lines occupy. The icon was 1.6px off centre and the row 1.6px too tall, on all four. `display:
+   flex` here collapses the line box onto the image; measured after: the wrapper and the row both
+   40px and 44.8px respectively.
+
+   And `flex-shrink: 0` has to be *here*: on `.itemIcon` it was styling the `<img>`, which is not
+   a flex item of anything on this route, so the wrapper kept the default `1` and a narrow column
+   could have squeezed the icon. It stays on `.itemIcon` as well, because the Studio's canvas
+   renders the bare `<img>` with no `<picture>` around it — there the image *is* the flex item. */
+.itemIconWrap {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.itemIcon {
+  flex-shrink: 0;
+  width: var(--item-icon-size);
+  height: var(--item-icon-size);
+  /* Matches the `fit: contain` of the request, so a non-square icon is never stretched. */
+  object-fit: contain;
+}
+
 .description {
   color: var(--foreground-secondary);
   display: flex;
@@ -616,8 +813,17 @@
    lets the item shrink inside a 0fr track but padding still contributes to it, so leaving this
    on unconditionally kept a closed row 11.2px tall — a phantom gap under every subheading. It
    is inside `.detailsInner` rather than on the wrapper so it is clipped with the text, and it
-   transitions with the row so closing does not yank the description upwards. */
-.subheading ~ .details[data-open="true"] .detailsInner {
+   transitions with the row so closing does not yank the description upwards.
+
+   **It was `.subheading ~ .details`, and the general sibling combinator is what broke.** `~`
+   is a DOM relationship, not a layout one, so the moment the title and subheading moved inside
+   `.itemHeader` — which they had to, for an icon to stand beside both — they stopped being
+   siblings of `.details` and this rule silently stopped matching. `display: contents` would not
+   have rescued it either, for the same reason. `:has()` asks the question the rule was always
+   asking — *does this item have a subheading* — of the box that contains both, which is a
+   relationship the wrapper cannot break. It is already the mechanism `.contactCompact`'s tooltip
+   and the Studio's `.node:has(> .tools)` use. */
+.experienceContent:has(.subheading) .details[data-open="true"] .detailsInner {
   padding-top: calc((var(--type-size) * var(--line-height)) / 2);
 }
 
@@ -635,13 +841,15 @@
   text-wrap: pretty;
 }
 
-@media (max-width: 480px) {
-  
-  .experiences,
-  .contacts {
-    margin-left: 16px;
-  }
+/* The narrow-viewport indent, declared once and unconditionally: `--content-indent` is 0 above
+   480px, so this is a no-op at wide widths and there is no media query to keep in step. The
+   attachment row's mobile bleed is derived from the same token — see globals.css. */
+.experiences,
+.contacts {
+  margin-left: var(--content-indent);
+}
 
+@media (max-width: 480px) {
   .experience {
     flex-direction: column;
   }

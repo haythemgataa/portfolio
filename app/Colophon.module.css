@@ -1,0 +1,226 @@
+/* The colophon: what the site is made of, opened from the footer.
+   Structurally the lightbox's dialog — see Colophon.tsx for what is reused and why. */
+
+/* `z-index: 990`, below the lightbox's 999. The two cannot both be open, but the order between
+   them should be a decision rather than an accident of which file was written second. */
+.root {
+  position: fixed;
+  z-index: 990;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* The same 24px the lightbox reserves around its media, so a sheet and an opened image stop at
+     the same distance from the viewport edge. */
+  padding: 24px;
+}
+
+/* It **veils** rather than replaces, which is the one structural difference from the lightbox's
+   backdrop: that one is a total takeover of the gallery and paints an opaque
+   `--background-primary`, where this is a panel over a page still being read.
+
+   `--backdrop` is the token for it and this is its first shipping use — it has been in globals.css
+   since the Studio needed it, asymmetric by theme (30% in light, 50% in dark) for the same reason
+   `--overlay-strength` is: black over a light ground bites harder than black over a dark one, so
+   matching the numbers would leave the dark theme's veil barely there. */
+.backdrop {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background-color: var(--backdrop);
+  cursor: pointer;
+}
+
+/* The Studio dialog's box, which is by now simply this site's dialog box: 440px, 12px radius, the
+   page's own surface, one hairline, and a shadow deep enough to lift it off a veiled page.
+
+   `100dvh`, not `100vh` — mobile Safari's `vh` includes the toolbar it then draws over, so a full
+   list would have its last group hidden behind the browser's own chrome. The 48px is the wrapper's
+   24px padding counted on both edges. */
+.sheet {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 440px;
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background-color: var(--background-primary);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.24);
+}
+
+/* Section titles' treatment, not a size of its own — `--type-size` at `--weight-emphasis` and the
+   same -0.02em the CV's `h2`s and the gallery's filter tag are tracked in. `padding-right` clears
+   the close button, which is absolutely positioned and so cannot push the heading itself. */
+.title {
+  margin: 0 32px 16px 0;
+  color: var(--foreground-primary);
+  font-size: var(--type-size);
+  font-weight: var(--weight-emphasis);
+  letter-spacing: -0.02em;
+  line-height: var(--line-height);
+}
+
+.groups {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* The quiet label above each set. `--secondary-type-size` in tertiary, the byline's own register,
+   so the groups read as captions on the list rather than as competing headings. */
+.groupLabel {
+  margin: 0 0 2px;
+  color: var(--foreground-tertiary);
+  font-size: var(--secondary-type-size);
+  font-weight: var(--weight-base);
+  line-height: var(--line-height);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* **Inline flow, not flex, and it was flex once** — the same call `Gallery.module.css` documents
+   for its date-and-tags line, made for a reason specific to this list.
+
+   As a `flex; flex-wrap: wrap` row, a note too long for the remaining width was pushed onto a
+   line of its own, flush left under the name: measured, two of them were (the signature's
+   attribution and use-resize-observer's), and a full-width tertiary line sitting directly beneath
+   an entry reads as *another entry* rather than as that one's note. Inline, the note simply
+   continues the line and wraps mid-phrase like the prose it is.
+
+   It also gets baseline alignment for nothing, which is what the flex version needed
+   `align-items: baseline` to buy back — the name and the note are set at different sizes, and
+   inline layout puts them on one baseline by construction. */
+.item {
+  color: var(--foreground-secondary);
+  font-size: var(--type-size);
+  line-height: var(--line-height);
+}
+
+.name {
+  color: var(--foreground-primary);
+}
+
+/* The prose-link rule, restated: `globals.css` sets `a { text-decoration: none }` globally, so a
+   link that should read as one has to say so. Derived from the text with
+   `color-mix(… currentColor 22% …)` rather than a fixed grey — the same declaration `About` and
+   the CV's descriptions carry, and the reason is that no single fixed value matched both themes
+   (the pair it replaced sat at ~11% of the text in light and ~21% in dark). */
+.link {
+  color: var(--foreground-primary);
+  border-bottom: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  transition: color 150ms ease;
+}
+
+/* Gated, never the rest state — on touch `:hover` sticks after a tap and would leave a link lit
+   for the rest of the panel's life. The same split `.title a:hover` and `.media:hover` make. */
+@media (hover: hover) {
+  .link:hover {
+    color: var(--blue);
+  }
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* What it does here, at the byline's size and weight. It is the *third* level of contrast on the
+   line — name, note, label — which is what lets the list be scanned by name alone.
+
+   `margin-left` rather than the `column-gap` the flex version used, since there is no flex
+   container left to own a gap. On the rare line where the note starts a fresh row it indents by
+   that 8px, which happens to be the right thing anyway: it reads as hanging off the name above. */
+.note {
+  margin-left: 8px;
+  color: var(--foreground-tertiary);
+  font-size: var(--secondary-type-size);
+}
+
+
+/* The lightbox's close button, copied rather than shared — a CSS module cannot hand a class to
+   another module, which is the same trade `.srOnly` makes in four files here. 28px at a 50%
+   radius, `--background-muted` over `--background-hover`, and the glyph painting with
+   `currentColor` so one `color` declaration drives the mark and its hover together. */
+.close {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background-color: var(--background-muted);
+  color: var(--foreground-secondary);
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+@media (hover: hover) {
+  .close:hover {
+    background-color: var(--background-hover);
+    color: var(--foreground-primary);
+  }
+}
+
+.close:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+/* The wrapper exists so the press can move both bars as one unit — see the note in Colophon.tsx.
+   `pointer-events: none`, or a span over the button's middle swallows the click. */
+.closeIcon {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.close:active .closeIcon {
+  transform: scale(0.82);
+}
+
+/* One grid cell, so there is no translate for the rotations to compose with. */
+.closeBar {
+  grid-area: 1 / 1;
+  width: 2px;
+  height: 12px;
+  border-radius: 1px;
+  background-color: currentColor;
+}
+
+.closeBar:first-of-type {
+  transform: rotate(45deg);
+}
+
+.closeBar:last-of-type {
+  transform: rotate(-45deg);
+}
+
+/* The sheet's own entrance is handled in JS (framer-motion reads the preference and drops the
+   scale while keeping the fade). These are the CSS transitions, which it cannot reach. */
+@media (prefers-reduced-motion: reduce) {
+  .close,
+  .closeIcon,
+  .link {
+    transition: none;
+  }
+}

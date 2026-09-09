@@ -19,26 +19,63 @@
   padding-bottom: 60px;
 }
 
-/* The date at one end and the location at the other, stacking once the column gets narrow
-   enough that they would otherwise collide. `column-gap` covers the row, `row-gap` the
-   stacked case.
+/* The place and the date at one end, stacked, and the colophon at the other.
 
-   `wrap-reverse`, not `wrap`, so the location comes out *above* the date once they stack.
-   Stacked, the date wants to be last: the cursor animation ends below it, and with the location
-   underneath, the hand would land on top of the location instead of in clear space.
+   **This carried `flex-wrap: wrap-reverse` and no longer does, and the reason it was there has
+   been satisfied rather than dropped.** The two lines used to sit at opposite ends of one row, so
+   the reversal existed to bring the location out *above* the date whenever the column got narrow
+   enough for them to collide — because stacked, the date wants to be last: the cursor animation
+   ends below it, and with the location underneath the hand lands on top of the location instead
+   of in clear space. The location is now above unconditionally, in `.stack`, so that argument is
+   built into the markup and no longer needs the cross axis reversed to express it. Left in place,
+   `wrap-reverse` would put the *colophon button* above the stack the moment this row wrapped,
+   which is the same bug pointed at a different pair.
 
-   Reversing the cross axis rather than reordering under a media query, because the point at
-   which these two collide is a fact about how wide the two strings are — and one of them is a
-   date whose width changes with the month. A breakpoint would be a guess at that; this fires
-   exactly when the wrap actually happens. */
+   **`align-items: last baseline`, which puts the control on the date's line rather than the
+   place's.** Plain `baseline` is the trap here and it is worth naming: a flex item's baseline is
+   its *first* line's, so on a column-flex `.stack` that is the place — the top line — which is the
+   one thing this must not align to. `last baseline` asks for the stack's final line instead, which
+   is the date, and lands the two on one baseline with nothing measured.
+
+   `flex-end` is declared first as the fallback, the same shape as `overflow-x: hidden` before
+   `clip` and every `light-dark()` in globals.css. It is a near miss rather than a different
+   design: the stack's bottom edge is the date's line box, so an engine without `last baseline`
+   puts the button within a pixel of the same place. Measured with the real rule: the button's
+   baseline and the date's are identical.
+
+   `wrap` and a `row-gap` are kept as a floor rather than because anything reaches them: measured
+   at 375px the row's contents come to roughly 200px of a 335px column, so it does not wrap at any
+   width the site supports. It is the date's width that could change that — it grows with the
+   month's name — and a footer that overflowed rather than wrapping would be worse than one that
+   stacks. */
 .row {
   display: flex;
   flex-direction: row;
-  align-items: baseline;
+  align-items: flex-end;
+  align-items: last baseline;
   justify-content: space-between;
   column-gap: 24px;
   row-gap: 4px;
-  flex-wrap: wrap-reverse;
+  flex-wrap: wrap;
+}
+
+/* The two lines of text, in the order the cursor needs them: place, then date, so the date is
+   last and the hand that parks below it has clear space to land in.
+
+   `row-gap: 4px` is the row's own stacked gap, restated — the two used to be the same measurement
+   because `wrap-reverse` produced this stack itself, and they should stay the same because it is
+   one relationship (these two lines, next to each other) whichever box expresses it.
+
+   `min-width: 0` so a long date shrinks the stack rather than pushing the colophon button off the
+   column's right edge; `align-items: flex-start` so `.location`, which is a button and therefore
+   a flex item that would otherwise stretch, stays exactly as wide as its text — the hit area of a
+   reveal should be the words it reveals, not the whole column. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  row-gap: 4px;
+  min-width: 0;
 }
 
 /* `relative` so the cursor can be positioned against the whole line — its first mark is
@@ -315,15 +352,115 @@
 
 /* The place reads at full contrast and the offset sits back, which is the same label/value
    split running the other way across the row: "Last updated:" is quiet and its date is not.
-   So the two ends mirror each other rather than each inventing a weighting. */
+   So the two ends mirror each other rather than each inventing a weighting.
+
+   **It is a `<button>` now, reset to inherit the line it used to be.** The `{(GMT+1)}` run swaps
+   for the actual clock on hover, focus or a press, and hover alone would have made that invisible
+   on every phone and to every keyboard — the same argument that makes the contact row's address
+   pill a button rather than a link. So the element changed and the appearance deliberately did
+   not: no fill, no border, no padding, and `font: inherit` because a `<button>` inherits neither
+   the family nor the size (the trap `.tab` hit, where the Studio's `<button>` twin fell back to
+   Arial while the site's `<a>` stayed Switzer). `color: inherit` would take the UA's blue, so the
+   token is declared outright.
+
+   The one thing it does gain is a focus ring, which is the price of being reachable. */
 .location {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
   color: var(--foreground-primary);
+  cursor: pointer;
+}
+
+.location:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
 /* A `{...}` run — see `splitMuted` in lib/contentTypes.ts. Same grey as `.updated`, so the
-   offset and the label it faces sit at one level. */
+   offset and the label it faces sit at one level.
+
+   **Monospaced, which is what makes "nothing moves" a guarantee rather than an observation.**
+   This is the run the clock replaces, and it is replaced by way of a scramble that cycles
+   arbitrary glyphs through every position on the way (see `scrambleText.ts`). With a proportional
+   face the box would be a different width for `(GMT+1)`, for `(17:54)`, and for every frame of
+   noise in between — the string is the same seven characters throughout, so one advance per glyph
+   makes all three identical by construction. It replaces a `tabular-nums` that only ever fixed the
+   narrower problem of a minute rolling over, which monospacing subsumes.
+
+   A system stack, so it costs no request and no `@font-face` — the site self-hosts exactly one
+   face and this is not worth a second. `monospace` last is the generic that guarantees *some*
+   fixed-pitch face wherever the named ones are absent, which is what the guarantee above rests on.
+
+   The size is stepped down from the 14px it inherits, and the step is measured rather than
+   eyeballed: a mono face carries a large cap for its nominal size, so at a matched 14px this one's
+   cap comes to 10.39px against the place's 10.08px — *larger* than the primary text it is an aside
+   to, which is the wrong way round. At 13px it is 9.65px, 96% of the place, and the x-heights land
+   at the same ratio. The baseline is shared exactly and the line box is untouched at 22.4px, so
+   the step costs the row nothing. */
 .locationMuted {
   color: var(--foreground-tertiary);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+}
+
+/* The colophon control, at the row's other end.
+
+   **A quiet text button, not a pill**, and that is the same argument `.detailsToggle` makes in
+   `Profile.module.css` and the gallery's Clear repeats: a filled `--background-muted` pill here
+   would be the loudest thing in the footer, competing with the two lines of text it sits beside
+   for the whole length of the page's ending. It resolves to nothing at rest and to
+   `--foreground-primary` under the pointer, which is enough to read as pressable and no more.
+
+   Set at `--type-size` rather than `.detailsToggle`'s `--secondary-type-size`, because that
+   control sits in a sticky header full of 12px labels and this one sits beside 14px text — the
+   register it has to match is the footer's, not the CV header's.
+
+   The declarations are duplicated by hand rather than shared: a CSS module cannot hand a class to
+   another module, so this is the same trade `.srOnly` already makes in four files here. If the
+   CV's toggle changes, this has to follow. */
+.colophon {
+  /* No `align-self`. It carried `flex-start` while the button sat on the place's line, and that
+     would now silently win over `.row`'s `last baseline` — the row is the one place that decides
+     which line this sits on. */
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  /* `font: inherit` first, then the size — a `<button>` inherits neither the family nor the
+     weight, the trap `.tab` hit where the site's `<a>` stayed Switzer and a `<button>` twin fell
+     back to Arial. */
+  font: inherit;
+  font-size: var(--type-size);
+  line-height: var(--line-height);
+  white-space: nowrap;
+  color: var(--foreground-tertiary);
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+/* Gated, never the rest state — on touch `:hover` sticks after a tap, which would leave the
+   control lit behind the dialog it just opened. The same split every hover on this site takes. */
+@media (hover: hover) {
+  .colophon:hover {
+    color: var(--foreground-primary);
+  }
+}
+
+.colophon:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .colophon {
+    transition: none;
+  }
 }
 
 /* Not bold — the emphasis is a step up in contrast, matching how the `.year` gutter and the

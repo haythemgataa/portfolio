@@ -15,12 +15,12 @@ import {
 import profile from '../../Profile.module.css';
 import type { ContactItem, CvItem, CvSection, ResolvedMedia } from '../../lib/contentTypes';
 import { groupContactRows, isAddressContact } from '../../lib/contentTypes';
-import { resolveHeading, resolveMedia, silent } from '../../lib/resolveContent';
+import { resolveHeading, resolveIcon, resolveMedia, silent } from '../../lib/resolveContent';
 import { sameSelection, useStudio } from '../lib/studioContext';
 import { useDragHandlers } from '../lib/useDragHandlers';
 import Editable from './Editable';
 import styles from './canvas.module.css';
-import SectionNumber from '../../SectionNumber';
+import SectionIcon from '../../SectionIcon';
 
 /**
  * The CV route, editable.
@@ -64,6 +64,14 @@ const Tool: React.FC<{
     {children}
   </button>
 );
+
+/**
+ * The CSS box for an item's icon, mirroring `ITEM_ICON_SIZE` in `Profile.tsx` — the same
+ * restatement the heading icon's literal `20` below already makes. Only the *box* is duplicated:
+ * the site's constant also sizes a Cloudflare request, and there is none here, because the canvas
+ * resolves against a plain `/media/<file>`.
+ */
+const ITEM_ICON_SIZE = 40;
 
 // ---------------------------------------------------------------------------
 // Item
@@ -110,6 +118,18 @@ const CanvasItem: React.FC<ItemProps> = ({
   const heading = useMemo(
     () => resolveHeading(item.heading, assets, urlFor, `cv.json ${sectionKey}/${item.id}`, silent),
     [item.heading, assets, urlFor, sectionKey, item.id]
+  );
+
+  /**
+   * The item's own icon, through the site's own resolver — so a filename that is not in the
+   * registry, or names a video, draws nothing here exactly as it will draw nothing on the page.
+   */
+  const itemIcon = useMemo(
+    () =>
+      item.icon
+        ? resolveIcon(item.icon, assets, urlFor, `cv.json ${sectionKey}/${item.id} icon`, silent)
+        : null,
+    [item.icon, assets, urlFor, sectionKey, item.id]
   );
 
   /**
@@ -199,59 +219,80 @@ const CanvasItem: React.FC<ItemProps> = ({
       </div>
 
       <div className={profile.experienceContent}>
-        <div className={profile.title}>
-          <Editable
-            value={item.heading ?? ''}
-            onChange={(next) => setItemField(sectionKey, item.id, 'heading', next)}
-            placeholder="Heading"
-            label="Heading"
-            onEdit={selectSelf}
-          >
-            {/* The site's own segments: `[filename]` tokens render as inline icons exactly
-                where they sit. The field opens on the raw string, tokens and all, which is the
-                only thing that can be edited back. */}
-            {heading.segments.map((segment, i) =>
-              segment.kind === 'text' ? (
-                <span key={i}>{segment.text}</span>
-              ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={i}
-                  className={profile.titleIcon}
-                  src={segment.icon.url}
-                  alt=""
-                  width={20}
-                  height={20}
-                  style={{ '--icon-size': '20px' } as React.CSSProperties}
-                />
-              )
-            )}
-          </Editable>
-          {item.url ? (
-            <span className={profile.linkArrow}>
-              &#xfeff;
-              <Arrow12 fill="var(--foreground-primary)" />
-            </span>
-          ) : null}
-        </div>
-
-        {/* An unset optional field is rendered only once its item is selected. Hiding it at
-            rest is what keeps the canvas measuring like the page — the site omits these
-            entirely — and an always-present empty `.details` would be worse than invisible:
-            `.subheading ~ .details .detailsInner` carries a top padding, so it would leave a
-            phantom gap under every item that has no description. The year and heading take the
-            other approach, since their boxes exist either way; see `.ghost`. */}
-        {item.subheading || selected ? (
-          <div className={profile.subheading}>
-            <Editable
-              value={item.subheading ?? ''}
-              onChange={(next) => setItemField(sectionKey, item.id, 'subheading', next)}
-              placeholder="Subheading"
-              label="Subheading"
-              onEdit={selectSelf}
+        {/* The site's own wrapper, so the canvas measures like the page and so the `:has()` rule
+            that spaces a description under a subheading matches here too. The icon is the site's
+            picture-less half: on the canvas an unsaved document has no content hash to resolve
+            against, so `urlFor` is a plain `/media/<file>` and the `-dark` sibling is dropped —
+            the same simplification the heading's inline icons above already make. */}
+        <div className={profile.itemHeader}>
+          {itemIcon ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              className={profile.itemIcon}
+              src={itemIcon.url}
+              alt=""
+              width={ITEM_ICON_SIZE}
+              height={ITEM_ICON_SIZE}
+              style={{ '--item-icon-size': `${ITEM_ICON_SIZE}px` } as React.CSSProperties}
             />
+          ) : null}
+          <div className={profile.itemHeading}>
+            <div className={profile.title}>
+              <Editable
+                value={item.heading ?? ''}
+                onChange={(next) => setItemField(sectionKey, item.id, 'heading', next)}
+                placeholder="Heading"
+                label="Heading"
+                onEdit={selectSelf}
+              >
+                {/* The site's own segments: `[filename]` tokens render as inline icons exactly
+                    where they sit. The field opens on the raw string, tokens and all, which is the
+                    only thing that can be edited back. */}
+                {heading.segments.map((segment, i) =>
+                  segment.kind === 'text' ? (
+                    <span key={i}>{segment.text}</span>
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={i}
+                      className={profile.titleIcon}
+                      src={segment.icon.url}
+                      alt=""
+                      width={20}
+                      height={20}
+                      style={{ '--icon-size': '20px' } as React.CSSProperties}
+                    />
+                  )
+                )}
+              </Editable>
+              {item.url ? (
+                <span className={profile.linkArrow}>
+                  &#xfeff;
+                  <Arrow12 fill="var(--foreground-primary)" />
+                </span>
+              ) : null}
+            </div>
+
+            {/* An unset optional field is rendered only once its item is selected. Hiding it at
+                rest is what keeps the canvas measuring like the page — the site omits these
+                entirely — and an always-present empty `.details` would be worse than invisible:
+                `.experienceContent:has(.subheading) .details .detailsInner` carries a top
+                padding, so it would leave a phantom gap under every item that has no
+                description. The year and heading take the other approach, since their boxes
+                exist either way; see `.ghost`. */}
+            {item.subheading || selected ? (
+              <div className={profile.subheading}>
+                <Editable
+                  value={item.subheading ?? ''}
+                  onChange={(next) => setItemField(sectionKey, item.id, 'subheading', next)}
+                  placeholder="Subheading"
+                  label="Subheading"
+                  onEdit={selectSelf}
+                />
+              </div>
+            ) : null}
           </div>
-        ) : null}
+        </div>
 
         {item.description || selected ? (
           <div className={profile.details} data-open={showDetails}>
@@ -338,19 +379,23 @@ const CanvasSection: React.FC<{
           select({ kind: 'section', sectionKey: section.key });
         }}
       >
-        {/* The site's ordinal, same component and same stylesheet. It is derived from position
-            there too, so dragging a section here renumbers it on the canvas exactly as the
-            rebuilt page will show it. */}
-        <SectionNumber index={index} />
-        <h2 className={styles.sectionTitleSlot}>
-          <Editable
-            value={section.label}
-            onChange={(next) => renameSection(section.key, next)}
-            placeholder="Section title"
-            label="Section title"
-            onEdit={() => select({ kind: 'section', sectionKey: section.key })}
-          />
-        </h2>
+        {/* The site's mark and the site's grouping wrapper, same component and same stylesheet
+            — so a section created here with a key nothing has drawn a mark for shows exactly the
+            unadorned header the rebuilt page will show. `.sectionTitleSlot` goes on the group
+            *and* the h2: the group has to grow into the space the toolbar is not using, and the
+            h2 has to grow inside the group, or the Editable stops filling the column. */}
+        <div className={`${profile.sectionTitle} ${styles.sectionTitleSlot}`}>
+          <SectionIcon sectionKey={section.key} className={profile.sectionIcon} />
+          <h2 className={styles.sectionTitleSlot}>
+            <Editable
+              value={section.label}
+              onChange={(next) => renameSection(section.key, next)}
+              placeholder="Section title"
+              label="Section title"
+              onEdit={() => select({ kind: 'section', sectionKey: section.key })}
+            />
+          </h2>
+        </div>
         <span className={styles.sectionTools}>
           <span {...dragSource} className={styles.toolButton} title="Drag to reorder" aria-hidden>
             ⠿
@@ -677,16 +722,19 @@ const CvCanvas: React.FC = () => {
             select({ kind: 'contact' });
           }}
         >
-          <SectionNumber index={cv.sections.length} />
-          <h2 className={styles.sectionTitleSlot}>
-            <Editable
-              value={cv.contact?.label ?? 'Contact'}
-              onChange={renameContact}
-              placeholder="Contact"
-              label="Contact section title"
-              onEdit={() => select({ kind: 'contact' })}
-            />
-          </h2>
+          <div className={`${profile.sectionTitle} ${styles.sectionTitleSlot}`}>
+            {/* The literal the site uses for the pinned row, which carries no `key` of its own. */}
+            <SectionIcon sectionKey="contact" className={profile.sectionIcon} />
+            <h2 className={styles.sectionTitleSlot}>
+              <Editable
+                value={cv.contact?.label ?? 'Contact'}
+                onChange={renameContact}
+                placeholder="Contact"
+                label="Contact section title"
+                onEdit={() => select({ kind: 'contact' })}
+              />
+            </h2>
+          </div>
           <span className={styles.sectionTools}>
             <Tool label="Add a contact row" onClick={addContactRow}>
               ＋

@@ -485,25 +485,35 @@
 }
 
 @media only screen and (max-width: 480px) {
-  /* The negative offsets are the deliberate bleed past the content column; `--hover-room` is
-     added on top of them so that, with `.images`' padding, the first child's compensating
-     `margin-left: 40px` lands it on the column edge exactly as before. */
+  /* The negative offsets are the deliberate bleed past the content column, out to the viewport's
+     own edges; `--hover-room` is added on top of them so that, with `.images`' padding, the first
+     child's compensating margin lands it on the column edge exactly as before.
+
+     **The two distances are derived, not measured once and written down.** On the left the row
+     has to clear the page's gutter *and* the indent the CV's rows take at this width; on the
+     right, only the gutter. Both were literals — `40px` and `24px` — correct only because the
+     gutter was 24 and the indent 16. They are 20 and 20 now, so the left sum is still 40 while
+     the right is not: had these stayed literals, the row would have reached 4px *past* the
+     viewport's right edge and had that much of its last thumbnail clipped away by
+     `overflow-x: clip`, with nothing here to say why. Measured at 375px after the change: the
+     row's content box spans exactly 0 to 375, with `--hover-room`'s 10px of overpaint outside it
+     on each side. See `--page-gutter` and `--content-indent` in globals.css. */
   .scrollableArea {
     position: absolute;
-    left: calc(-40px - var(--hover-room));
-    right: calc(-24px - var(--hover-room));
+    left: calc(-1 * (var(--page-gutter) + var(--content-indent)) - var(--hover-room));
+    right: calc(-1 * var(--page-gutter) - var(--hover-room));
   }
 
   .scrollableArea .images > *:first-child {
-    margin-left: 40px;
+    margin-left: calc(var(--page-gutter) + var(--content-indent));
   }
 
   .scrollableArea .images > *:last-child {
-    margin-right: 24px;
+    margin-right: var(--page-gutter);
   }
 
   .scrollableArea::-webkit-scrollbar-track {
-    margin-left: 40px;
-    margin-right: 24px;
+    margin-left: calc(var(--page-gutter) + var(--content-indent));
+    margin-right: var(--page-gutter);
   }
 }

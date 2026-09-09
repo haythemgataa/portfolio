@@ -1,5 +1,7 @@
+/* The page's left and right padding. `--page-gutter` rather than a literal because two other
+   files are measured against it — see the token in globals.css. */
 .page {
-  padding: 0 24px;
+  padding: 0 var(--page-gutter);
 }
 
 /* The single content column both tabs share. Centred, which is what makes the tab bar's

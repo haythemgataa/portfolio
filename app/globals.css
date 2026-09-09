@@ -277,6 +277,51 @@
      background and the unselected pills, so the whole surface changes as one thing rather than
      the pills snapping while the page eases. */
   --ground-fade: 320ms;
+
+  /* The page's own left and right padding — `.page` in `layout.module.css` — and, below 480px,
+     the indent the CV's rows take inside it.
+
+     **Both are here rather than at their one obvious use site, because a third file is measured
+     against them.** `Attachments.module.css`'s mobile rule bleeds the thumbnail row out past the
+     content column to the viewport's edges, and the offsets it needs *are* these two: the left
+     bleed is the gutter plus the indent, the right bleed is the gutter alone, and the first
+     child's compensating margin puts it back on the column edge by the same sum. They were three
+     hardcoded copies of `24px` and `16px`, which happened to agree — and would have stopped
+     agreeing the moment either number moved, silently, in the one place nobody would look.
+
+     `--content-indent` is 0 at wide widths rather than being scoped to a media query, which is
+     what lets `.experiences` and `.contacts` declare `margin-left` once and unconditionally.
+     Nothing else in the content column carries an indent — About's was dropped when it moved
+     above the tab bar. */
+  --page-gutter: 24px;
+  --content-indent: 0px;
+
+  /* The gap between a section's mark and its heading, halved below 480px. Both values live in
+     this file, next to each other, rather than the override sitting in `Profile.module.css`'s
+     mobile block — the same arrangement the gutter and the indent above take. */
+  --section-title-gap: 8px;
+}
+
+/* The narrow-viewport values. 20px of gutter with a 20px indent inside it, against 24 and 16 —
+   so the page edge comes in by 4px and the rows' own indent goes out by 4px. Their *sum* is
+   unchanged at 40px, which is what the attachment row's left bleed is derived from, so that
+   construction lands exactly where it did. Verified rather than assumed: the row still reaches
+   both viewport edges and its first thumbnail still sits on the column edge.
+
+   480px is the breakpoint the rest of the site already uses — `.experience` stacks here and the
+   attachment row starts bleeding here — so this introduces no second idea of what "narrow"
+   means. */
+@media (max-width: 480px) {
+  :root {
+    --page-gutter: 20px;
+    --content-indent: 20px;
+    /* Half the wide gap. The column is at its narrowest here and the mark is the one thing in a
+       section header that cannot shrink, so the 8px between it and the heading is the cheapest
+       4px on the row — and tighter, the mark reads as belonging to the title rather than sitting
+       beside it. The header's own 16px before the Show/Hide control is left alone: that gap
+       separates two things which genuinely are separate. */
+    --section-title-gap: 4px;
+  }
 }
 
 /* The explicit theme override, and the only thing the switch touches.

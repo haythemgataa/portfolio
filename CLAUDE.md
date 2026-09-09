@@ -1195,11 +1195,27 @@ Three things it depends on:
     *less its 1px border on each side*, the same arithmetic (and the same reason) as a
     thumbnail's. The blur-up is the lightbox's, down to the checks-before-it-subscribes effect
     and the `setTimeout` rather than `requestAnimationFrame` — see `LightboxImage`.
-- **Nothing in the content column carries a narrow-viewport indent any more.** About's body
-  copy used to take `margin-left: 16px` below 480px, inherited from the days when it was a CV
-  section whose text lined up past a section title. It sits under the tabs now, with a
-  full-width surface directly beneath it, so the indent read as a misalignment; About and the
-  teaser both take the whole column at every width, the same edges the avatar and the bar use.
+- **Above the bar, nothing carries a narrow-viewport indent.** About's body copy used to take
+  `margin-left: 16px` below 480px, inherited from the days when it was a CV section whose text
+  lined up past a section title. It sits under the tabs now, with a full-width surface directly
+  beneath it, so the indent read as a misalignment; About and the teaser both take the whole
+  column at every width, the same edges the avatar and the bar use.
+
+  **Below the bar the CV's rows still do, and it is `--content-indent` (20px under 480px, 0
+  above).** `.experiences` and `.contacts` declare `margin-left` once and unconditionally rather
+  than inside a media query, which is what the 0 at wide widths buys. The gallery's list takes
+  none — it is a column of full-width surfaces, like About.
+
+  **That token and `--page-gutter` live in globals.css because a third file is measured against
+  them.** `Attachments.module.css`'s mobile rule bleeds the thumbnail row out to the viewport's
+  edges, and its offsets *are* the two: the left bleed is gutter plus indent, the right bleed is
+  the gutter alone, and the first child's compensating margin puts it back on the column edge by
+  the same sum. They were hardcoded as `40px` and `24px`, correct only because the gutter was 24
+  and the indent 16. At 20 and 20 the left sum is still 40 while the right is not — so a literal
+  right offset would have pushed the row 4px past the viewport and had that much of its last
+  thumbnail clipped by `overflow-x: clip`, silently, in the one file nobody would think to check.
+  Measured at 375px: the row's content box spans exactly 0 to 375 on every row, with
+  `--hover-room`'s 10px of overpaint outside it.
 - `.profile` and `.gallery` are both centred (`margin: 0 auto`), which is what makes the
   full-bleed `calc(50% - 50vw)` margins land symmetrically on either route.
 - `globals.css` uses `overflow-x: clip` (not `hidden`) on `html, body`. `hidden` makes them
@@ -1528,7 +1544,12 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
     `justify-content: space-between`, so left flat the three children spread with the title
     stranded mid-column — and the header's 16px `column-gap`, which exists to separate the title
     from the Show/Hide control, would become the mark's gap as well. Grouped, the existing
-    two-item spacing is untouched and the mark takes an 8px gap of its own.
+    two-item spacing is untouched and the mark takes a gap of its own: `--section-title-gap`,
+    8px, and 4px below 480px. The column is at its narrowest there and the mark is the one thing
+    in the header that cannot shrink, so that 4px is the cheapest on the row — and tighter, the
+    mark reads as belonging to the title rather than sitting beside it. The header's own 16px is
+    left alone at every width, because that gap separates two things which genuinely are
+    separate.
   - **It adds nothing to the header's height, and that figure is still load-bearing**: 39.59375px
     is what the tab bar parks every pinned title against and what the Studio's canvas is measured
     to match `/` on. The box is `6px + LH + LH/2` around its tallest child, so any child shorter

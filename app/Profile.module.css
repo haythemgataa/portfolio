@@ -54,7 +54,9 @@
 .sectionTitle {
   display: flex;
   align-items: center;
-  column-gap: 8px;
+  /* 8px, and 4px below 480px — both values are in globals.css, so nothing reads this rule and
+     assumes 8px is the whole story. */
+  column-gap: var(--section-title-gap);
   min-width: 0;
 }
 
@@ -839,13 +841,15 @@
   text-wrap: pretty;
 }
 
-@media (max-width: 480px) {
-  
-  .experiences,
-  .contacts {
-    margin-left: 16px;
-  }
+/* The narrow-viewport indent, declared once and unconditionally: `--content-indent` is 0 above
+   480px, so this is a no-op at wide widths and there is no media query to keep in step. The
+   attachment row's mobile bleed is derived from the same token — see globals.css. */
+.experiences,
+.contacts {
+  margin-left: var(--content-indent);
+}
 
+@media (max-width: 480px) {
   .experience {
     flex-direction: column;
   }

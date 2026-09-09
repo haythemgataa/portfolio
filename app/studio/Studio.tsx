@@ -511,6 +511,13 @@ export default function Studio({
     for (const s of cv?.sections ?? []) {
       for (const i of s.items ?? []) {
         for (const f of i.media ?? []) used.add(f);
+        // The item's own icon. Counted for the same reason the server counts it — see
+        // `collectReferences`.
+        if (i.icon) {
+          used.add(i.icon);
+          const iconDark = darkVariant(i.icon);
+          if (iconDark && assets[iconDark]) used.add(iconDark);
+        }
         for (const f of headingIconFiles(i.heading)) {
           used.add(f);
           // Counted for the same reason the server counts it — see `collectReferences`.

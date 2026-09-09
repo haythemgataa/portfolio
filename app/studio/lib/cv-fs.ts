@@ -232,8 +232,9 @@ function mergePatch<T extends Record<string, unknown>>(
 // ---------------------------------------------------------------------------
 
 /**
- * Every filename referenced anywhere: CV item media, item icons, the profile
- * photo, gallery entries, and poster frames declared in the registry.
+ * Every filename referenced anywhere: CV item media, an item's own icon, the inline icons named
+ * inside its heading, the profile photo, the gallery teaser, gallery entries, and poster frames
+ * declared in the registry.
  *
  * This is the only reference counter — `planGarbage` and `findOrphans` both read
  * it — so a *kind* of reference missing from here is not a small bug: the assets
@@ -259,6 +260,15 @@ export function collectReferences(
   for (const section of cv.sections ?? []) {
     for (const item of section.items ?? []) {
       for (const file of item.media ?? []) bump(file);
+      // The item's own 40px icon, beside the heading and subheading. A plain field rather than a
+      // token in a string, so unlike the heading icons below it needs no parsing — but it is a
+      // *kind* of reference all the same, and one that is not reachable through `media`.
+      if (item.icon) {
+        bump(item.icon);
+        // Same convention, same reason as the heading icons' siblings below.
+        const dark = darkVariant(item.icon);
+        if (dark && assets[dark]) bump(dark);
+      }
       // Inline heading icons are named inside the heading *string*, so they have to be parsed
       // out rather than read off a field. Missing this is what would let the sweep delete a
       // logo that is currently rendering.

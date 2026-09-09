@@ -8,6 +8,7 @@ import Tabs from "./Tabs";
 import ThemeScript from "./ThemeScript";
 import ThemeSwitch from "./ThemeSwitch";
 import { switzer } from "./lib/font";
+import { faviconIcons } from "./lib/chromeAsset";
 import { loadProfileData } from "./lib/contentLoader";
 import { hasGalleryItems } from "./lib/galleryLoader";
 import { SITE_URL, pageTitle } from "./lib/site";
@@ -28,6 +29,10 @@ export async function generateMetadata(): Promise<Metadata> {
     // the card blocks below are left bare.
     title: pageTitle(cv.profile.displayName),
     description: cv.profile.byline || '',
+    // One favicon per theme, picked by a `media` query on the link rather than swapped by
+    // script — the same reason a heading's `-dark` icon goes through `<picture>`. See
+    // `faviconIcons`, which both this and the 404 read so the pair cannot drift.
+    icons: faviconIcons(),
     // The card's text. Its *image* is deliberately not named here: `app/opengraph-image.png` is
     // a file convention, so Next emits `og:image` and `twitter:image` for this segment along
     // with the type, the real pixel dimensions read off the file, and a cache-busting hash —

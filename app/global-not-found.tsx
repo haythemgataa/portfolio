@@ -5,6 +5,7 @@ import styles from "./NotFound.module.css";
 import ThemeScript from "./ThemeScript";
 import ThemeSwitch from "./ThemeSwitch";
 import { switzer } from "./lib/font";
+import { faviconIcons } from "./lib/chromeAsset";
 import { loadProfileData } from "./lib/contentLoader";
 import { SITE_URL, pageTitle } from "./lib/site";
 import { THEME_SWITCH_ENABLED } from "./lib/theme";
@@ -22,6 +23,11 @@ export async function generateMetadata(): Promise<Metadata> {
     // tab would just read the site's name, which is not wrong but says nothing about where you
     // have landed.
     title: pageTitle(`Not found — ${cv.profile.displayName}`),
+    // Also declared rather than inherited, and for the same reason as `metadataBase` above: this
+    // route replaces the layout, so without this the 404 is the one page in the export with no
+    // themed favicon — the same trap the pre-paint theme script and the font already document
+    // here. Imported rather than restated, because a second copy of the pair is what goes stale.
+    icons: faviconIcons(),
     // No `robots` entry, and that is checked rather than assumed: Next injects
     // `<meta name="robots" content="noindex">` into this route at build time, so it is already in
     // `out/404.html` even though a static export has no server deciding a status. Declaring one

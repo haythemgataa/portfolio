@@ -12,7 +12,7 @@ import {
 } from "./ContactIcon";
 import { groupContactRows } from "./lib/contentTypes";
 import GalleryPreview from "./GalleryPreview";
-import SectionNumber from "./SectionNumber";
+import SectionIcon from "./SectionIcon";
 import styles from "./Profile.module.css";
 import Attachments from "./Attachments";
 import { cloudflareImageUrl } from "./lib/cloudflareImage";
@@ -32,6 +32,14 @@ import type {
  * property for the same reason.
  */
 const ICON_SIZE = 20;
+
+/**
+ * Displayed size of an item's own icon — the app icon standing beside the heading *and* the
+ * subheading, where `ICON_SIZE` above is the logo a `[filename]` token drops inline into the
+ * words. Declared here for the same reason: the Cloudflare request derives from it, so a second
+ * copy of the number would drift from the box it fills. It reaches the CSS as a custom property.
+ */
+const ITEM_ICON_SIZE = 40;
 
 type ProfileProps = {
   cv: ResolvedCv,
@@ -78,15 +86,16 @@ const Profile: React.FC<ProfileProps> = ({
           // index says nothing about where it sits in the document — testing that index was
           // what put the first few thumbnails of *every* section into the initial fetch.
           priority={sectionIndex === 0}
-          index={sectionIndex}
         />
       ))}
 
       {cv.contact.items.length > 0 ?
         <section className={styles.profileSection}>
-          {/* Contact is pinned last rather than living in `sections`, so its ordinal continues
-              the sequence from the end of that array instead of being counted with it. */}
-          <SectionHeader label={cv.contact.label} index={cv.sections.length}/>
+          {/* Contact is pinned last rather than living in `sections`, so it has no `key` of its
+              own in the file — hence the literal. It used to be handed `sections.length`, the
+              ordinal continuing the sequence past the end of that array; a mark needs no
+              position, only a name. */}
+          <SectionHeader label={cv.contact.label} iconKey="contact"/>
           {/* Grouped rather than laid out flat, so a row too wide for the column breaks between
               the address and the marks instead of stranding one lone mark up beside it — see
               `groupContactRows`. Every run is still in array order. */}
@@ -115,15 +124,12 @@ type SectionProps = {
   onToggleDetails: () => void,
   /** Whether this is the first section, and so the one on screen at load. */
   priority?: boolean,
-  /** Its position in `sections`, which is also its ordinal — see `SectionNumber`. */
-  index: number,
 };
 const Section: React.FC<SectionProps> = ({
   section,
   showDetails,
   onToggleDetails,
   priority = false,
-  index,
 }) => {
   // Descriptions are the only thing the control hides, so a section whose items carry none
   // — Awards and Speaking, today — gets no control at all rather than a dead one. Media and
@@ -135,7 +141,7 @@ const Section: React.FC<SectionProps> = ({
     <section className={styles.profileSection}>
       <SectionHeader
         label={section.label}
-        index={index}
+        iconKey={section.key}
         toggle={hasDetails ? { open: showDetails, onToggle: onToggleDetails } : undefined}
       />
       <div className={styles.experiences}>
@@ -154,8 +160,13 @@ const Section: React.FC<SectionProps> = ({
 
 type SectionHeaderProps = {
   label: string,
-  /** Zero-based position in the numbered sequence; `SectionNumber` renders it 1-based and padded. */
-  index: number,
+  /**
+   * Which mark to draw, looked up in `SECTION_MARKS`. It is the section's `key` for everything
+   * in `sections`, and the literal `'contact'` for the pinned row at the bottom, which has no
+   * `key` of its own in the file. A key with no mark drawn for it renders none — see
+   * `SectionIcon`.
+   */
+  iconKey: string,
   toggle?: { open: boolean, onToggle: () => void },
 };
 
@@ -171,21 +182,25 @@ type SectionHeaderProps = {
  */
 const SectionHeader: React.FC<SectionHeaderProps> = ({
   label,
-  index,
+  iconKey,
   toggle,
 }) => {
   return (
     <div className={styles.sectionHeader}>
-      {/* First in source order, but out of flow — it is positioned against this header, which is
-          already sticky. Being absolutely positioned it is not a flex item either, so it takes no
-          part in the `space-between` that pushes the toggle to the far edge. */}
-      <SectionNumber index={index} />
-      {/* h2, not h3. `ProfileHeader`'s is the page's only h1 and this is the only other heading
-          on either route, so an h3 left every section title two levels below the page title with
-          no h2 anywhere to bridge them — a hole in the outline, and nothing for a screen
-          reader's "next level 2" to land on. Purely semantic: `.profileSection h2` overrides the
-          UA sizing, so the tag carries no visual weight of its own. */}
-      <h2>{label}</h2>
+      {/* The mark and the title are one flex item, not two. `.sectionHeader` is
+          `justify-content: space-between`, so left flat the three children would spread with the
+          title stranded in the middle of the column — and the 16px `column-gap` that separates
+          the title from the Show/Hide control would become the icon's gap as well. Grouped, the
+          existing two-item spacing is untouched and the mark gets a gap of its own. */}
+      <div className={styles.sectionTitle}>
+        <SectionIcon sectionKey={iconKey} className={styles.sectionIcon} />
+        {/* h2, not h3. `ProfileHeader`'s is the page's only h1 and this is the only other heading
+            on either route, so an h3 left every section title two levels below the page title with
+            no h2 anywhere to bridge them — a hole in the outline, and nothing for a screen
+            reader's "next level 2" to land on. Purely semantic: `.profileSection h2` overrides the
+            UA sizing, so the tag carries no visual weight of its own. */}
+        <h2>{label}</h2>
+      </div>
       {toggle ?
         /* The visible label already states what the button does, so there is no aria-pressed
            here: a toggle that renames itself and one that announces a pressed state are two
@@ -237,12 +252,21 @@ const ProfileItem: React.FC<ProfileItemProps> = ({
         <span>{item.year}</span>
       </div>
       <div className={styles.experienceContent}>
-        <div className={styles.title}>
-          {title}
+        {/* The icon and the two lines that name the item, as one row. The wrapper is
+            unconditional — see `.itemHeader` for why an item with no icon is unaffected — and it
+            is what moved `.subheading ~ .details` onto `:has()`: `~` needs the two to be DOM
+            siblings, which this wrapper ends. */}
+        <div className={styles.itemHeader}>
+          {item.icon ? <ItemIcon icon={item.icon} /> : null}
+          <div className={styles.itemHeading}>
+            <div className={styles.title}>
+              {title}
+            </div>
+            {item.subheading ?
+            <div className={styles.subheading}>{item.subheading}</div>
+            : null}
+          </div>
         </div>
-        {item.subheading ?
-        <div className={styles.subheading}>{item.subheading}</div>
-        : null}
         {item.description ?
         /* Collapsed by animating the grid track from 0fr to 1fr, which is the only way to
            transition to a content-determined height. `inert` rather than `aria-hidden`
@@ -313,6 +337,49 @@ const TitleIcon: React.FC<{ icon: ResolvedIcon }> = ({ icon }) => {
         width={ICON_SIZE}
         height={ICON_SIZE}
         style={{ '--icon-size': `${ICON_SIZE}px` } as React.CSSProperties}
+      />
+    </picture>
+  );
+};
+
+/**
+ * An item's own icon, standing beside the heading and the subheading at 40px.
+ *
+ * Everything `TitleIcon` explains applies here — `alt=""` because the words beside it name the
+ * thing, `fit: 'contain'` because a non-square icon should not be cropped, and the `<picture>`
+ * rather than a scripted swap because dark mode on a static export is `prefers-color-scheme` and
+ * a swap after hydration would paint the wrong file first and do nothing at all with JS off.
+ *
+ * It is a separate component rather than a `size` prop on that one because the two differ in
+ * where they sit rather than only in how big they are: a token's icon is part of the heading's
+ * inline flow and is tuned with `vertical-align`, and this one is a flex item placed against two
+ * lines of text. One component taking both would have to carry both stylesheets.
+ */
+const ItemIcon: React.FC<{ icon: ResolvedIcon }> = ({ icon }) => {
+  const variant = (url: string) =>
+    cloudflareImageUrl(url, {
+      width: ITEM_ICON_SIZE,
+      height: ITEM_ICON_SIZE,
+      fit: 'contain',
+    });
+
+  return (
+    // The `<picture>` carries the class, because the `<picture>` is what `.itemHeader` lays out —
+    // see `.itemIconWrap`, which is a fix rather than a formality.
+    <picture className={styles.itemIconWrap}>
+      {icon.darkUrl && (
+        <source srcSet={variant(icon.darkUrl)} media="(prefers-color-scheme: dark)" />
+      )}
+      {/* A plain <img> for the reason `TitleIcon` gives: next/image renders a bare element and
+          so cannot take part in the `<picture>` the theme swap depends on. `no-img-element` does
+          not fire — the rule accepts an <img> inside a <picture>. */}
+      <img
+        className={styles.itemIcon}
+        src={variant(icon.url)}
+        alt=""
+        width={ITEM_ICON_SIZE}
+        height={ITEM_ICON_SIZE}
+        style={{ '--item-icon-size': `${ITEM_ICON_SIZE}px` } as React.CSSProperties}
       />
     </picture>
   );

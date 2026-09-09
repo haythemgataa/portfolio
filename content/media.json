@@ -103,6 +103,10 @@
       "framed": false,
       "poster": "design-ruler-alignment-guides-poster.webp"
     },
+    "design-ruler-icon.png": {
+      "width": 512,
+      "height": 512
+    },
     "design-ruler-icons.webp": {
       "width": 2500,
       "height": 1500
@@ -152,6 +156,10 @@
       "width": 2000,
       "height": 1250,
       "framed": false
+    },
+    "files-shelf-icon.png": {
+      "width": 512,
+      "height": 512
     },
     "framer-logo.svg": {
       "width": 80,
@@ -289,6 +297,10 @@
       "framed": false,
       "poster": "personal-website-framer-poster.webp"
     },
+    "personal-website-icon.png": {
+      "width": 512,
+      "height": 512
+    },
     "polytechnique-logo-dark.svg": {
       "width": 80,
       "height": 80
@@ -339,6 +351,10 @@
       "width": 1280,
       "height": 1280,
       "framed": false
+    },
+    "table-lamp-mod-icon.png": {
+      "width": 512,
+      "height": 512
     },
     "tasty-stickers.webp": {
       "width": 2000,

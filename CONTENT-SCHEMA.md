@@ -57,6 +57,7 @@ Two things that follow from that, worth stating because they are easy to assume:
           "heading": "Product Designer at InstaDeep",
           "url": "https://instadeep.com",
           "subheading": "Tunis, Tunisia",
+          "icon": "instadeep-app-icon.png",
           "description": "* Collaborating on a design system…",
           "media": ["board-view-running.webp", "pcb-layout-editing.webm"]
         }
@@ -92,6 +93,24 @@ Rules:
   location-specific despite its origins — Work Experience uses it for a city,
   Personal Projects for a stack (`"Swift (w/ Claude)"`). It was called `location`
   until that second use made the name a lie.
+- `item.icon` is **one pool filename**, drawn at 40px to the left of the heading
+  *and* the subheading — the App Store arrangement, with the description and the
+  thumbnails running full width below rather than indented behind it. It is a
+  field on the **item**, not a setting on the section, even though only Personal
+  Projects uses it today: `sections[]` is homogeneous precisely so reordering it
+  is safe, and a treatment that switched on which section an item sat in would be
+  the `kind` discriminator this model already replaced with a shape. A `-dark`
+  sibling is picked up by convention, exactly as for a heading icon.
+
+  Distinguish it from the `[filename]` token below: a token puts a 20px logo
+  *inline in the heading's words*, where this stands beside the two lines that
+  name the thing. An item can carry both.
+
+  Like `profile.galleryPreview`, it is a new **kind** of reference and so is
+  counted: `collectReferences` in `app/studio/lib/cv-fs.ts` bumps it and its
+  derived `-dark` sibling, and `cvUses` in `Studio.tsx` mirrors that. Without it
+  the sweep would report an icon the CV is currently drawing as an orphan and
+  delete it.
 - `description` is markdown. Start a line with `* ` for a bullet.
 - `item.media` is a **list of filenames** into the pool; array order is display
   order. Dimensions live in `media.json`, so the build skips `sharp` entirely.

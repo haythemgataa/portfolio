@@ -8,9 +8,10 @@
 
 import { execSync } from 'node:child_process';
 
-// Cloudflare Pages' configured production branch is a dashboard setting that has not been read
-// (confirmation is scheduled in Phase 2). This is the one line to change if it turns out not to
-// be "main".
+// **Verified against the Pages project rather than assumed**: the API reports
+// `production_branch: "main"` for `portfolio`, so this matches the dashboard. It had carried a
+// note saying confirmation was still pending; it no longer is. Still the one line to change if
+// the dashboard setting ever moves.
 export const PRODUCTION_BRANCH = 'main';
 
 /**

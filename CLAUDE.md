@@ -28,7 +28,17 @@ content model are gone — see git history if you need them.
 
 No test framework is configured.
 
-`out/` is gitignored — Cloudflare Pages runs `npm run build` on deploy, so the export is never committed.
+`out/` is gitignored, so the export is never committed.
+
+**Cloudflare Pages does *not* run `npm run build` on deploy — its build command is
+`npx next build`.** This line said otherwise and was wrong. npm lifecycle scripts only run for
+`npm run <script>`, so on a deploy neither `prebuild` nor `clean-export.mjs` executes; the font
+still arrives because `postinstall` runs during `npm clean-install`. Two consequences, and the
+second is the one that bites: `/__placeholder__` is a live 200 URL on the deployed site (see the
+404 section), and **anything added to the `build` script is a local-only step.** An `X-Robots-Tag`
+injection was added to `clean-export.mjs` and was silently a no-op on every deploy — verified only
+after the fact, which is the lesson. Check a claim like this against the project's actual build
+config before relying on it.
 
 ### Content Studio (`localhost:3000/studio`)
 
@@ -452,9 +462,18 @@ following it gets a 404, where the root simply emits no `og:image` at all.
 **No case studies exist yet.** `content/case-studies/` is absent, but `output: 'export'` requires
 `generateStaticParams()` to return at least one route, so `[slug]/page.tsx` emits a synthetic
 `__placeholder__` slug that calls `notFound()`. The export still writes that page to disk, so
-`scripts/clean-export.mjs` deletes it after every build — otherwise Cloudflare would serve
-`/__placeholder__` as a real 200 URL. Once real case studies are added, the placeholder path is
-unused and the cleanup step becomes a no-op.
+`scripts/clean-export.mjs` deletes it after every build. Once real case studies are added, the
+placeholder path is unused and the cleanup step becomes a no-op.
+
+**That cleanup does not happen on a deploy, and `/__placeholder__` is therefore live.** Measured:
+`https://haythem.cv/__placeholder__` answers 200 with a 44 KB page. The cause is the build command
+— see Deployment — not this file. What it costs is smaller than it sounds and worth stating
+precisely, because the fix is a settings change nobody should make in a panic: Next stamps
+`<meta name="robots" content="noindex">` on that render, the route is in no sitemap, and nothing
+links to it, so it is not an indexing problem. It is a URL that should not exist answering as
+though it does — and answering with Next's *default* not-found UI inside the root layout, which is
+exactly the cramped hole `global-not-found.tsx` exists to avoid (the note at the end of that file
+already predicted this shape).
 
 ### Data Layer
 
@@ -2511,16 +2530,28 @@ three things read it. Five things about the arrangement:
   both pick it up. `global-not-found.tsx` still declares none — Next injects `noindex` into that
   route itself, and a second competing tag is the bug its own comment records. Measured on a dev
   export: one tag on `/`, one on `/gallery`, exactly one on `404.html`.
-- **`X-Robots-Tag: noindex, nofollow` is injected into `out/_headers` by
-  `scripts/clean-export.mjs`**, and it is not a duplicate of the meta tag — it reaches what a meta
-  tag cannot. `sitemap.xml`, `404.html` and every file in the pool are indexable URLs with nowhere
-  to put a `<meta>`. Confirmed against the live deploy that the `/*` block does reach `/`:
-  `Referrer-Policy`, `X-Frame-Options` and `Permissions-Policy` are all present on it.
-- **The line goes *inside* the existing `/*` block, not into a second one**, so it does not rest on
-  whether Cloudflare Pages applies every matching rule cumulatively or stops at the first match.
-  The script **throws** when that block is missing: the file's shape is the contract, and a rewrite
-  that quietly wrote nothing is the exact failure being guarded against. Both branches of that were
-  tested by hand, including the throw.
+- **`X-Robots-Tag: noindex, nofollow` is declared per hostname in `public/_headers`**, and it is
+  not a duplicate of the meta tag — it reaches what a meta tag cannot. `sitemap.xml` and every file
+  in the pool are indexable URLs with nowhere to put a `<meta>`. `_headers` matches absolute URLs
+  by hostname (ignoring port and protocol), and every matching rule's headers apply cumulatively,
+  so the three hostname blocks coexist with the `/*` block below them.
+
+  **This replaced a build-time injection, and the way that failed is the more useful half of the
+  story.** It was written into `out/_headers` by `scripts/clean-export.mjs`, gated on
+  `IS_PRODUCTION_DEPLOY`, verified in the local export — and it never reached a single deploy,
+  because Cloudflare's build command is `npx next build` and no npm lifecycle script runs there.
+  It was caught by checking the live host afterwards and finding four of the `/*` block's five
+  headers arriving; the build log settled it, showing none of the script's output and
+  `Parsed 10 valid header rules`. **Verify a header at the host, not in `out/`.**
+
+  Stated by hostname it is also strictly better than the version it replaced: a branch gate could
+  only ever cover `dev.haythem.cv`, where `:project.pages.dev` and `:version.:project.pages.dev`
+  cover `readcv.pages.dev` and every per-deployment preview URL as well.
+- **`haythem.cv` and `www.haythem.cv` are deliberately not in those rules.** The apex is the site.
+  The `www` alias serves the same build and is kept out of the index by its canonical pointing at
+  the apex — measured, both it and `readcv.pages.dev` already carry that canonical. A canonical is
+  the right tool for a duplicate; noindex is the right tool for a host that should not be in search
+  at all.
 - **A dev page's canonical still points at production**, which is the one thing that was already
   right — `SITE_URL` is hardcoded, so a crawler that reaches a preview is told where the real page
   is. That is why it stays hardcoded rather than becoming per-branch.

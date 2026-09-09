@@ -10,9 +10,13 @@ import { IS_PRODUCTION_DEPLOY, SITE_URL } from './lib/site';
  * `noindex` it can never read, so anything already listed keeps its stale entry indefinitely.
  * Serving `noindex` on a *crawlable* page is the documented removal path, so the directives stay
  * permissive and the work is done by the two things that actually deindex — a `robots` meta tag
- * from `layout.tsx` and an `X-Robots-Tag` header injected into `out/_headers` by
- * `scripts/clean-export.mjs`, which is what covers `sitemap.xml`, `404.html` and the media pool,
- * none of which a meta tag can reach.
+ * from `layout.tsx`, and `X-Robots-Tag` headers declared per hostname in `public/_headers`, which
+ * are what cover `sitemap.xml` and the media pool, neither of which a meta tag can reach.
+ *
+ * Those headers were briefly injected into `out/_headers` by `scripts/clean-export.mjs` instead,
+ * gated on this same constant. That never reached a deploy — Cloudflare's build command is
+ * `npx next build`, so no npm lifecycle script runs there — and stating them by hostname is the
+ * better answer anyway, since a branch gate could not cover the pages.dev hosts.
  *
  * On production there is nothing to hide either: the export contains exactly the routes in the
  * sitemap plus the media pool they reference. The Studio is not part of a production build at all

@@ -5,6 +5,7 @@ import UserHand from "./UserHand";
 import { useHasHover } from "./useHasHover";
 import { usePrefersReducedMotion } from "./usePrefersReducedMotion";
 import FigmaCursor from "./FigmaCursor";
+import { trackEvent } from "./lib/analytics";
 import styles from "./SiteFooter.module.css";
 
 /** Milliseconds between characters. */
@@ -79,6 +80,14 @@ const FIRST_CLICK_OFFSET = { x: 8, y: -6 };
 /** How long the wave runs. Must match `handWave` in the stylesheet. */
 const WAVE_MS = 900;
 
+/**
+ * The name Simple Analytics files the greeting under. Lowercase and underscored because that is
+ * the only form that arrives as written — anything else is coerced to a valid name rather than
+ * rejected, so a stray character becomes a silent second event in the dashboard rather than an
+ * error. See `lib/analytics.ts`.
+ */
+const CLAP_EVENT = "footer_clap";
+
 type LastUpdatedProps = {
   /** Already formatted. Computed at build time by the server component above — see SiteFooter. */
   date: string,
@@ -144,6 +153,22 @@ const LastUpdated: React.FC<LastUpdatedProps> = ({ date }) => {
   const [waving, setWaving] = useState(false);
   const [clapping, setClapping] = useState(false);
   const clapTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  /**
+   * Whether this page load's greeting has already been counted.
+   *
+   * **The event is sent once, and the cap is what makes the number answer the question.** What is
+   * worth knowing is how many *people* find the hand, and an uncapped event cannot say: one
+   * delighted reader tapping it twenty times and twenty readers finding it once each are the same
+   * total. Touch made that worse rather than hypothetical — repeat tapping is the natural gesture
+   * there, which is exactly why `restartClap` exists.
+   *
+   * A ref, not state, because nothing renders from it and a re-render on the first clap would be a
+   * render spent on bookkeeping. And "per page load" is the honest scope rather than "per page
+   * view": the footer is rendered by the root layout, so it survives the tab routes, and a reader
+   * who claps on `/` and again on `/gallery` is one person who found it — counted once, against
+   * whichever page view was open at the time.
+   */
+  const clapCounted = useRef(false);
   /**
    * Where to draw the reader's own hand, relative to the cursor element. Null when they are not
    * over the zone, which is also when the native pointer is theirs again — and null throughout on
@@ -372,6 +397,17 @@ const LastUpdated: React.FC<LastUpdatedProps> = ({ date }) => {
     restartClap();
     clearTimeout(clapTimer.current);
     clapTimer.current = setTimeout(() => setClapping(false), CLAP_MS);
+
+    // Counted after the gesture is under way, and after the reduced-motion bail above: a clap that
+    // was suppressed is not a clap anyone interacted with. `pointerType` is the least-derived
+    // answer to "on what" — it is what this pointer actually is, rather than what the media query
+    // says the device is, so a finger on a hover-capable laptop reads as the touch it was. The
+    // fallback is required and not defensive: Simple Analytics drops falsy metadata values, and
+    // `pointerType` is specified to be able to come back empty.
+    if (!clapCounted.current) {
+      clapCounted.current = true;
+      trackEvent(CLAP_EVENT, { pointer: event.pointerType || "unknown" });
+    }
   };
 
   return (

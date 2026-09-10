@@ -2580,6 +2580,40 @@ with Do Not Track set. The argument for it is that what is collected is the same
 cookie and no cross-site identifier, so honouring DNT would discard page views without withholding
 anything personal. Drop the attribute to exclude them.
 
+**Custom events go through `trackEvent` in `app/lib/analytics.ts`**, which is to `Analytics.tsx`
+what `lib/theme.ts` is to `ThemeScript.tsx`. There is exactly one today: `footer_clap`, sent when
+the footer's hand is greeted, with `{ pointer }` carrying `event.pointerType` — the least-derived
+answer to "on what", so a finger on a hover-capable laptop reads as the touch it was rather than as
+whatever the media query says the device is. Four things:
+
+- **The guard is "is `sa_event` there", not `IS_PRODUCTION_DEPLOY`.** No tag is emitted off the
+  production branch, so the function simply does not exist there and every call is a no-op — one
+  fewer copy of the branch constant to keep in step. It also covers what a branch check cannot: an
+  ad blocker, or a visit where the CDN did not answer, where a call assuming the function was
+  present would throw inside an event handler. Verified with no `sa_event` installed: no page
+  error, and the clap still runs.
+- **There is deliberately no queue stub.** Simple Analytics documents a 130-byte inline shim
+  (`window.sa_event.q`) for events fired before the async script lands, and nothing here can fire
+  that early — the clap needs the reader at the bottom of a 5,400px document with a ~6s animation
+  already finished. A blocking `<head>` script on every page, restated in `global-not-found.tsx`
+  which has no footer at all, would be paid by every visit to insure an event that cannot happen.
+  Add it if something ever reports during load; not because it is the documented setup.
+- **The event is capped at one per page load, and the cap is what makes the number mean
+  anything.** The question is how many *people* find the hand, and uncapped it cannot answer:
+  one delighted reader tapping twenty times and twenty readers finding it once are the same total.
+  Touch makes that the normal case rather than a hypothetical. "Page load" and not "page view" is
+  the honest scope — the footer is in the root layout, so it survives the tab routes and a reader
+  who claps on both is counted once.
+- **An event means the clap was *triggered*.** On a pointer that includes a cursor passing through
+  the 40px zone on its way somewhere, which is a weaker signal than a tap. The gesture did run and
+  was seen, so it is counted; there is no dwell timer, and adding one would change the feature to
+  suit the metric.
+
+Event names must be alphanumeric and underscored to arrive as written — anything else is
+lowercased and coerced to a valid form rather than rejected, so a typo becomes a silent second
+event in the dashboard. Metadata is flat key/value and **falsy values are dropped, booleans
+excepted**, which is why `pointerType` takes a fallback rather than being passed through.
+
 **Every pool URL therefore carries a `?v=<hash>` content hash, built in `assetUrl()`** — the one
 place a `/media/` URL is constructed, so item media, posters, item icons, dark variants and the
 profile photo all get it from one line. A year of `immutable` means the filename *is* the cache

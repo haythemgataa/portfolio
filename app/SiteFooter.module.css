@@ -103,12 +103,43 @@
   pointer-events: none;
   transition: transform var(--cursor-move, 520ms) cubic-bezier(0.33, 0, 0.16, 1);
   animation: cursorIn 220ms ease both;
+  /* How far the clap swells at its peak, read by `handClap` below. It is a custom property rather
+     than a literal in the keyframe so the touch rule can raise it without a second copy of the
+     two-curve easing that keyframe exists to express — see the `hover: none` block for why a
+     tapped clap has to be so much bigger than a hovered one. Declared once here, and inherited
+     by both hands, so there is one number rather than one per gesture. */
+  --clap-peak: 1.42;
 }
 
 /* The clap scales the hand well past the 96x53 viewBox and throws its sparks above the top
    edge, both of which an SVG clips away by default. */
 .cursor svg {
   overflow: visible;
+}
+
+/* The gravity lean — the hand drifting towards the reader's pointer as it comes near. The
+   component writes the offset as a pair of custom properties on this box and the transform is
+   composed here, so the easing and the composition have one home.
+
+   `display: block` is load-bearing rather than tidy: `transform` does not apply to a
+   non-replaced inline element, so as a plain span this rule would silently do nothing at all.
+   The box is otherwise the svg's own — `.cursor` is absolutely positioned and shrink-to-fit, so
+   wrapping its content in a block of max-content width moves nothing.
+
+   **The transition is restarted on every frame the pointer moves, and that is the mechanism
+   rather than a cost.** Re-easing towards a fresh target each frame is a damped follow: the box
+   covers a fraction of the remaining distance per frame, so the hand trails the pointer by a
+   few frames instead of tracking it rigidly, which is the whole difference between something
+   with mass being pulled and something being driven. It is also what gives the release its
+   settle for free — the component writes zero once and this eases the rest of the way.
+
+   Nothing is written under `prefers-reduced-motion` or on a device with no hovering pointer
+   (`useHasHover` in LastUpdated.tsx gates the listener), so the fallbacks resolve to no offset
+   and this rule is inert rather than needing a query of its own. */
+.cursorPull {
+  display: block;
+  transform: translate(var(--hand-pull-x, 0px), var(--hand-pull-y, 0px));
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* The swap itself: the outgoing pointer scales down and blurs away while the incoming one
@@ -205,7 +236,12 @@
    greeting. A cursor image is stamped by the compositor and cannot be animated, so it could only
    ever be a still hand arriving; hiding the real pointer and drawing `.userHand` in its place is
    what lets the reader's hand clap too. The drawn one covers exactly this circle, so the native
-   pointer returns the instant they leave. */
+   pointer returns the instant they leave. On touch it draws nothing and this declaration is inert
+   — there is no cursor to hide — which is why it is not gated.
+
+   The radius is a variable because it is the one measurement here that is about the *pointer*
+   rather than about the hand: a finger cannot be placed to the pixel, so the `hover: none` block
+   below widens it. */
 .clapZone {
   --clap-radius: 20px;
   position: absolute;
@@ -239,11 +275,44 @@
   animation: handClap 560ms linear;
 }
 
-/* Nothing is travelling toward anything on a touch screen, and `pointerenter` there fires on a
-   tap — which would clap for someone who never approached. */
+/* On a touch screen the greeting is a *press* rather than an arrival, and both halves of it
+   change.
+
+   **The reader's hand is not drawn at all**, because there is no cursor to stand in for: the whole
+   reason `.userHand` exists is that a native cursor image cannot be animated, and a finger is not
+   a cursor. `useHasHover` in LastUpdated.tsx is the gate, and it is the JavaScript half of *this*
+   query on purpose — one mechanism, so the markup and the stylesheet cannot come to disagree
+   about which device they are on. So a tap claps the site's hand alone.
+   (This block used to hide `.clapZone` outright, on the argument that `pointerenter` fires on a
+   tap and would clap for someone who never approached. That is exactly right about *arrival* and
+   is the wrong conclusion: a tap on the hand is not a near miss, it is the most deliberate way
+   anyone can point at it.)
+
+   **The target grows to 48px**, because the 40px circle was measured against a pointer that can
+   be placed to the pixel. It stays centred on the hand, so its top edge reaches 6px into the
+   "Last updated" line above — which costs nothing, since there is nothing interactive up there
+   and the hand hangs in `.footer`'s 60px of reserved padding below.
+
+   **And the clap swells much further**, which is the half that is not merely a bigger hit area:
+   the finger making the gesture is also sitting on top of it. `handClap` pivots at the wrist, so
+   the peak scale is what decides how far the fingers rise *out* from under that finger, and the
+   pivot is what makes rising the only thing that happens — measured across the animation, the
+   hand's top edge climbs 11.6px at the hovered 1.42 and 42.8px at 2.6, while its bottom moves
+   under 2px either way. A fingertip's contact patch is around 40px across and hides roughly that
+   much again above itself, so 12px of travel is entirely under the finger and 43px clears it with
+   room to read. The name pill does not move at all, so the gesture still reads as this hand rather
+   than as something inflating in place.
+
+   (Note the arithmetic is against the *rendered* box, which is the hand plus its drop shadow and
+   a pivot a little above the lowest ink — not the bare 19px artwork, which would predict 30px and
+   be wrong by a third. Remeasure rather than scaling the figure if either changes.) */
 @media (hover: none) {
+  .cursor {
+    --clap-peak: 2.6;
+  }
+
   .clapZone {
-    display: none;
+    --clap-radius: 24px;
   }
 }
 
@@ -278,7 +347,7 @@
     animation-timing-function: cubic-bezier(0.05, 0.85, 0.15, 1);
   }
   20% {
-    transform: scale(1.42);
+    transform: scale(var(--clap-peak));
     animation-timing-function: cubic-bezier(0.36, 0, 0.18, 1);
   }
   100% {

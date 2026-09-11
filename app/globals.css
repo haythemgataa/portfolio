@@ -1,3 +1,22 @@
+/* The shimmer's position, registered so it can be *animated*.
+
+   An unregistered custom property is a token stream to CSS, so it interpolates discretely — a
+   band that jumps rather than travels. `syntax` is what makes this a percentage the engine can
+   walk through, `inherits` is what lets the load sweep run on `.description` and be read by the
+   `<strong>` inside it, and `initial-value` is the resting position: far enough past the
+   right-hand edge that *both* bands are off the phrase and nothing is tinted.
+
+   **Why the value comes from an ancestor at all** — see `About.module.css`, because it is not
+   decoration: the phrase replays the sweep on hover, and a `:hover` rule that sets an
+   `animation` re-fires it on *un*hover too, since leaving the state restarts whatever the
+   resting rule declares. Driven from above, the resting rule declares no animation of its own:
+   it inherits a finished value, so there is nothing to restart. */
+@property --shimmer-position {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: -15%;
+}
+
 :root {
   --type-size: 14px;
   --secondary-type-size: 12px;
@@ -191,6 +210,40 @@
      reflection on the selected tab's black pill. Same sweep at the same scale in both, so
      the reflection samples the hue that is actually overhead — declared once so they cannot
      drift. Lowering the fraction widens the glow; see `.topGradient`. */
+  /* The cursor glow on the page's hairlines — `EdgeGlow.tsx` and `EdgeGlow.module.css`. Named
+     apart from the `--glow-*` pair below on purpose: those are the wash at the top of the page
+     and its reflection on the tab pill, and the two effects share nothing but a word.
+
+     `--edge-glow-radius` is how much of a border one cursor position lights, and it is the
+     dial that decides the character rather than the strength: at 150px the light spanned most of
+     a tab pill and read as a treatment along the edge, where 130 reads as a point being touched.
+     Both numbers were settled on the page with a slider rather than argued about.
+
+     **There is no hue in it. The light is the hairline itself, turned up** — `--overlay-ink` at
+     16%, laid over whatever `--border` already is, so a lit hairline is the colour it was made
+     of rather than a second colour arriving. Alpha of one ink over the same ink adds, so the 6%
+     resting hairline composites to 21% and the dark theme's 8% to 22.7%: rgb(228 229 231) →
+     rgb(192 192 194) on a pill in light, rgb(60 63 68) → rgb(91 94 98) in dark. That flip is
+     the reason this is stated as the *overlay* ink rather than as a black: the same declaration
+     darkens a light hairline and brightens a dark one, where a black would be invisible on the
+     dark theme.
+
+     Two versions with orange in them were tried and dropped, and both are worth knowing about
+     before reaching for the hue again: full strength to nothing *shouted*, a saturated line on
+     a page whose loudest ink is a 6% hairline; and half strength over a darkened hairline was
+     one thing too many on a 1px line, where the darkening read as the border thickening rather
+     than as light on it. What survived is the darkening alone.
+
+     `--edge-glow-ink-fade` is that same ink at zero alpha rather than `transparent`, the rule the
+     section-title tint and the page glow both follow — and here it takes relative colour syntax
+     rather than a second `color-mix`, because `color-mix(… var(--overlay-ink) 0%, transparent)`
+     resolves to transparent *black* whatever the ink was, which on the dark theme would be a
+     white-to-black ramp. Harmless in any engine that interpolates premultiplied, which is all of
+     them now, and exactly the assumption this rule exists to avoid depending on. */
+  --edge-glow-radius: 130px;
+  --edge-glow-ink: color-mix(in srgb, var(--overlay-ink) 16%, transparent);
+  --edge-glow-ink-fade: rgb(from var(--overlay-ink) r g b / 0);
+
   --glow-fraction: 0.43;
   --glow-sweep: linear-gradient(
     90deg,
@@ -277,6 +330,30 @@
      background and the unselected pills, so the whole surface changes as one thing rather than
      the pills snapping while the page eases. */
   --ground-fade: 320ms;
+
+  /* The signature's hand, and the shimmer that follows it across About's opening claim.
+
+     **These two live here rather than on `.signature` because two components now have to agree
+     about when the hand finishes**: `Signature.module.css` schedules eighteen strokes from them,
+     and `About.module.css` starts its shimmer while the last one is still being drawn. Written
+     twice, the sum is two chances to update one of them — the argument `--sticky-top` already
+     makes. `--signature-min-stroke` stays in the component: it is the nib's own floor and
+     nothing else can want it.
+
+     The generator normalises the schedule so the last contour ends at exactly 1.0 of the
+     timeline, which is what makes `delay + duration` the moment the hand lifts — 1.5s.
+
+     The shimmer opens at 82% of that, 1.25s, while the `H`'s final contour (which starts at
+     1.40s) is still going. Overlapping is the point: handed over mid-gesture the two read as one
+     movement crossing the page, where a shimmer waiting for 1.5s reads as the second item in a
+     queue. It is **one** sweep of an image carrying **two** bands half a phrase-width apart, so
+     the second glint is chasing the first while the first is still crossing rather than being a
+     separate pass — 0.8s in total, with about 190ms between the two arriving at any given
+     letter. The phrase then rests in plain ink exactly as it did before any of this. */
+  --signature-duration: 1.4s;
+  --signature-delay: 0.1s;
+  --shimmer-delay: calc(var(--signature-delay) + var(--signature-duration) * 0.82);
+  --shimmer-duration: 0.8s;
 
   /* The page's own left and right padding — `.page` in `layout.module.css` — and, below 480px,
      the indent the CV's rows take inside it.

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { cloudflareImageUrl } from "./lib/cloudflareImage";
+import glow from "./EdgeGlow.module.css";
 import styles from "./GalleryPreview.module.css";
 import type { ResolvedMedia } from "./lib/contentTypes";
 
@@ -82,7 +83,7 @@ const PreviewTile: React.FC<{ media: ResolvedMedia; alt: string; priority: boole
   }, [loaded]);
 
   return (
-    <div className={styles.tile}>
+    <div className={`${styles.tile} ${glow.ring} ${glow.onBorder}`}>
       {/* A plain clipping span, and the blur is on the image inside it rather than on this.
           `filter` applies to the *result* of a clip, so blurring the clipping box would feather
           the blur straight back out past the edge the box exists to hold. */}
@@ -156,7 +157,7 @@ const GalleryPreview: React.FC<{ items: ResolvedMedia[] }> = ({ items }) => {
     <section className={styles.wrap} aria-label="From the gallery">
       {/* The frame wears the unselected tab pill's fill and the hairline the media thumbnails
           carry, via the same tokens, so the three surfaces cannot drift apart. */}
-      <div className={styles.frame}>
+      <div className={`${styles.frame} ${glow.ring} ${glow.onBorder}`}>
         {items.map((media, i) => (
           <PreviewTile
             key={media.url}

@@ -307,6 +307,9 @@
    `--foreground-primary` is a hovered icon. */
 .contactPill {
   --contact-pill-size: 40px;
+  /* Containing block for the lit edge's ring. `.contactCompact` already declares this for its
+     tooltip; the address pill did not. */
+  position: relative;
   display: inline-flex;
   align-items: center;
   box-sizing: border-box;

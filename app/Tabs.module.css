@@ -184,6 +184,12 @@
    is only for the hover tint below. */
 .tab {
   flex: 1 1 0;
+  /* The lit edge's ring is its `::after`, and an absolute box needs a containing block. It
+     changes no paint order that matters: `.pillLayer` is positioned and comes later, so the
+     travelling pill still covers the tab it is over — which is why the *selected* pill shows
+     no light and the one beside it does. That reads correctly rather than as a miss: the
+     selection is a solid object passing over the surface, and the light plays on the surface. */
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;

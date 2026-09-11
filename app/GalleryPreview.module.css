@@ -17,9 +17,19 @@
   grid-template-columns: 1fr 1fr;
   gap: 4px;
   padding: 8px;
-  border: 1px solid var(--border);
+  border: var(--hairline) solid var(--border);
   border-radius: 12px;
   background-color: var(--background-muted);
+  /* The rings below are its own and its tiles' pseudo-elements. */
+  position: relative;
+
+  /* The border's width, stated once and read four times — both borders, the picture's inner
+     radius below, and, through `--edge-glow-line`, both the thickness of the lit ring
+     `EdgeGlow.module.css` draws and the distance it is pulled out to reach the border box.
+     Four things that must agree to the pixel, so they are one number. */
+  --hairline: 1px;
+  --edge-glow-line: var(--hairline);
+  --tile-radius: 8px;
 }
 
 /* Every tile is the same shape whatever its media is, so the four read as a set. The ratio is
@@ -28,10 +38,18 @@
 .tile {
   position: relative;
   aspect-ratio: 4 / 3;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--tile-radius);
   box-sizing: border-box;
+  /* **No `overflow` here; the picture rounds itself** — see `.clip` and `.image`. A clip on
+     this box had two jobs and they want opposite boxes: tight on the padding edge, to trim the
+     picture to the border's inner curve, and loose on the border box, so the glow ring — which
+     lies *on* the border, outside the padding edge — survives at all. Neither `hidden` nor
+     `clip` can be both. `overflow-clip-margin` looks like the answer and is the trap: pushing
+     the clip edge out to the border box stops it trimming anything at the corners, so each
+     picture's square corner fills the arc its own border is drawing, which reads as a square
+     photograph inside a rounded frame. With nothing clipping here the ring is free, the radius
+     is stated on the thing being rounded, and there is no `@supports` floor to carry. */
 }
 
 /* Holds the blurred stand-in, and nothing else. The blur is on the image *inside* this rather
@@ -41,7 +59,10 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
-  border-radius: inherit;
+  /* The border's *inner* radius, not `inherit`. This box is the padding box, so the tile's own
+     radius is a hairline too round for it — which was invisible only while the tile clipped
+     everything at the right curve anyway. */
+  border-radius: calc(var(--tile-radius) - var(--hairline));
   pointer-events: none;
 }
 
@@ -62,6 +83,10 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  /* What rounds the picture now that the tile does not. `border-radius` clips a replaced
+     element's own content, so this needs no clipping box around it — at the same inner radius
+     as `.clip`, since the two stand in exactly the same box. */
+  border-radius: calc(var(--tile-radius) - var(--hairline));
   -webkit-user-drag: none;
 }
 

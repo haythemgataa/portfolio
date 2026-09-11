@@ -1,0 +1,102 @@
+/* A lit edge: the shared half of the cursor glow.
+
+   `EdgeGlow.tsx` writes the cursor onto `<html>` and this turns it into light on a border. A
+   host adds `.ring` and then states, in its own stylesheet, *where* its ring sits — which is
+   the one thing that is genuinely different every time, because a border can be the element's
+   own or an inset pseudo-element's, and the radius follows the box rather than the effect.
+   Everything above that line is here, once, for the reason `DuotoneMark.tsx` exists: this was
+   fourteen declarations of mask plumbing, and three copies of it would have been three places
+   to fix the day one of them turned out to be wrong.
+
+   Six things:
+
+   - **The ring is a mask, not a border colour.** `border-color` is one colour for a whole
+     edge; it cannot be lit in one place and dark two pixels along, which is the entire effect.
+     `mask-clip: content-box` minus `border-box`, composited `exclude`, leaves a ring of
+     whatever this pseudo-element's own `padding` is thick.
+   - **That band has to be `padding`, and a `border` of the same width silently draws nothing.**
+     It looks interchangeable — both leave the same gap between the content box and the border
+     box for the mask to keep — and it is not: a background *image*'s positioning area is the
+     padding box, so a band cut out of the border area lies outside the gradient's own box and
+     is filled by the repeated tile's far edge, which on this gradient is its transparent end.
+     A background *colour* paints there perfectly, which is what makes this so confusing to
+     debug: swap the gradient for a flat colour to check a ring's geometry and the geometry
+     proves fine. `background-origin: border-box` does not rescue it. Hence `.ringUnder` below,
+     for a host whose own hairline is a bordered pseudo-element: the light gets a pseudo of its
+     own rather than being asked to paint inside someone else's border.
+   - **`background-attachment: fixed` is what makes one light serve every ring.** The
+     positioning area becomes the viewport, so the same two numbers land on the same spot of
+     the screen in all of them and the light is continuous as it crosses from one object to the
+     next. It also means `background-origin` is moot here: fixed attachment ignores it.
+   - **It re-anchors inside a transformed, filtered or `will-change`d ancestor**, which is the
+     one real limit of the arrangement — such a ring is positioned against *that* ancestor and
+     its light will sit in the wrong place. Prefer moving the transform to a descendant; where
+     that is not possible the honest answer is to leave the edge unlit rather than ship a light
+     that disagrees with the others.
+   - **`@supports` gates the whole thing, and the failure it guards is loud.** Two mask layers
+     with no compositing operator fall back to their *union* — the whole box — so an engine
+     without `mask-composite` would paint an orange blob over the element rather than a
+     hairline. Drawing nothing is the honest fallback.
+   - **The far stop is the same hue at zero alpha, never `transparent`**, which would drag the
+     falloff through black. `Profile.module.css`'s section-title tint documents the same trap.
+
+   **There is no hue in it**, which is worth saying because the files are named for a glow: the
+   ramp is the hairline's own overlay ink at 10%, fading to nothing over a radius short enough to
+   read as the point being touched rather than as a treatment along the edge. So a lit border is
+   the colour it already was, ten points stronger — darker in light, lighter in dark, from one
+   declaration. Both the colour and the radius live in `globals.css`, with the reasoning. */
+@supports (mask-composite: exclude) or (-webkit-mask-composite: xor) {
+  .ring::after,
+  .ringUnder::before {
+    content: "";
+    position: absolute;
+    box-sizing: border-box;
+    pointer-events: none;
+    /* Presence, not proximity: how near the pointer must be is the gradient's falloff below.
+       This is the fade when it leaves the window, and why a page never pointed at is dark. */
+    opacity: var(--edge-glow-strength, 0);
+    transition: opacity 200ms linear;
+    background-attachment: fixed;
+    /* `--edge-glow-at` is a seam, not a knob: it lets one host override *where* the light is
+       without restating the ramp. `Attachments`' hovered thumbnail is the only caller — see the
+       note there — and the nested fallback is what keeps every other ring on the viewport's
+       coordinates. */
+    background-image: radial-gradient(
+      circle var(--edge-glow-radius)
+        at var(--edge-glow-at, var(--edge-glow-x, -100%) var(--edge-glow-y, -100%)),
+      var(--edge-glow-ink) 0%,
+      var(--edge-glow-ink-fade) 100%
+    );
+    -webkit-mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+    -webkit-mask-clip: content-box, border-box;
+    -webkit-mask-composite: xor;
+    mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+    mask-clip: content-box, border-box;
+    mask-composite: exclude;
+  }
+}
+
+/* `.ringUnder` is the second slot, for a host whose `::after` is already its hairline —
+   `Lightbox`'s opened media and `Attachments`' thumbnails both draw theirs as an inset
+   pseudo-element rather than as a border on the box. The light takes `::before` there and so
+   paints *under* that hairline, which costs it almost nothing: `--border` is 6% of an ink, so
+   94% of the orange comes through. Those hosts place their own ring, because an inset hairline
+   sits wherever its owner decided and carries that box's radius, not the element's.
+
+   The common geometry, for a host whose hairline is its own `border`: the ring is pulled out to
+   the border box and cut to the border's width.
+
+   **Not `inset: 0`, and that is the trap.** An absolutely positioned box is laid out against
+   its containing block's *padding* box, so `0` starts inside the hairline and the light lands
+   beside the border rather than on it — two parallel lines, one grey and one orange. Pulling
+   it out by the border's own width makes the box the border box exactly, which is also what
+   makes `border-radius: inherit` right: that is the border-box radius.
+
+   A host whose hairline is already drawn by an inset pseudo-element wants none of this — see
+   `.media::after` in `Attachments.module.css` — so it is a second class rather than part of
+   `.ring`. */
+.onBorder::after {
+  inset: calc(var(--edge-glow-line, 1px) * -1);
+  padding: var(--edge-glow-line, 1px);
+  border-radius: inherit;
+}

@@ -8,21 +8,22 @@
      generated figure lives in one place and this only has to say how it may shrink. */
   max-width: 100%;
   height: auto;
-  /* The four knobs. Every stroke's own duration and delay are derived from these and from the
-     two fractions the generator writes on it, so the whole hand is tuned from here.
+  /* Every stroke's own duration and delay are derived from `--signature-duration` and
+     `--signature-delay` — which are in `globals.css`, because About's shimmer has to start
+     while this hand is still moving and the two cannot be allowed to disagree about when that
+     is — and from the two fractions the generator writes on each stroke.
 
-     The overlap that keeps the hand continuous is *not* here — it is baked into `start` by the
-     generator, because it has to accumulate and CSS can only see one stroke at a time. See
-     `OVERLAP` in `scripts/gen-signature.mjs`.
+     The overlap that keeps the hand continuous is *not* in either place: it is baked into
+     `start` by the generator, because it has to accumulate and CSS can only see one stroke at a
+     time. See `OVERLAP` in `scripts/gen-signature.mjs`.
 
-     `--signature-min-stroke` is a floor for the contours too short to be seen being drawn. Four
+     `--signature-min-stroke` stays here, since it is this nib's floor and nothing outside can
+     want it: it lifts the contours too short to be seen being drawn. Four
      of the eighteen are under 1% of the timeline; at 1.4s that is 6–15ms and they pop into
      existence. 55ms rather than something rounder because it has to lift those four and leave
      the rest alone — at 90ms it caught thirteen of the eighteen and flattened the
      length-proportional pacing into a metronome. A floored stroke only ever runs *longer* than
      its slot, which the overlapping schedule already tolerates, so it cannot open a gap. */
-  --signature-duration: 1.4s;
-  --signature-delay: 0.1s;
   --signature-min-stroke: 55ms;
 }
 

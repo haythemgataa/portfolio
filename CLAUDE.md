@@ -1193,11 +1193,65 @@ Three things it depends on:
     resolves `bolder` to 700 — a step past `--weight-emphasis` and, beside 350 body copy, a
     different voice rather than an emphasis. It takes `--foreground-primary` with it, so the
     phrase reads as the page's ink and the rest of the sentence as secondary. Declared on the
-    element because `RichText` emits classless markdown; there is no other handle.
+    element because `RichText` emits classless markdown; there is no other handle — which is
+    safe because the paragraph has exactly one bold phrase and it is this one.
+  - **Two orange bands cross that phrase in one sweep as the signature finishes writing it**,
+    and they replay when it is hovered. The two being one gesture is the point: `--shimmer-delay` is
+    `calc(var(--signature-delay) + var(--signature-duration) * 0.82)` — 1.25s, while the `H`'s
+    last contour (which opens at 1.40s) is still being drawn. Waiting for the hand to lift reads
+    as the second item in a queue; overlapping reads as one movement crossing the page. **That
+    is why `--signature-duration` and `--signature-delay` moved to `globals.css`**: two
+    components now have to agree about when the hand finishes, and written twice the sum is two
+    chances to update one of them, the argument `--sticky-top` already makes.
+    `--signature-min-stroke` stayed in `Signature.module.css`, being the nib's own floor.
+
+    It is the `background-clip: text` construction `.sectionHeader h2` uses — a band on top, the
+    page's ink underneath, `color: transparent` to get the UA's fill out of the way — with the
+    band moved by `background-position` rather than held still. Five things:
+    - **The load sweep runs on `.description` and the hover sweep on the phrase itself, both
+      animating one registered property.** `@property --shimmer-position` in `globals.css` is
+      what makes a custom property interpolate at all (unregistered, it is a token stream and
+      steps discretely) and what lets the value be produced by an ancestor and read by the
+      `<strong>`. **The obvious arrangement — one animation on the phrase, another on `:hover` —
+      has a bug that is easy to ship and hard to attribute**: leaving a hover state restarts
+      whatever animation the resting rule declares, so every un-hover queues the load sweep
+      again, delay and all. Handed down from above, the resting rule declares no animation, so
+      there is nothing to restart. Verified: on un-hover the phrase has zero animations and holds
+      10% both immediately and 1.6s later.
+    - **Both bands live in one gradient, and that is what makes them chase each other.** They
+      are two peaks in a single stop list, at 1/3 and 1/2 of the image, so one sweep carries
+      both and the second is on the phrase while the first is still crossing it. Two
+      *iterations* of a one-band sweep is what this replaced, and it read as what it was: two
+      passes with a pause, however short the pause was made — and the pause could not be
+      removed, because CSS has no way to state a gap *between* iterations, so it had to be held
+      inside the keyframes where it was visible.
+    - **The range is 90% → −15%, and both ends exist so nothing is tinted at rest.** At
+      `background-size: 300%` a position percentage resolves against a negative `box − image`, so
+      a band at image-fraction `f` sits at `3f − 2P` box-widths from the left edge: the pair is
+      at `1.5 − 2P` and `1 − 2P`, half a box-width apart. The ends put the leading band at −0.3
+      and the *trailing* one at +1.3, each clear of the phrase at the end it is nearest — and the
+      trailing band is why the far end is negative, having half a box-width further to travel.
+      Getting this wrong is quiet: 80% → 20% shipped for a day and left about 0.05 of a box-width
+      of the feathered edge *on* the phrase at each end, orange on the "P" before the animation
+      and on the "r" forever after.
+    - **`112deg`, so the bands lean**, and 12% of the image wide rather than the 10% they started
+      at. Upright they read as a progress bar passing through rather than as light catching a
+      surface, and at 10% the light was a hairline rather than a highlight.
+    - **Nothing depends on the phrase staying on one line, but it does**: measured at 375px, the
+      narrowest width supported, it is one 186px fragment with "6+ years, owning" still beside
+      it. A wrapped phrase would take one band across both fragments, since an inline box's
+      positioning area is the box as if unfragmented — no background can follow text flow, the
+      limit that title tint records too.
+
+    The whole treatment sits inside `@media (prefers-reduced-motion: no-preference)`, declared
+    there rather than declared and then switched off, so a reader who asked for less motion gets
+    the plain rule and not even the clip or the transparent `color` — machinery for an effect
+    they are not being shown. The hover half is additionally gated on `hover: hover`, since on
+    touch `:hover` sticks after a tap and would leave the phrase mid-sweep.
 - **`GalleryPreview.tsx` — the 2x2 teaser — is the CV page's first block**, rendered by
   `Profile.tsx` and not by the layout. That is what makes it CV-only without a route test: the
   layout is never told which route it is rendering, so anything conditional up there needs
-  `usePathname()`, whereas inside the CV page being on the CV *is* the condition. Four things
+  `usePathname()`, whereas inside the CV page being on the CV *is* the condition. Five things
   worth knowing before touching it:
   - **It must stay below the bar.** Above it, the bar's resting height stops matching
     `/gallery`'s and the jump comes back — measured at 500px, the block's height plus its
@@ -1216,6 +1270,23 @@ Three things it depends on:
     *less its 1px border on each side*, the same arithmetic (and the same reason) as a
     thumbnail's. The blur-up is the lightbox's, down to the checks-before-it-subscribes effect
     and the `setTimeout` rather than `requestAnimationFrame` — see `LightboxImage`.
+  - **Its hairlines light under the cursor, and the mechanism is shared** — `.ring` plus
+    `.onBorder` from `EdgeGlow.module.css`, five rings here (the frame's and one per tile). See
+    **Lit edges** for how the light works and what it costs; two things are this block's own.
+    It is the hairline and nothing wider: a second, fainter ring was tried for bleed and drew a
+    soft band lying on the photographs rather than light coming off an edge, where the ramp
+    *along* the border is what reads as a glow. And `--hairline` is stated once here and read
+    four times — both borders, the picture's inner radius, and, through `--edge-glow-line`, the
+    ring's thickness and the distance it is pulled out to reach the border box. Four things that
+    must agree to the pixel, so they are one number.
+  - **A tile clips nothing, and its picture rounds itself**, which is what makes room for that
+    ring — `.image` and `.clip` carry `calc(var(--tile-radius) - var(--hairline))`, the border's
+    inner radius, measured at 7px against the tile's 8px and exactly the curve the tile's old
+    `overflow: hidden` was drawing. (`.clip` had `inherit` and so was a pixel too round;
+    invisible only because the tile was re-clipping it correctly.) The trap that sent it this
+    way is under **Lit edges**: a clip at the padding edge does not shift a ring lying on the
+    border, it deletes it, and `overflow-clip-margin` trades that for square-cornered
+    photographs inside rounded frames.
 - **Above the bar, nothing carries a narrow-viewport indent.** About's body copy used to take
   `margin-left: 16px` below 480px, inherited from the days when it was a CV section whose text
   lined up past a section title. It sits under the tabs now, with a full-width surface directly
@@ -1306,6 +1377,138 @@ is the single exception — measured, its path reaches 16.004 in a 16 box, so th
 0.004 units of real work. At 16px on a 3x screen that is 0.012 of a device pixel, which is why it
 is not worth carrying.
 
+### Lit edges
+
+**Every hairline on the site lights orange under the cursor, and the light is one light.**
+`EdgeGlow.tsx` writes the pointer's position onto `<html>` and renders nothing else;
+`EdgeGlow.module.css` turns that into a ring on a border. Adding a lit border is a class and,
+where the geometry is unusual, three lines — no JavaScript at all.
+
+**`background-attachment: fixed` is the whole mechanism.** A fixed background's positioning area
+is the viewport, so one `at var(--edge-glow-x) var(--edge-glow-y)` lands on the same spot of the
+screen in every ring on the page: the light is continuous as it crosses from a tab pill to the
+frame below it, and nothing has to be measured. The first version of this lit only the gallery
+teaser and handed each ring the cursor in *its own* coordinates — a rect read and two writes per
+ring per frame, which would not have survived being asked of the 59 rings the CV page now
+carries. Three things fell out of the change, and all three are deletions: no scroll listener
+(scrolling moves the borders *under* a stationary light, which is what a light in a room does),
+no `IntersectionObserver` (nothing per-element to switch on), and no proximity ramp — how near
+the pointer must be is the gradient's own falloff, so `--edge-glow-strength` is now only the
+pointer's presence: the fade when it leaves the window, and the reason a page never pointed at
+draws nothing. The one thing the driver still does per element is the transformed-host exception
+below, and it is bounded to whichever single element is under the pointer.
+
+Measured rather than assumed, because 59 masked gradients repainting on every pointer frame is
+the obvious objection: frame intervals are identical with the gradients live and with them
+switched off (median 8.3ms, p95 9.3 against 9.2), so there is no proximity gate and no need for
+one.
+
+**What is lit, and what is not.** The `.ring` class goes on hosts whose `::after` is free — the
+tab pills, the contact pills, the avatar well, the theme switch, and the teaser's frame and
+tiles, which all pair it with `.onBorder` because their hairline is the element's own border.
+`.ringUnder` is the second slot, for a host whose `::after` *is* its hairline: `Attachments`'
+thumbnails draw theirs as an inset pseudo-element, so the light takes `::before` and paints under
+it — which costs almost nothing, since `--border` is 6% of an ink and 94% of the light comes
+through. That host places its own ring, because an inset hairline sits where its owner decided
+and carries that box's radius rather than the element's.
+
+Four deliberate exclusions:
+
+- **The gallery's items.** A light chasing the cursor down a column of large media reads as
+  restless where the same light on a small control reads as attention. Excluded by not carrying
+  the class; `/gallery` therefore lights only the chrome it shares with the CV — the avatar, the
+  tabs, the switch.
+- **The lightbox.** It was lit for one commit and came out: an opened image is a takeover, with
+  nothing around it to relate the light to and the reader's whole attention already on the one
+  object. A hairline stirring at the edge of it is interference rather than attention.
+- **The 404.** `global-not-found.tsx` bypasses the root layout and ships no client JavaScript at
+  all, which is worth more than one effect. It renders no driver, so its borders simply never
+  light.
+- **The colophon's sheet.** It is its own scroll container, and an absolutely positioned ring
+  inside one scrolls with the content — the light would drift off the border as the list moves.
+  Fixable only by moving the scroll to an inner element, which is a change to the dialog's layout
+  rather than to this effect.
+
+Five traps, four of them paid for in full before they were understood:
+
+- **The band must be the ring's `padding`, never a `border` of the same width.** They look
+  interchangeable — both leave exactly the same gap between content box and border box for the
+  mask to keep — and they are not: a background *image*'s positioning area is the padding box,
+  so a band cut out of the border area lies outside the gradient's own box and gets filled by
+  the repeated tile's far edge, which on this gradient is its transparent end. It draws nothing,
+  in total silence. What makes it vicious is that a background *colour* paints there perfectly,
+  so the obvious way to check a ring's geometry — swap the gradient for flat lime — reports the
+  geometry as fine. `background-origin: border-box` does not rescue it. This is why `.ringUnder`
+  exists at all rather than the light simply being added to an existing bordered pseudo-element.
+- **`inset: 0` is the padding box, not the border box.** An absolutely positioned box is laid
+  out against its containing block's padding box, so a ring at `0` starts inside the hairline and
+  the light lands *beside* the border rather than on it — two parallel lines, one grey and one
+  orange. `.onBorder` pulls it out by the border's own width, which is also what makes
+  `border-radius: inherit` right there: that is the border-box radius.
+- **A clip at the padding edge deletes the ring.** `overflow: hidden` on a host clips at the
+  padding edge and an `.onBorder` ring lies outside that, on the border — so the picture-rounding
+  clip that `.tile` and `.profilePhoto` both used to carry had to go, with the media taking the
+  border's *inner* radius instead (`calc(radius - hairline)`, the curve the clip was drawing
+  anyway). `overflow-clip-margin` looks like the alternative and is a worse bug: pushing the clip
+  edge out stops it trimming anything at the corners, so each picture's square corner fills the
+  arc its own border draws.
+- **It re-anchors inside a transformed, filtered or `will-change`d ancestor**, which is the one
+  real limit: such a ring is positioned against *that* ancestor and its light sits in the wrong
+  place. `Attachments`' `filter: drop-shadow` is on `.frame`, a child of the lit `.media`, so it
+  costs nothing — but **the hover lift is a `transform` on `.media` itself**, which made a
+  hovered thumbnail the one place the effect looked broken rather than absent: its own ring
+  re-anchored to a 140x90 box, the light landed far outside it, and hovering a thumbnail put it
+  out. Such a host marks itself `data-edge-glow-local` and the driver writes the cursor in *that
+  element's* coordinates into `--edge-glow-at`, the seam `EdgeGlow.module.css` leaves for it, so
+  the ramp is not restated. **Centring the light on the element was the first attempt and it
+  flashed on the way out**: a light centred on a thumbnail lights its whole ring at once, which
+  is not what the shared light a pixel outside the element was doing, so the handover was a
+  visible jump in both directions. Tracking the cursor makes the two states agree exactly where
+  they swap — both put the light on the same point of the screen — which is the whole reason
+  this is worth one `:hover` match and one rect read per frame. The element's rotation is
+  ignored: 1.2° across 140px is under 1.5px of error on a soft 90px light, against inverting a
+  transform matrix every frame. Where neither route is possible, leave the edge unlit rather
+  than ship a light that disagrees with the others.
+- **`@supports` gates the whole thing**, because two mask layers with no compositing operator
+  fall back to their *union* — the whole box — so an engine without `mask-composite` would paint
+  an orange blob over the element rather than a hairline. Drawing nothing is the honest fallback.
+
+**There is no hue in it, which is worth saying because the files are named for a glow: the light
+is the hairline itself, turned up.** `--edge-glow-ink` is `--overlay-ink` at 16%, laid over
+whatever `--border` already is, so a lit border is the colour it was made of rather than a second
+colour arriving. Alpha of one ink over the same ink adds, so the 6% resting hairline composites to
+21% and the dark theme's 8% to 22.7% — measured on a pill, rgb(228 229 231) → rgb(192 192 194) in
+light and rgb(60 63 68) → rgb(91 94 98) in dark. Stating it as the *overlay* ink rather than as a
+black is what buys that second row: one declaration darkens a light hairline and brightens a dark
+one, where a black would be invisible on the dark theme. The other dial is `--edge-glow-radius`,
+at 130px, and it is the one that decides the character rather than the strength — at 150 the light
+spanned most of a tab pill and read as a treatment along the edge. Both numbers were settled on
+the page with a throwaway slider panel rather than argued about; it is gone, and this is where
+they live.
+
+**Three versions with orange in them were tried and dropped**, which is worth knowing before
+reaching for the hue again: full-strength orange to nothing *shouted*, a saturated line on a page
+whose loudest ink is a 6% hairline; orange over a darkened hairline was one thing too many on a
+1px line, where the darkening read as the border thickening rather than as light falling on it;
+and half-strength orange alone, which was still a colour statement on a palette of seven. The
+darkening alone is what survived.
+
+`--edge-glow-ink-fade` is that same ink at zero alpha rather than `transparent`, the rule the
+section-title tint and the page glow both follow. It takes relative colour syntax
+(`rgb(from var(--overlay-ink) r g b / 0)`) rather than a second `color-mix`, because
+`color-mix(… var(--overlay-ink) 0%, transparent)` resolves to transparent *black* whatever the
+ink was — which on the dark theme is a white-to-black ramp, harmless in any engine that
+interpolates premultiplied and exactly the assumption the rule exists to avoid depending on.
+
+The selected tab pill shows no light, and that is correct rather than missed — the travelling
+pill's opaque ground covers the tab it is over, so the selection reads as a solid object passing
+over a surface the light plays on.
+
+Gated on a hovering pointer *and* on motion being allowed. Under `prefers-reduced-motion` it is
+dropped rather than stilled: unlike `LocalTime`'s clock there is no information under the
+animation to keep, so the listeners are never attached and every ring's opacity resolves through
+a `--edge-glow-strength` that is then never written.
+
 ### The signature
 
 **The name is drawn, not set.** `app/Signature.tsx` renders an inline SVG whose outlines
@@ -1380,7 +1583,9 @@ load-bearing, and most of them were found by rendering the thing and looking:
   different, much bolder script — so it is left out and the mark rests as pure fill.
 - **Timing is a share of contour length, not a share of the letters.** `span` in the generated
   module is proportional to how far the nib travels through that contour, and
-  `Signature.module.css` multiplies it by one `--signature-duration` (1.4s). A fixed beat per
+  `Signature.module.css` multiplies it by one `--signature-duration` (1.4s, and declared in
+  `globals.css` — About's shimmer starts while this hand is still moving, so the two cannot be
+  allowed to disagree about when that is). A fixed beat per
   glyph would crawl through `t` and sprint through the `H`; this is one hand at one speed.
 - **The strokes overlap, and the schedule for that is computed in the generator, not in CSS.**
   Because the nib traces a *contour*, it runs up one side of a stroke and back down the other,
@@ -1452,6 +1657,15 @@ flattening it would bake the light theme's wash into the picture —
 and `.name`'s `margin-top: -14px` puts the ink's top 12.5px above the photo's lower edge, about a
 quarter of the picture. Enough for the `H`'s flourish to read as crossing it, little enough that
 none of the face is covered.
+
+**`.name` carries `position: relative` to keep that overlap the right way up**, and it is a fix
+rather than tidiness. The well above became positioned the day it took a lit edge — a ring is an
+absolutely positioned pseudo-element and needs a containing block — and a positioned element
+paints above in-flow content whatever the source order says, so the picture started covering the
+ascender that is supposed to cross it. It read as the signature having *moved below* the photo
+when only the paint order had changed, which is the shape to recognise: anything given a ring can
+quietly start painting over whatever used to overlap it. Positioned too and later in the tree, the
+signature is back on top and neither needs a `z-index`.
 
 **The name is no longer edited on the Studio's canvas**, and that is the canvas/inspector split
 holding rather than an omission: what a visitor can read is edited where it sits, and a visitor
@@ -1932,7 +2146,7 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
 ### Component Patterns
 
 - **Server components** (async): `layout.tsx`, `page.tsx`, `[slug]/page.tsx` — handle data loading
-- **Client components** (`"use client"`): `Profile.tsx`, `Attachments.tsx`, `Lightbox.tsx`, `Scrollbar.tsx`, `RichText.tsx`, `Gallery.tsx`, `Tabs.tsx`, `LastUpdated.tsx`, `LocalTime.tsx`, `Colophon.tsx`
+- **Client components** (`"use client"`): `Profile.tsx`, `Attachments.tsx`, `Lightbox.tsx`, `Scrollbar.tsx`, `RichText.tsx`, `Gallery.tsx`, `Tabs.tsx`, `LastUpdated.tsx`, `LocalTime.tsx`, `Colophon.tsx`, `EdgeGlow.tsx` (renders nothing — see **Lit edges**)
 - **`SiteFooter.tsx` is in the root layout**, below the bar, so it closes both routes — the gallery
   would otherwise just stop after its last item. It is a stack against a control: the place above
   the published date at one end, and the colophon at the other. Eight things there:
@@ -2118,6 +2332,40 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
     finished date blank itself and retype. Measured on a stepped scroll: zero frames where the
     complete date is visible before the animation starts. Reduced motion is *derived* during render
     rather than written back as state — assigning it in the effect trips `set-state-in-effect`.
+  - **Once the sequence parks, the hand has gravity: it leans up to 6px towards the reader's
+    pointer from 120px out, and settles back when that pointer goes away.** The radius is six
+    times the clap's 20px on purpose — the two are halves of one approach rather than two
+    thresholds, the lean being the hand noticing someone coming and the clap the arrival. Four
+    things:
+    - **It moves the whole cursor, name pill included**, where the click, wave and clap move the
+      pointer group alone. Those are gestures *of* the hand and a pill riding along unchanged is
+      what a multiplayer cursor does; this is the cursor being pulled, and a hand drifting out
+      from under its own name reads as coming loose. So it needs a box of its own
+      (`.cursorPull`): `.cursorPointer` already animates `transform` for all three gestures, and
+      two things cannot own one property.
+    - **The anchor is `.clapZone`, which is deliberately left *outside* that box.** An anchor
+      that moved with the lean would feed its own output back in. `.userHand` stays outside it
+      for a different reason — it stands in for the reader's own pointer, so it has to sit
+      exactly where that pointer is. Verified: the drawn fingertip lands on the pointer to the
+      pixel while the hand is leaning, and `.cursor`'s own rect does not move.
+    - **The falloff is a smoothstep, flat at both ends**, so the lean neither switches on as the
+      pointer crosses the radius nor snatches the last pixels as the two meet — measured, 0.44px
+      at 100px out, 3.0px at 60px, 4.4px at 40px, 5.56px at 20px. It is capped at the gap itself, or the hand reaches
+      through the pointer and the direction it is reaching in goes to noise as the two coincide.
+    - **The offset is written to the DOM, not to state, and the transition is the damping.**
+      This is a value per animation frame, so it is a custom property on one element (the
+      `EdgeGlow` argument) rather than a render of the subtree 60 times a second. Re-easing
+      towards a fresh target each frame *is* the follow: the box covers a fraction of what is
+      left per frame, so the hand trails by a few frames instead of tracking rigidly, and the
+      release eases home for free. `display: block` on that box is load-bearing — `transform`
+      does not apply to a non-replaced inline element, so as a plain span the rule would
+      silently do nothing. Measured against the pre-change tree: the cursor's rect, the clap
+      zone, `.updated`, the footer's 126.8px and the document's height are all identical.
+    - Gated on a hovering pointer and on motion being allowed, and only while the hand is out —
+      so nothing listens while the arrow is still working (the sequence is a performance, not
+      something to shove) and nothing listens at all for a reader who never reached the footer.
+      The listener also returns early while the footer is off screen, which is what keeps its
+      cost for the whole page above at one boolean.
   - The gap above it is **padding, not margin**, and that is the only reason the two routes agree.
     The gallery's list ends in a margin, which collapses with an adjacent margin — a 16px top
     margin disappeared into the list's 60px and left the gallery 16px tighter than the CV, whose

@@ -30,14 +30,15 @@
   font-weight: var(--weight-emphasis);
 }
 
-/* One orange sweep across that phrase, timed to take over from the signature above it.
+/* Two orange sweeps across that phrase, the first timed to take over from the signature above
+   it and both replayed when the phrase is hovered.
 
    The whole treatment sits inside `no-preference` rather than being declared and then switched
    off, so a reader who asked for less motion gets the plain rule above and nothing else — not
    even the `background-clip` and the transparent `color`, which are machinery for an effect they
    are not being shown.
 
-   Six things:
+   Nine things:
 
    - **Two layers, and the order is the mechanism.** The band paints on top and the page's ink
      underneath, both clipped to the glyphs, with `color: transparent` to get the UA's own fill
@@ -51,34 +52,51 @@
      against a *negative* `box − image`: the band's centre lands at `1.5 − 2P` box-widths from
      the left edge, which is why a *falling* percentage sweeps it left to right, the direction
      the sentence is read in.
-   - **The keyframes are 80% → 20%, not 100% → 0%, and the difference is half the animation.**
-     That arithmetic puts the band on the box only while P is between 0.75 and 0.25 — so the
-     full range spends the first quarter and the last quarter of the duration travelling with
-     nothing to show, which measured as a sweep that crossed the phrase and then left it
-     untouched for 350ms. 80% starts it just off the left edge and 20% carries it just past the
-     right, so the whole duration is the crossing.
+   - **The range is 90% → 10%, and both ends are chosen so nothing is tinted at rest.** Those
+     put the centre at −0.3 and +1.3 box-widths, comfortably past each edge — where the 80% → 20%
+     it started as left about 0.05 of a box-width of the feathered band *on* the phrase at both
+     ends, a sliver of orange sitting on "P" before the animation and on "r" forever after. The
+     margin is deliberately more than the arithmetic needs, because the slant below widens the
+     band's horizontal reach and the exact figure depends on the phrase's width.
+   - **One cycle is a sweep and then a pause**, held in the keyframes rather than expressed as a
+     gap between iterations, which CSS has no way to state: the band reaches 10% at 72% of the
+     cycle and sits there. `--shimmer-cycles` then runs it twice, and the snap back to 90% at
+     the cycle boundary is invisible because both ends are off the phrase.
+   - **`112deg`, so the band leans**, rather than the 90 a vertical wipe would be. It is the
+     angle a light catches a surface at; upright it read as a progress bar passing through.
    - **`linear`, for the reason the nib is linear**: shaping belongs in a schedule rather than
      in a timing function, and here there is one stroke to shape. Eased, the light appeared to
      hesitate at the edge it was entering from.
    - **The far stops are the same hue at zero alpha, never `transparent`**, which would drag the
      feathered edges through black. The rule the section-title tint and the page glow follow.
-   - **`both` is load-bearing, exactly as it is on the signature's nib.** It holds the *from*
-     state through the 1.25s delay, so nothing is tinted while the hand is still writing, and
-     the *to* state afterwards, so the phrase rests in plain ink. The animation never replays:
-     About is rendered by the layout, so switching tabs does not remount it — the same reason
-     the signature draws once per load rather than once per route.
    - **Nothing here depends on the phrase staying on one line, but it does.** Measured at 375px,
      the narrowest width the site supports: one fragment, 186px wide, with "6+ years, owning"
      still beside it — so the wrapped case does not arise today on any supported width. If a
      longer claim ever wrapped, an inline box's background positioning area is the box as if
      unfragmented (`box-decoration-break: slice`), so the band would cross both fragments at
      once and arrive at each at a different point in its own width. No background can follow
-     text flow, which is the accepted limit `.sectionHeader h2` records for its own tint. */
+     text flow, which is the accepted limit `.sectionHeader h2` records for its own tint.
+
+   **The load sweep runs on `.description` and the hover sweep on the phrase itself, and that
+   split is the whole reason this works.** Both animate one registered property — see
+   `@property --shimmer-position` in `globals.css` — which the `<strong>` reads for its
+   `background-position`. The obvious arrangement, one animation on the phrase and another on
+   `:hover`, has a bug that is easy to ship and hard to attribute: leaving the hover state
+   restarts whatever animation the resting rule declares, so every un-hover queues the load
+   sweep again, delay and all. With the value handed down from above, the resting rule declares
+   no animation at all — it inherits a value the ancestor has already finished holding — so
+   there is nothing to restart, and the element's own animation simply wins for as long as the
+   pointer is on it. */
 @media (prefers-reduced-motion: no-preference) {
+  .description {
+    animation: shimmer var(--shimmer-duration) linear var(--shimmer-delay)
+      var(--shimmer-cycles) both;
+  }
+
   .description strong {
     background-image:
       linear-gradient(
-        100deg,
+        112deg,
         rgb(251 65 7 / 0) 45%,
         rgb(251 65 7 / 0.9) 50%,
         rgb(251 65 7 / 0) 55%
@@ -86,20 +104,32 @@
       linear-gradient(var(--foreground-primary), var(--foreground-primary));
     background-size: 300% 100%, 100% 100%;
     background-repeat: no-repeat;
+    background-position: var(--shimmer-position) 0, 0 0;
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    animation: shimmer var(--shimmer-duration) linear var(--shimmer-delay) both;
+  }
+
+  /* Gated on `hover: hover`: on touch `:hover` sticks after a tap, which would leave the phrase
+     mid-sweep. No delay — the pointer arriving is the cue. */
+  @media (hover: hover) {
+    .description strong:hover {
+      animation: shimmer var(--shimmer-duration) linear 0s var(--shimmer-cycles) both;
+    }
   }
 }
 
 @keyframes shimmer {
   from {
-    background-position: 80% 0, 0 0;
+    --shimmer-position: 90%;
+  }
+
+  72% {
+    --shimmer-position: 10%;
   }
 
   to {
-    background-position: 20% 0, 0 0;
+    --shimmer-position: 10%;
   }
 }
 

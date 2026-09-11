@@ -1195,8 +1195,8 @@ Three things it depends on:
     phrase reads as the page's ink and the rest of the sentence as secondary. Declared on the
     element because `RichText` emits classless markdown; there is no other handle — which is
     safe because the paragraph has exactly one bold phrase and it is this one.
-  - **One orange sweep crosses that phrase as the signature finishes writing it**, and the two
-    being one gesture is the whole point: `--shimmer-delay` is
+  - **Two orange sweeps cross that phrase as the signature finishes writing it**, and they
+    replay when it is hovered. The two being one gesture is the point: `--shimmer-delay` is
     `calc(var(--signature-delay) + var(--signature-duration) * 0.82)` — 1.25s, while the `H`'s
     last contour (which opens at 1.40s) is still being drawn. Waiting for the hand to lift reads
     as the second item in a queue; overlapping reads as one movement crossing the page. **That
@@ -1207,28 +1207,43 @@ Three things it depends on:
 
     It is the `background-clip: text` construction `.sectionHeader h2` uses — a band on top, the
     page's ink underneath, `color: transparent` to get the UA's fill out of the way — with the
-    band moved by `background-position` rather than held still. Four things:
-    - **The whole treatment lives inside `@media (prefers-reduced-motion: no-preference)`**,
-      declared there rather than declared and then switched off, so a reader who asked for less
-      motion gets the plain rule and not even the clip or the transparent `color` — machinery for
-      an effect they are not being shown.
-    - **The keyframes are 80% → 20%, not 100% → 0%, and that is half the animation.** At
+    band moved by `background-position` rather than held still. Five things:
+    - **The load sweep runs on `.description` and the hover sweep on the phrase itself, both
+      animating one registered property.** `@property --shimmer-position` in `globals.css` is
+      what makes a custom property interpolate at all (unregistered, it is a token stream and
+      steps discretely) and what lets the value be produced by an ancestor and read by the
+      `<strong>`. **The obvious arrangement — one animation on the phrase, another on `:hover` —
+      has a bug that is easy to ship and hard to attribute**: leaving a hover state restarts
+      whatever animation the resting rule declares, so every un-hover queues the load sweep
+      again, delay and all. Handed down from above, the resting rule declares no animation, so
+      there is nothing to restart. Verified: on un-hover the phrase has zero animations and holds
+      10% both immediately and 1.6s later.
+    - **The range is 90% → 10%, and both ends exist so nothing is tinted at rest.** At
       `background-size: 300%` a position percentage resolves against a negative `box − image`, so
-      the band's centre lands at `1.5 − 2P` box-widths from the left edge — on the box only while
-      P is between 0.75 and 0.25. The full range therefore spends its first and last quarters
-      travelling with nothing to show: measured, a sweep that crossed the phrase and then left it
-      untouched for 350ms. Sampled at the real duration through `getAnimations()`, the trimmed
-      range puts the band on "Pro" at 100ms, "gner" at 450ms and "eer" at 800ms.
-    - **`both` is load-bearing, exactly as on the signature's nib**: it holds the *from* state
-      through the delay, so nothing is tinted while the hand is still writing, and the *to* state
-      after, so the phrase rests in plain ink. It never replays — About is rendered by the layout,
-      so switching tabs does not remount it, the same reason the signature draws once per load
-      rather than once per route.
+      the centre sits at `1.5 − 2P` box-widths from the left edge: 90% and 10% put it at −0.3 and
+      +1.3, comfortably clear. The 80% → 20% it shipped with for a day left about 0.05 of a
+      box-width of the feathered band *on* the phrase at each end — a sliver of orange on the "P"
+      before the animation and on the "r" forever after, which is what "peeking at the sides"
+      was. The margin is deliberately more than the arithmetic needs, since the slant widens the
+      band's horizontal reach.
+    - **One cycle is a sweep and then a pause**, held inside the keyframes (the band reaches 10%
+      at 72% of the cycle and sits there) because CSS has no way to state a gap *between*
+      iterations. `--shimmer-cycles` runs it twice at `--shimmer-duration` 0.55s, so the pair
+      takes 1.1s, and the snap back at the cycle boundary is invisible because both ends are off
+      the phrase.
+    - **`112deg`, so the band leans.** Upright it read as a progress bar passing through rather
+      than as light catching a surface.
     - **Nothing depends on the phrase staying on one line, but it does**: measured at 375px, the
       narrowest width supported, it is one 186px fragment with "6+ years, owning" still beside
       it. A wrapped phrase would take one band across both fragments, since an inline box's
       positioning area is the box as if unfragmented — no background can follow text flow, the
       limit that title tint records too.
+
+    The whole treatment sits inside `@media (prefers-reduced-motion: no-preference)`, declared
+    there rather than declared and then switched off, so a reader who asked for less motion gets
+    the plain rule and not even the clip or the transparent `color` — machinery for an effect
+    they are not being shown. The hover half is additionally gated on `hover: hover`, since on
+    touch `:hover` sticks after a tap and would leave the phrase mid-sweep.
 - **`GalleryPreview.tsx` — the 2x2 teaser — is the CV page's first block**, rendered by
   `Profile.tsx` and not by the layout. That is what makes it CV-only without a route test: the
   layout is never told which route it is rendering, so anything conditional up there needs

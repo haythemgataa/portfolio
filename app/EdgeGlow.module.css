@@ -40,10 +40,9 @@
    - **The far stop is the same hue at zero alpha, never `transparent`**, which would drag the
      falloff through black. `Profile.module.css`'s section-title tint documents the same trap.
 
-   The ramp is three stops and its order is the design — a little orange at the centre, a
-   darkened hairline around it, then the hairline as it was. All three live in `globals.css`,
-   with the reasoning; the short version is that what reads as light here is mostly the
-   *darkening*, and the hue only marks the point being touched. */
+   The ramp is the orange alone at half strength, fading to nothing over a radius short enough
+   that it reads as a point being touched rather than as a treatment along the edge. Both the
+   colour and the radius live in `globals.css`, with the reasoning. */
 @supports (mask-composite: exclude) or (-webkit-mask-composite: xor) {
   .ring::after,
   .ringUnder::before {
@@ -64,8 +63,7 @@
       circle var(--edge-glow-radius)
         at var(--edge-glow-at, var(--edge-glow-x, -100%) var(--edge-glow-y, -100%)),
       var(--edge-glow-tint) 0%,
-      var(--edge-glow-ink) 22%,
-      var(--edge-glow-ink-fade) 100%
+      var(--edge-glow-tint-fade) 100%
     );
     -webkit-mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
     -webkit-mask-clip: content-box, border-box;

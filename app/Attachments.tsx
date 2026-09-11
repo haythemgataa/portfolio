@@ -564,6 +564,10 @@ const Attachment: React.FC<AttachmentProps> = ({
       }}
       aria-label={accessibleName}
       data-framed={media.framed}
+      // `EdgeGlow` writes this element's own cursor coordinates while it is hovered — see the
+      // note on `.media:hover` in the stylesheet for why the shared viewport light cannot serve
+      // an element the hover state transforms.
+      data-edge-glow-local=""
       className={`${styles.media} ${glow.ringUnder}`}>
       {/* Sized to the image's box, so the shadow falls under the image rather than around the
           mat. It cannot go on the img itself: with `object-fit`, the element's border box is

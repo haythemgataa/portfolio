@@ -1341,7 +1341,8 @@ carries. Three things fell out of the change, and all three are deletions: no sc
 no `IntersectionObserver` (nothing per-element to switch on), and no proximity ramp — how near
 the pointer must be is the gradient's own falloff, so `--edge-glow-strength` is now only the
 pointer's presence: the fade when it leaves the window, and the reason a page never pointed at
-draws nothing.
+draws nothing. The one thing the driver still does per element is the transformed-host exception
+below, and it is bounded to whichever single element is under the pointer.
 
 Measured rather than assumed, because 59 masked gradients repainting on every pointer frame is
 the obvious objection: frame intervals are identical with the gradients live and with them
@@ -1403,34 +1404,36 @@ Five traps, four of them paid for in full before they were understood:
   costs nothing — but **the hover lift is a `transform` on `.media` itself**, which made a
   hovered thumbnail the one place the effect looked broken rather than absent: its own ring
   re-anchored to a 140x90 box, the light landed far outside it, and hovering a thumbnail put it
-  out. `.media:hover::before` answers that by stopping asking for the viewport — anchored to the
-  thumbnail and centred, via the `--edge-glow-at` seam so the ramp is not restated. It loses no
-  accuracy worth having: the light's radius is 150px against a thumbnail 140px wide, so a cursor
-  anywhere inside one already reaches its whole ring, where the alternative is per-element
-  measurement plus inverting a 1.2° rotation. Where neither is possible, leave the edge unlit
-  rather than ship a light that disagrees with the others.
+  out. Such a host marks itself `data-edge-glow-local` and the driver writes the cursor in *that
+  element's* coordinates into `--edge-glow-at`, the seam `EdgeGlow.module.css` leaves for it, so
+  the ramp is not restated. **Centring the light on the element was the first attempt and it
+  flashed on the way out**: a light centred on a thumbnail lights its whole ring at once, which
+  is not what the shared light a pixel outside the element was doing, so the handover was a
+  visible jump in both directions. Tracking the cursor makes the two states agree exactly where
+  they swap — both put the light on the same point of the screen — which is the whole reason
+  this is worth one `:hover` match and one rect read per frame. The element's rotation is
+  ignored: 1.2° across 140px is under 1.5px of error on a soft 90px light, against inverting a
+  transform matrix every frame. Where neither route is possible, leave the edge unlit rather
+  than ship a light that disagrees with the others.
 - **`@supports` gates the whole thing**, because two mask layers with no compositing operator
   fall back to their *union* — the whole box — so an engine without `mask-composite` would paint
   an orange blob over the element rather than a hairline. Drawing nothing is the honest fallback.
 
-**The ramp is three stops and its order is the design: a little orange at the very centre, a
-darkened hairline around it, then the hairline as it was.** Straight orange to nothing was the
-first version and it shouted — a saturated line on a page whose loudest ink is a 6% hairline —
-so what reads as light here is mostly the *darkening*, with the hue only marking the point being
-touched. All three colours are tokens in `globals.css`, which is also where to tune it. Two
-things about them:
+**The ramp is the orange alone, half strength, fading to nothing — and the radius is what
+quietens it.** At 150px the light spanned most of a tab pill and read as a treatment along the
+edge; at 90 it reads as the point being touched. Two versions were tried and dropped on the way,
+and both are worth knowing about before reaching for them again: full-strength orange to nothing
+*shouted*, a saturated line on a page whose loudest ink is a 6% hairline; and a version carrying
+a darkened hairline behind the hue — `--overlay-ink` at 24%, four times `--border`'s strength —
+was one thing too many on a 1px line, where the darkening read as the border thickening rather
+than as light falling on it. Both live in `globals.css`, which is where to tune this:
+`--edge-glow-radius` and `--edge-glow-tint`.
 
-- **`--edge-glow-ink` is `--overlay-ink` at 24%**, four times `--border`'s own strength, so the
-  lit hairline is the colour the hairline is already made of, turned up. Composited on a pill's
-  edge that is rgb(228 229 231) at rest against rgb(173 174 176) lit, with the core at
-  rgb(241 139 108). It is also what makes the dark theme right for free: `--overlay-ink` flips to
-  white there, where a *darker* border would be invisible — measured, rgb(60 63 68) at rest
-  against rgb(107 109 113) lit.
-- **`--edge-glow-tint` is the literal `#fb4107`** the section marks and the footer's cursor wear,
-  at one alpha for both themes: the site has one orange, and this is a hue laid on a neutral
-  hairline rather than a tint of the page's ink, so it needs no per-theme number the way
-  `--section-title-tint-strength` does. `--edge-glow-ink-fade` is that ink at zero alpha rather
-  than `transparent`, the rule the section-title tint and the page glow both follow.
+The colour is the literal `#fb4107` the section marks and the footer's cursor wear, at one alpha
+for both themes: the site has one orange, and this is a hue laid on a neutral hairline rather
+than a tint of the page's ink, so it needs no per-theme number the way
+`--section-title-tint-strength` does. `--edge-glow-tint-fade` is the same hue at zero alpha
+rather than `transparent`, the rule the section-title tint and the page glow both follow.
 
 The selected tab pill shows no light, and that is correct rather than missed — the travelling
 pill's opaque ground covers the tab it is over, so the selection reads as a solid object passing

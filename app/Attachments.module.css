@@ -371,22 +371,34 @@
   /* Tighter blur than this first had (16px): at that radius the shadow read as a halo around a
      90px thumbnail rather than as the thing lifting off the page. Kept as a contact shadow plus
      a short spread, which is the same two-part shape the matted print inside uses. */
-  /* **The lit hairline, while this thumbnail is the one under the cursor.** The lift above
-     is a `transform` on this element, which makes it the containing block for its own fixed
+  /* **The lit hairline, while this thumbnail is the one under the cursor.** The lift below is a
+     `transform` on this element, which makes it the containing block for its own fixed
      background — so `EdgeGlow`'s one viewport-anchored light re-anchors to a 140x90 box, lands
-     far outside it and goes out. Hovering a thumbnail therefore *extinguished* it, which is the
+     far outside it and goes out. Hovering a thumbnail therefore *extinguished* it, which was the
      one place the effect looked broken rather than absent.
 
-     The fix is to stop asking for the viewport on this one element: anchored to the thumbnail
-     and centred, the light is on it wherever in it the pointer is. That costs no accuracy worth
-     having — the light's radius is 150px against a thumbnail 140px wide, so a cursor anywhere
-     inside it already reaches the whole ring, and the alternative (writing the pointer in this
-     element's own coordinates) would mean per-element measurement plus inverting a 1.2° rotation
-     to place it. `--edge-glow-at` is the seam `EdgeGlow.module.css` leaves for exactly this, so
-     the colour ramp is not restated here. */
+     So this one element stops asking for the viewport, and `EdgeGlow.tsx` writes the cursor in
+     its own coordinates into `--edge-glow-at` — the seam that module leaves for exactly this, so
+     the ramp is not restated here. The `50% 50%` is only the first frame's fallback, before the
+     driver has written anything; it is declared on the element rather than on the ring so the
+     driver's inline value can win, where a declaration on the pseudo-element would beat an
+     inherited one however it was set.
+
+     **Centring it was the first attempt, and it flashed on the way out.** A light centred on the
+     thumbnail lights its whole ring at once, which is not what the shared light a pixel outside
+     the element was doing — so the handover at the boundary was a visible jump in both
+     directions. Tracking the cursor makes the two states agree exactly where they swap.
+
+     `background-origin: border-box` because the position is now resolved against this ring's own
+     box rather than the viewport, and the ring's 1px padding would otherwise offset the light by
+     that much. */
+  .media:hover {
+    --edge-glow-at: 50% 50%;
+  }
+
   .media:hover::before {
     background-attachment: scroll;
-    --edge-glow-at: 50% 50%;
+    background-origin: border-box;
   }
 
   .media:hover {

@@ -195,22 +195,21 @@
      apart from the `--glow-*` pair below on purpose: those are the wash at the top of the page
      and its reflection on the tab pill, and the two effects share nothing but a word.
 
-     `--edge-glow-radius` is how much of a border one cursor position lights. The three colours
-     are the ramp, and the order is the whole design: **a little orange at the very centre, a
-     darkened hairline around it, then the hairline as it was.** Straight orange to nothing was
-     the first version and it shouted — a saturated line on a page whose loudest ink is a 6%
-     hairline. What reads as light here is mostly the *darkening*, with the hue only at the
-     point being touched.
+     `--edge-glow-radius` is how much of a border one cursor position lights, and it is the
+     dial that quietens this: at 150px the light spanned most of a tab pill and read as a
+     treatment, where at 90 it reads as a point being touched. The ramp is the orange alone,
+     half-strength, fading to nothing — a version carrying a darkened hairline behind it was
+     tried and dropped: two things happening on one 1px line is one too many, and the darkening
+     read as the border thickening rather than as light on it.
 
-     `--edge-glow-ink` is the overlay ink at three and a bit times `--border`'s own strength, so
-     it is the same colour the hairline is made of, turned up. That is also what makes the dark
-     theme correct for free: `--overlay-ink` flips to white there, where a *darker* border would
-     be invisible. `--edge-glow-ink-fade` is that ink at zero alpha rather than `transparent`,
-     the rule the section-title tint and the page glow both follow. */
-  --edge-glow-radius: 150px;
+     `--edge-glow-tint-fade` is the same hue at zero alpha rather than `transparent`, the rule
+     the section-title tint and the page glow both follow. The colour is the literal `#fb4107`
+     the section marks and the footer's cursor wear, at one alpha for both themes: the site has
+     one orange, and this is a hue laid on a neutral hairline rather than a tint of the page's
+     ink, so it needs no per-theme number the way `--section-title-tint-strength` does. */
+  --edge-glow-radius: 90px;
   --edge-glow-tint: rgb(251 65 7 / 0.55);
-  --edge-glow-ink: color-mix(in srgb, var(--overlay-ink) 24%, transparent);
-  --edge-glow-ink-fade: color-mix(in srgb, var(--overlay-ink) 0%, transparent);
+  --edge-glow-tint-fade: rgb(251 65 7 / 0);
 
   --glow-fraction: 0.43;
   --glow-sweep: linear-gradient(

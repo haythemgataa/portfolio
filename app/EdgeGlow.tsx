@@ -32,6 +32,21 @@ import { usePrefersReducedMotion } from "./usePrefersReducedMotion";
  *   is now only the pointer's presence: the fade when it leaves the window, and the reason a
  *   page that has never been pointed at draws nothing.
  *
+ * **The one exception is a host that cannot use the viewport's coordinates**, and it is why
+ * this is not purely two writes. A `transform` on a lit element makes it the containing block
+ * for its own fixed background, so the shared light re-anchors to that element's box and lands
+ * outside it — which is what happens to a thumbnail while it is hovered and lifted. Such a host
+ * marks itself `data-edge-glow-local` and gets `--edge-glow-at` written with the cursor in its
+ * *own* coordinates instead, which is continuous with the shared light rather than a second
+ * treatment: both put the light on the same point of the screen, so the handover as the pointer
+ * leaves is invisible. Centring it on the element was the first attempt and it flashed, because
+ * a whole ring lit at once is not what the light a pixel outside the element was doing.
+ *
+ * It costs one `:hover` selector match and one rect read per frame, and only while such an
+ * element is under the pointer. The element's own rotation is ignored: at 1.2° across 140px
+ * that is under 1.5px of error on a soft 90px light, where correcting it would mean inverting
+ * the transform matrix per frame.
+ *
  * Gated on a hovering pointer *and* on motion being allowed. With reduced motion this is
  * dropped rather than stilled — unlike `LocalTime`'s clock there is no information under the
  * animation to keep — and nothing paints, because every ring's opacity resolves through a
@@ -49,6 +64,7 @@ export default function EdgeGlow() {
     let x = 0;
     let y = 0;
     let lit = false;
+    let local: HTMLElement | null = null;
 
     const paint = () => {
       queued = 0;
@@ -57,6 +73,19 @@ export default function EdgeGlow() {
       if (!lit) {
         lit = true;
         root.style.setProperty("--edge-glow-strength", "1");
+      }
+
+      // The exception above. `:hover` rather than a pointerover/pointerout pair of our own,
+      // because the CSS that switches such a host off the viewport's coordinates is keyed on
+      // `:hover` too — one condition, so the two cannot disagree about when it applies.
+      const hovered = document.querySelector<HTMLElement>("[data-edge-glow-local]:hover");
+      if (hovered !== local) {
+        local?.style.removeProperty("--edge-glow-at");
+        local = hovered;
+      }
+      if (hovered) {
+        const box = hovered.getBoundingClientRect();
+        hovered.style.setProperty("--edge-glow-at", `${x - box.left}px ${y - box.top}px`);
       }
     };
 
@@ -75,6 +104,8 @@ export default function EdgeGlow() {
     const release = () => {
       lit = false;
       root.style.setProperty("--edge-glow-strength", "0");
+      local?.style.removeProperty("--edge-glow-at");
+      local = null;
     };
 
     window.addEventListener("pointermove", onMove, { passive: true });
@@ -87,6 +118,7 @@ export default function EdgeGlow() {
       for (const name of ["--edge-glow-x", "--edge-glow-y", "--edge-glow-strength"]) {
         root.style.removeProperty(name);
       }
+      local?.style.removeProperty("--edge-glow-at");
     };
   }, [hasHover, reducedMotion]);
 

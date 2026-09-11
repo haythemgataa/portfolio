@@ -1420,25 +1420,17 @@ Five traps, four of them paid for in full before they were understood:
   an orange blob over the element rather than a hairline. Drawing nothing is the honest fallback.
 
 **There is no hue in it, which is worth saying because the files are named for a glow: the light
-is the hairline itself, turned up.** `--edge-glow-ink` is `--overlay-ink` at 14%, laid over
+is the hairline itself, turned up.** `--edge-glow-ink` is `--overlay-ink` at 16%, laid over
 whatever `--border` already is, so a lit border is the colour it was made of rather than a second
 colour arriving. Alpha of one ink over the same ink adds, so the 6% resting hairline composites to
-19.2% and the dark theme's 8% to 20.9% — measured on a pill, rgb(228 229 231) → rgb(196 197 199)
-in light and rgb(60 63 68) → rgb(87 90 94) in dark. Stating it as the *overlay* ink rather than as
-a black is what buys that second row: one declaration darkens a light hairline and brightens a
-dark one, where a black would be invisible on the dark theme. The other dial is
-`--edge-glow-radius`, and it is the one that changes the character — at 150px the light spanned
-most of a tab pill and read as a treatment along the edge; at 90 it reads as the point being
-touched.
-
-**`EdgeGlowTuner.tsx` is a temporary dev-only panel over those two dials** — two sliders writing
-them onto `<html>`, printing the declarations to paste back into `globals.css`. It is gated on
-`process.env.NODE_ENV`, a build-time literal, so a production build renders nothing: measured,
-no panel markup in `out/index.html`, `out/gallery.html` or `out/404.html`. It does **not** keep
-the code out of the bundle — the layout's `import` is static, so the component and its stylesheet
-ship as a few hundred dead bytes, the same thing `ThemeSwitch` documents about its own gate.
-Which is why this is a file to delete rather than a flag to leave off: remove it, its stylesheet
-and its line in `layout.tsx` once the numbers are settled.
+21% and the dark theme's 8% to 22.7% — measured on a pill, rgb(228 229 231) → rgb(192 192 194) in
+light and rgb(60 63 68) → rgb(91 94 98) in dark. Stating it as the *overlay* ink rather than as a
+black is what buys that second row: one declaration darkens a light hairline and brightens a dark
+one, where a black would be invisible on the dark theme. The other dial is `--edge-glow-radius`,
+at 130px, and it is the one that decides the character rather than the strength — at 150 the light
+spanned most of a tab pill and read as a treatment along the edge. Both numbers were settled on
+the page with a throwaway slider panel rather than argued about; it is gone, and this is where
+they live.
 
 **Three versions with orange in them were tried and dropped**, which is worth knowing before
 reaching for the hue again: full-strength orange to nothing *shouted*, a saturated line on a page

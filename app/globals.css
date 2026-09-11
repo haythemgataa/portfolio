@@ -196,14 +196,15 @@
      and its reflection on the tab pill, and the two effects share nothing but a word.
 
      `--edge-glow-radius` is how much of a border one cursor position lights, and it is the
-     dial that quietens this: at 150px the light spanned most of a tab pill and read as a
-     treatment along the edge, where at 90 it reads as the point being touched.
+     dial that decides the character rather than the strength: at 150px the light spanned most of
+     a tab pill and read as a treatment along the edge, where 130 reads as a point being touched.
+     Both numbers were settled on the page with a slider rather than argued about.
 
      **There is no hue in it. The light is the hairline itself, turned up** — `--overlay-ink` at
-     14%, laid over whatever `--border` already is, so a lit hairline is the colour it was made
+     16%, laid over whatever `--border` already is, so a lit hairline is the colour it was made
      of rather than a second colour arriving. Alpha of one ink over the same ink adds, so the 6%
-     resting hairline composites to 19.2% and the dark theme's 8% to 20.9%: rgb(228 229 231) →
-     rgb(196 197 199) on a pill in light, rgb(60 63 68) → rgb(87 90 94) in dark. That flip is
+     resting hairline composites to 21% and the dark theme's 8% to 22.7%: rgb(228 229 231) →
+     rgb(192 192 194) on a pill in light, rgb(60 63 68) → rgb(91 94 98) in dark. That flip is
      the reason this is stated as the *overlay* ink rather than as a black: the same declaration
      darkens a light hairline and brightens a dark one, where a black would be invisible on the
      dark theme.
@@ -220,8 +221,8 @@
      resolves to transparent *black* whatever the ink was, which on the dark theme would be a
      white-to-black ramp. Harmless in any engine that interpolates premultiplied, which is all of
      them now, and exactly the assumption this rule exists to avoid depending on. */
-  --edge-glow-radius: 90px;
-  --edge-glow-ink: color-mix(in srgb, var(--overlay-ink) 14%, transparent);
+  --edge-glow-radius: 130px;
+  --edge-glow-ink: color-mix(in srgb, var(--overlay-ink) 16%, transparent);
   --edge-glow-ink-fade: rgb(from var(--overlay-ink) r g b / 0);
 
   --glow-fraction: 0.43;

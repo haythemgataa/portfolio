@@ -4,7 +4,6 @@ import styles from "./layout.module.css";
 import About from "./About";
 import Analytics from "./Analytics";
 import EdgeGlow from "./EdgeGlow";
-import EdgeGlowTuner from "./EdgeGlowTuner";
 import ProfileHeader from "./ProfileHeader";
 import SiteFooter from "./SiteFooter";
 import Tabs from "./Tabs";
@@ -166,10 +165,6 @@ export default async function RootLayout({
             component with no client JavaScript at all and is worth keeping that way for one
             effect. */}
         <EdgeGlow />
-        {/* Temporary, and dev-only by a build-time literal inside it — two sliders for finding
-            the glow's numbers. Delete the import, this line and the two files when they are
-            settled. */}
-        <EdgeGlowTuner />
       </body>
     </html>
   );

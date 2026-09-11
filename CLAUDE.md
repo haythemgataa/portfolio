@@ -1195,8 +1195,8 @@ Three things it depends on:
     phrase reads as the page's ink and the rest of the sentence as secondary. Declared on the
     element because `RichText` emits classless markdown; there is no other handle — which is
     safe because the paragraph has exactly one bold phrase and it is this one.
-  - **Two orange sweeps cross that phrase as the signature finishes writing it**, and they
-    replay when it is hovered. The two being one gesture is the point: `--shimmer-delay` is
+  - **Two orange bands cross that phrase in one sweep as the signature finishes writing it**,
+    and they replay when it is hovered. The two being one gesture is the point: `--shimmer-delay` is
     `calc(var(--signature-delay) + var(--signature-duration) * 0.82)` — 1.25s, while the `H`'s
     last contour (which opens at 1.40s) is still being drawn. Waiting for the hand to lift reads
     as the second item in a queue; overlapping reads as one movement crossing the page. **That
@@ -1218,21 +1218,25 @@ Three things it depends on:
       again, delay and all. Handed down from above, the resting rule declares no animation, so
       there is nothing to restart. Verified: on un-hover the phrase has zero animations and holds
       10% both immediately and 1.6s later.
-    - **The range is 90% → 10%, and both ends exist so nothing is tinted at rest.** At
+    - **Both bands live in one gradient, and that is what makes them chase each other.** They
+      are two peaks in a single stop list, at 1/3 and 1/2 of the image, so one sweep carries
+      both and the second is on the phrase while the first is still crossing it. Two
+      *iterations* of a one-band sweep is what this replaced, and it read as what it was: two
+      passes with a pause, however short the pause was made — and the pause could not be
+      removed, because CSS has no way to state a gap *between* iterations, so it had to be held
+      inside the keyframes where it was visible.
+    - **The range is 90% → −15%, and both ends exist so nothing is tinted at rest.** At
       `background-size: 300%` a position percentage resolves against a negative `box − image`, so
-      the centre sits at `1.5 − 2P` box-widths from the left edge: 90% and 10% put it at −0.3 and
-      +1.3, comfortably clear. The 80% → 20% it shipped with for a day left about 0.05 of a
-      box-width of the feathered band *on* the phrase at each end — a sliver of orange on the "P"
-      before the animation and on the "r" forever after, which is what "peeking at the sides"
-      was. The margin is deliberately more than the arithmetic needs, since the slant widens the
-      band's horizontal reach.
-    - **One cycle is a sweep and then a pause**, held inside the keyframes (the band reaches 10%
-      at 72% of the cycle and sits there) because CSS has no way to state a gap *between*
-      iterations. `--shimmer-cycles` runs it twice at `--shimmer-duration` 0.55s, so the pair
-      takes 1.1s, and the snap back at the cycle boundary is invisible because both ends are off
-      the phrase.
-    - **`112deg`, so the band leans.** Upright it read as a progress bar passing through rather
-      than as light catching a surface.
+      a band at image-fraction `f` sits at `3f − 2P` box-widths from the left edge: the pair is
+      at `1.5 − 2P` and `1 − 2P`, half a box-width apart. The ends put the leading band at −0.3
+      and the *trailing* one at +1.3, each clear of the phrase at the end it is nearest — and the
+      trailing band is why the far end is negative, having half a box-width further to travel.
+      Getting this wrong is quiet: 80% → 20% shipped for a day and left about 0.05 of a box-width
+      of the feathered edge *on* the phrase at each end, orange on the "P" before the animation
+      and on the "r" forever after.
+    - **`112deg`, so the bands lean**, and 12% of the image wide rather than the 10% they started
+      at. Upright they read as a progress bar passing through rather than as light catching a
+      surface, and at 10% the light was a hairline rather than a highlight.
     - **Nothing depends on the phrase staying on one line, but it does**: measured at 375px, the
       narrowest width supported, it is one 186px fragment with "6+ years, owning" still beside
       it. A wrapped phrase would take one band across both fragments, since an inline box's

@@ -3,8 +3,8 @@
    An unregistered custom property is a token stream to CSS, so it interpolates discretely — a
    band that jumps rather than travels. `syntax` is what makes this a percentage the engine can
    walk through, `inherits` is what lets the load sweep run on `.description` and be read by the
-   `<strong>` inside it, and `initial-value` is the resting position: past the right-hand edge,
-   where the band is off the phrase and nothing is tinted.
+   `<strong>` inside it, and `initial-value` is the resting position: far enough past the
+   right-hand edge that *both* bands are off the phrase and nothing is tinted.
 
    **Why the value comes from an ancestor at all** — see `About.module.css`, because it is not
    decoration: the phrase replays the sweep on hover, and a `:hover` rule that sets an
@@ -14,7 +14,7 @@
 @property --shimmer-position {
   syntax: "<percentage>";
   inherits: true;
-  initial-value: 10%;
+  initial-value: -15%;
 }
 
 :root {
@@ -346,14 +346,14 @@
      The shimmer opens at 82% of that, 1.25s, while the `H`'s final contour (which starts at
      1.40s) is still going. Overlapping is the point: handed over mid-gesture the two read as one
      movement crossing the page, where a shimmer waiting for 1.5s reads as the second item in a
-     queue. `--shimmer-duration` is one *cycle* — a sweep and then a pause, both inside the
-     keyframes — and it runs twice, so the whole thing is 1.1s and the phrase then rests in plain
-     ink exactly as it did before any of this. */
+     queue. It is **one** sweep of an image carrying **two** bands half a phrase-width apart, so
+     the second glint is chasing the first while the first is still crossing rather than being a
+     separate pass — 0.8s in total, with about 190ms between the two arriving at any given
+     letter. The phrase then rests in plain ink exactly as it did before any of this. */
   --signature-duration: 1.4s;
   --signature-delay: 0.1s;
   --shimmer-delay: calc(var(--signature-delay) + var(--signature-duration) * 0.82);
-  --shimmer-duration: 0.55s;
-  --shimmer-cycles: 2;
+  --shimmer-duration: 0.8s;
 
   /* The page's own left and right padding — `.page` in `layout.module.css` — and, below 480px,
      the indent the CV's rows take inside it.

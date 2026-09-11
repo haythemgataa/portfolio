@@ -2332,6 +2332,40 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
     finished date blank itself and retype. Measured on a stepped scroll: zero frames where the
     complete date is visible before the animation starts. Reduced motion is *derived* during render
     rather than written back as state — assigning it in the effect trips `set-state-in-effect`.
+  - **Once the sequence parks, the hand has gravity: it leans up to 6px towards the reader's
+    pointer from 120px out, and settles back when that pointer goes away.** The radius is six
+    times the clap's 20px on purpose — the two are halves of one approach rather than two
+    thresholds, the lean being the hand noticing someone coming and the clap the arrival. Four
+    things:
+    - **It moves the whole cursor, name pill included**, where the click, wave and clap move the
+      pointer group alone. Those are gestures *of* the hand and a pill riding along unchanged is
+      what a multiplayer cursor does; this is the cursor being pulled, and a hand drifting out
+      from under its own name reads as coming loose. So it needs a box of its own
+      (`.cursorPull`): `.cursorPointer` already animates `transform` for all three gestures, and
+      two things cannot own one property.
+    - **The anchor is `.clapZone`, which is deliberately left *outside* that box.** An anchor
+      that moved with the lean would feed its own output back in. `.userHand` stays outside it
+      for a different reason — it stands in for the reader's own pointer, so it has to sit
+      exactly where that pointer is. Verified: the drawn fingertip lands on the pointer to the
+      pixel while the hand is leaning, and `.cursor`'s own rect does not move.
+    - **The falloff is a smoothstep, flat at both ends**, so the lean neither switches on as the
+      pointer crosses the radius nor snatches the last pixels as the two meet — measured, 0.44px
+      at 100px out, 3.0px at 60px, 4.4px at 40px, 5.56px at 20px. It is capped at the gap itself, or the hand reaches
+      through the pointer and the direction it is reaching in goes to noise as the two coincide.
+    - **The offset is written to the DOM, not to state, and the transition is the damping.**
+      This is a value per animation frame, so it is a custom property on one element (the
+      `EdgeGlow` argument) rather than a render of the subtree 60 times a second. Re-easing
+      towards a fresh target each frame *is* the follow: the box covers a fraction of what is
+      left per frame, so the hand trails by a few frames instead of tracking rigidly, and the
+      release eases home for free. `display: block` on that box is load-bearing — `transform`
+      does not apply to a non-replaced inline element, so as a plain span the rule would
+      silently do nothing. Measured against the pre-change tree: the cursor's rect, the clap
+      zone, `.updated`, the footer's 126.8px and the document's height are all identical.
+    - Gated on a hovering pointer and on motion being allowed, and only while the hand is out —
+      so nothing listens while the arrow is still working (the sequence is a performance, not
+      something to shove) and nothing listens at all for a reader who never reached the footer.
+      The listener also returns early while the footer is off screen, which is what keeps its
+      cost for the whole page above at one boolean.
   - The gap above it is **padding, not margin**, and that is the only reason the two routes agree.
     The gallery's list ends in a margin, which collapses with an adjacent margin — a 16px top
     margin disappeared into the list's 60px and left the gallery 16px tighter than the CV, whose

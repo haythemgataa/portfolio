@@ -117,6 +117,31 @@
   overflow: visible;
 }
 
+/* The gravity lean — the hand drifting towards the reader's pointer as it comes near. The
+   component writes the offset as a pair of custom properties on this box and the transform is
+   composed here, so the easing and the composition have one home.
+
+   `display: block` is load-bearing rather than tidy: `transform` does not apply to a
+   non-replaced inline element, so as a plain span this rule would silently do nothing at all.
+   The box is otherwise the svg's own — `.cursor` is absolutely positioned and shrink-to-fit, so
+   wrapping its content in a block of max-content width moves nothing.
+
+   **The transition is restarted on every frame the pointer moves, and that is the mechanism
+   rather than a cost.** Re-easing towards a fresh target each frame is a damped follow: the box
+   covers a fraction of the remaining distance per frame, so the hand trails the pointer by a
+   few frames instead of tracking it rigidly, which is the whole difference between something
+   with mass being pulled and something being driven. It is also what gives the release its
+   settle for free — the component writes zero once and this eases the rest of the way.
+
+   Nothing is written under `prefers-reduced-motion` or on a device with no hovering pointer
+   (`useHasHover` in LastUpdated.tsx gates the listener), so the fallbacks resolve to no offset
+   and this rule is inert rather than needing a query of its own. */
+.cursorPull {
+  display: block;
+  transform: translate(var(--hand-pull-x, 0px), var(--hand-pull-y, 0px));
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 /* The swap itself: the outgoing pointer scales down and blurs away while the incoming one
    arrives. Both layers exist at all times — see the note in FigmaCursor — because a transition
    needs something to transition *from*, and markup swapped at the moment of change can only cut.

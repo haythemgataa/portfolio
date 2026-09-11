@@ -197,19 +197,32 @@
 
      `--edge-glow-radius` is how much of a border one cursor position lights, and it is the
      dial that quietens this: at 150px the light spanned most of a tab pill and read as a
-     treatment, where at 90 it reads as a point being touched. The ramp is the orange alone,
-     half-strength, fading to nothing — a version carrying a darkened hairline behind it was
-     tried and dropped: two things happening on one 1px line is one too many, and the darkening
-     read as the border thickening rather than as light on it.
+     treatment along the edge, where at 90 it reads as the point being touched.
 
-     `--edge-glow-tint-fade` is the same hue at zero alpha rather than `transparent`, the rule
-     the section-title tint and the page glow both follow. The colour is the literal `#fb4107`
-     the section marks and the footer's cursor wear, at one alpha for both themes: the site has
-     one orange, and this is a hue laid on a neutral hairline rather than a tint of the page's
-     ink, so it needs no per-theme number the way `--section-title-tint-strength` does. */
+     **There is no hue in it. The light is the hairline itself, ten points stronger** —
+     `--overlay-ink` at 10%, laid over whatever `--border` already is, so a lit hairline is the
+     colour it was made of turned up rather than a second colour arriving. Alpha of one ink over
+     the same ink adds, so the 6% resting hairline composites to 15.4% and the dark theme's 8%
+     to 17.2%: rgb(228 229 231) → rgb(205 206 208) on a pill in light, rgb(60 63 68) →
+     rgb(80 82 87) in dark. That flip is the reason this is stated as the *overlay* ink rather
+     than as a black: the same declaration darkens a light hairline and brightens a dark one,
+     where a black would be invisible on the dark theme.
+
+     Two versions with orange in them were tried and dropped, and both are worth knowing about
+     before reaching for the hue again: full strength to nothing *shouted*, a saturated line on
+     a page whose loudest ink is a 6% hairline; and half strength over a darkened hairline was
+     one thing too many on a 1px line, where the darkening read as the border thickening rather
+     than as light on it. What survived is the darkening alone.
+
+     `--edge-glow-ink-fade` is that same ink at zero alpha rather than `transparent`, the rule the
+     section-title tint and the page glow both follow — and here it takes relative colour syntax
+     rather than a second `color-mix`, because `color-mix(… var(--overlay-ink) 0%, transparent)`
+     resolves to transparent *black* whatever the ink was, which on the dark theme would be a
+     white-to-black ramp. Harmless in any engine that interpolates premultiplied, which is all of
+     them now, and exactly the assumption this rule exists to avoid depending on. */
   --edge-glow-radius: 90px;
-  --edge-glow-tint: rgb(251 65 7 / 0.55);
-  --edge-glow-tint-fade: rgb(251 65 7 / 0);
+  --edge-glow-ink: color-mix(in srgb, var(--overlay-ink) 10%, transparent);
+  --edge-glow-ink-fade: rgb(from var(--overlay-ink) r g b / 0);
 
   --glow-fraction: 0.43;
   --glow-sweep: linear-gradient(

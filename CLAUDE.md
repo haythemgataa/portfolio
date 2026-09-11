@@ -1419,21 +1419,31 @@ Five traps, four of them paid for in full before they were understood:
   fall back to their *union* — the whole box — so an engine without `mask-composite` would paint
   an orange blob over the element rather than a hairline. Drawing nothing is the honest fallback.
 
-**The ramp is the orange alone, half strength, fading to nothing — and the radius is what
-quietens it.** At 150px the light spanned most of a tab pill and read as a treatment along the
-edge; at 90 it reads as the point being touched. Two versions were tried and dropped on the way,
-and both are worth knowing about before reaching for them again: full-strength orange to nothing
-*shouted*, a saturated line on a page whose loudest ink is a 6% hairline; and a version carrying
-a darkened hairline behind the hue — `--overlay-ink` at 24%, four times `--border`'s strength —
-was one thing too many on a 1px line, where the darkening read as the border thickening rather
-than as light falling on it. Both live in `globals.css`, which is where to tune this:
-`--edge-glow-radius` and `--edge-glow-tint`.
+**There is no hue in it, which is worth saying because the files are named for a glow: the light
+is the hairline itself, ten points stronger.** `--edge-glow-ink` is `--overlay-ink` at 10%, laid
+over whatever `--border` already is, so a lit border is the colour it was made of turned up
+rather than a second colour arriving. Alpha of one ink over the same ink adds, so the 6% resting
+hairline composites to 15.4% and the dark theme's 8% to 17.2% — measured on a pill,
+rgb(228 229 231) → rgb(205 206 208) in light and rgb(60 63 68) → rgb(80 82 87) in dark. Stating
+it as the *overlay* ink rather than as a black is what buys that second row: one declaration
+darkens a light hairline and brightens a dark one, where a black would be invisible on the dark
+theme. The other dial is `--edge-glow-radius`, and it is the one that changes the character — at
+150px the light spanned most of a tab pill and read as a treatment along the edge; at 90 it reads
+as the point being touched.
 
-The colour is the literal `#fb4107` the section marks and the footer's cursor wear, at one alpha
-for both themes: the site has one orange, and this is a hue laid on a neutral hairline rather
-than a tint of the page's ink, so it needs no per-theme number the way
-`--section-title-tint-strength` does. `--edge-glow-tint-fade` is the same hue at zero alpha
-rather than `transparent`, the rule the section-title tint and the page glow both follow.
+**Three versions with orange in them were tried and dropped**, which is worth knowing before
+reaching for the hue again: full-strength orange to nothing *shouted*, a saturated line on a page
+whose loudest ink is a 6% hairline; orange over a darkened hairline was one thing too many on a
+1px line, where the darkening read as the border thickening rather than as light falling on it;
+and half-strength orange alone, which was still a colour statement on a palette of seven. The
+darkening alone is what survived.
+
+`--edge-glow-ink-fade` is that same ink at zero alpha rather than `transparent`, the rule the
+section-title tint and the page glow both follow. It takes relative colour syntax
+(`rgb(from var(--overlay-ink) r g b / 0)`) rather than a second `color-mix`, because
+`color-mix(… var(--overlay-ink) 0%, transparent)` resolves to transparent *black* whatever the
+ink was — which on the dark theme is a white-to-black ramp, harmless in any engine that
+interpolates premultiplied and exactly the assumption the rule exists to avoid depending on.
 
 The selected tab pill shows no light, and that is correct rather than missed — the travelling
 pill's opaque ground covers the tab it is over, so the selection reads as a solid object passing

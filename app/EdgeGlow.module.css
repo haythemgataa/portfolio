@@ -40,9 +40,11 @@
    - **The far stop is the same hue at zero alpha, never `transparent`**, which would drag the
      falloff through black. `Profile.module.css`'s section-title tint documents the same trap.
 
-   The ramp is the orange alone at half strength, fading to nothing over a radius short enough
-   that it reads as a point being touched rather than as a treatment along the edge. Both the
-   colour and the radius live in `globals.css`, with the reasoning. */
+   **There is no hue in it**, which is worth saying because the files are named for a glow: the
+   ramp is the hairline's own overlay ink at 10%, fading to nothing over a radius short enough to
+   read as the point being touched rather than as a treatment along the edge. So a lit border is
+   the colour it already was, ten points stronger — darker in light, lighter in dark, from one
+   declaration. Both the colour and the radius live in `globals.css`, with the reasoning. */
 @supports (mask-composite: exclude) or (-webkit-mask-composite: xor) {
   .ring::after,
   .ringUnder::before {
@@ -62,8 +64,8 @@
     background-image: radial-gradient(
       circle var(--edge-glow-radius)
         at var(--edge-glow-at, var(--edge-glow-x, -100%) var(--edge-glow-y, -100%)),
-      var(--edge-glow-tint) 0%,
-      var(--edge-glow-tint-fade) 100%
+      var(--edge-glow-ink) 0%,
+      var(--edge-glow-ink-fade) 100%
     );
     -webkit-mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
     -webkit-mask-clip: content-box, border-box;

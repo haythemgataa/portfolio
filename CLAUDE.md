@@ -1224,7 +1224,7 @@ Three things it depends on:
     so "the nearest borders" is the geometry rather than a decision anything makes. It is the
     hairline and nothing wider — a second, fainter ring inside it was tried for bleed and can
     only bleed *inwards*, since a tile carries `overflow: hidden`, so what it drew was a soft
-    band lying on the photographs rather than light coming off an edge. Five things:
+    band lying on the photographs rather than light coming off an edge. Eight things:
     - **`@supports` gates the whole block, and the failure it guards is loud.** Two mask layers
       with no compositing operator fall back to their *union*, which is the whole box — a large
       orange blob over the frame and its photographs. `layout.module.css` dodges the same trap by
@@ -1232,6 +1232,20 @@ Three things it depends on:
       clips, so there is nothing to split and drawing nothing is the honest fallback.
     - **`background-origin: border-box` is required**, since the mask's `padding` shrinks the
       background positioning area and the light would otherwise sit a pixel off the cursor.
+    - **The ring is `inset: calc(var(--glow-line) * -1)`, not `inset: 0`, and that is the trap.**
+      An absolutely positioned box is laid out against its containing block's *padding* box, so
+      `0` starts inside the hairline and the light lands beside the border rather than on it —
+      two parallel lines, one grey and one orange, which is exactly how it shipped first.
+      Pulling it out by the border's own width makes the pseudo-element's box the border box,
+      which is also what makes its `border-radius: inherit` right: that is the border-box radius.
+    - **A tile therefore needs `overflow: clip` with a margin, behind `@supports`.** Overflow
+      clips at the padding edge, so on a tile — the one clipping box here — `hidden` does not
+      shift the ring, it deletes it; `overflow-clip-margin` at the hairline's width puts the clip
+      edge on the border box instead. The condition is not decoration: Lightning CSS minifies
+      against modern targets and **drops a plain `overflow: hidden` fallback declaration**
+      (verified in the export), which would leave an engine without `clip` resolving overflow to
+      `visible` — a photograph with square corners, rather than a tile that merely does not
+      light. As a `@supports` rule the fallback is a separate rule nothing can remove.
     - **The rings are found by `[data-glow]`, and each is handed the cursor in its own
       coordinates.** So `useBorderGlow` knows neither how many rings there are nor where they
       sit, which is what makes it right at every column width and inside the Studio's canvas —

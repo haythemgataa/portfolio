@@ -25,8 +25,9 @@
 
   /* The two knobs of the glow, declared here so they inherit into the tiles and the frame and
      its four tiles cannot come to disagree about them. `--glow-radius` is how much of a border
-     one cursor position lights; `--glow-line` is the thickness the mask cuts, which is the
-     hairline's own. */
+     one cursor position lights; `--glow-line` is the hairline's own width — the frame's and the
+     tiles' borders are both 1px — which the ring uses twice, as its thickness and as the
+     distance it is pulled out to reach the border box. */
   --glow-radius: 150px;
   --glow-line: 1px;
 }
@@ -39,8 +40,33 @@
   aspect-ratio: 4 / 3;
   border: 1px solid var(--border);
   border-radius: 8px;
-  overflow: hidden;
   box-sizing: border-box;
+  /* The rounded corner on the picture. */
+  overflow: hidden;
+}
+
+/* The clip edge, pushed out to the border box so the glow ring survives it.
+
+   Overflow clips at the *padding* edge, and the ring lies entirely outside that — it is drawn
+   on the border — so `hidden` does not shift a tile's light, it deletes it. `overflow: clip` is
+   the only one that takes a margin; at the hairline's width the clip edge lands exactly on the
+   border box, corner radius included. Nothing else pays for the swap: the picture is the
+   padding box exactly, so there is no overflow for the extra pixel to let through, and `clip`
+   is the non-scrolling one of the two anyway — the reason `globals.css` prefers it too.
+
+   **The `@supports` is load-bearing and a plain fallback declaration is not**, which is worth
+   knowing before simplifying this back to `overflow: hidden; overflow: clip`. Lightning CSS
+   minifies against modern targets and *drops* the first of those two — verified in the export —
+   so on an engine without `clip` the whole declaration is invalid and overflow resolves to
+   `visible`: not a tile that fails to light, but a photograph with square corners. Asked as a
+   condition instead, the fallback is a separate rule that nothing can remove, and the window it
+   covers is real if narrow — `overflow: clip` and `overflow-clip-margin` are both Safari 16,
+   where `:has()`, which this site already leans on unguarded, arrived in 15.4. */
+@supports (overflow-clip-margin: 1px) {
+  .tile {
+    overflow: clip;
+    overflow-clip-margin: var(--glow-line);
+  }
 }
 
 /* Holds the blurred stand-in, and nothing else. The blur is on the image *inside* this rather
@@ -122,7 +148,14 @@
   .tile::after {
     content: "";
     position: absolute;
-    inset: 0;
+    /* **Not `inset: 0`, and this is the trap.** An absolutely positioned box is laid out
+       against its containing block's *padding* box, so `0` starts inside the hairline and the
+       ring lands beside the border rather than on it — two parallel lines, one grey and one
+       orange. Pulling it out by the border's own width makes the pseudo-element's box the
+       border box exactly, which is also what makes `border-radius: inherit` below correct:
+       that is the border-box radius, and at `inset: 0` it was a pixel too round for the box it
+       was drawing. */
+    inset: calc(var(--glow-line) * -1);
     box-sizing: border-box;
     border-radius: inherit;
     pointer-events: none;
@@ -141,8 +174,9 @@
     mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
     mask-clip: content-box, border-box;
     mask-composite: exclude;
-    /* The ring's thickness. It is the border's own, so the light lands on the hairline exactly
-       rather than beside it. */
+    /* The ring's thickness, and the same figure the negative inset above uses: one number,
+       because both are the hairline's own width and a ring thicker or thinner than the border
+       it lights would sit half on and half off it. */
     padding: var(--glow-line);
   }
 }

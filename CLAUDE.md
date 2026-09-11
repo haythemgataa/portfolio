@@ -1197,7 +1197,7 @@ Three things it depends on:
 - **`GalleryPreview.tsx` — the 2x2 teaser — is the CV page's first block**, rendered by
   `Profile.tsx` and not by the layout. That is what makes it CV-only without a route test: the
   layout is never told which route it is rendering, so anything conditional up there needs
-  `usePathname()`, whereas inside the CV page being on the CV *is* the condition. Four things
+  `usePathname()`, whereas inside the CV page being on the CV *is* the condition. Five things
   worth knowing before touching it:
   - **It must stay below the bar.** Above it, the bar's resting height stops matching
     `/gallery`'s and the jump comes back — measured at 500px, the block's height plus its
@@ -1216,6 +1216,38 @@ Three things it depends on:
     *less its 1px border on each side*, the same arithmetic (and the same reason) as a
     thumbnail's. The blur-up is the lightbox's, down to the checks-before-it-subscribes effect
     and the `setTimeout` rather than `requestAnimationFrame` — see `LightboxImage`.
+  - **The hairlines light orange under the cursor, and the light is a masked gradient rather
+    than a border colour.** Five rings — the frame's and one per tile — each carry a radial
+    gradient centred on the pointer, masked to that element's own border by the
+    `content-box`-minus-`border-box` trick. `border-color` could not do it: it is one colour for
+    a whole edge, where the entire effect is an edge lit in one place and dark two pixels along,
+    so "the nearest borders" is the geometry rather than a decision anything makes. Five things:
+    - **`@supports` gates the whole block, and the failure it guards is loud.** Two mask layers
+      with no compositing operator fall back to their *union*, which is the whole box — a large
+      orange blob over the frame and its photographs. `layout.module.css` dodges the same trap by
+      splitting its two masks across two elements; here both layers are the same shape at two
+      clips, so there is nothing to split and drawing nothing is the honest fallback.
+    - **`background-origin: border-box` is required**, since the mask's `padding` shrinks the
+      background positioning area and the light would otherwise sit a pixel off the cursor.
+    - **The rings are found by `[data-glow]`, and each is handed the cursor in its own
+      coordinates.** So `useBorderGlow` knows neither how many rings there are nor where they
+      sit, which is what makes it right at every column width and inside the Studio's canvas —
+      which reuses this component — with no second arrangement.
+    - **A wheel scroll has to repaint it**, because it moves the block under a stationary cursor
+      and changes every distance the hook measures without producing one `pointermove`. The
+      listener is in the capture phase: scroll does not bubble, and in the Studio the scroller is
+      the canvas rather than the window. An `IntersectionObserver` is what keeps a `pointermove`
+      handler off the window while the block is off screen, with the proximity zone as its margin
+      so the light is live before the block's edge appears.
+    - **It is gated on a hovering pointer *and* on motion being allowed**, and the second is a
+      drop rather than a still: unlike `LocalTime`'s clock there is no information under the
+      animation to keep, so under `prefers-reduced-motion` the listeners are never attached and
+      the CSS — whose `--glow-strength` defaults to 0 — paints nothing.
+    - **It is the literal `#fb4107` again, at one strength for both themes.** The site has one
+      orange and already states it as a literal twice; a glow mixing its own would read as a
+      second accent. It needs no per-theme number — unlike `--section-title-tint-strength`, this
+      is a hue laid on a neutral hairline rather than a tint of the page's ink, so there is no
+      starting chroma for it to spend itself cancelling.
 - **Above the bar, nothing carries a narrow-viewport indent.** About's body copy used to take
   `margin-left: 16px` below 480px, inherited from the days when it was a CV section whose text
   lined up past a section title. It sits under the tabs now, with a full-width surface directly

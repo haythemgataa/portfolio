@@ -20,6 +20,15 @@
   border: 1px solid var(--border);
   border-radius: 12px;
   background-color: var(--background-muted);
+  /* The rings below are its own and its tiles' pseudo-elements. */
+  position: relative;
+
+  /* The three knobs of the glow, declared here so they inherit into the tiles and the frame and
+     its four tiles cannot come to disagree about them. `--glow-radius` is how much of a border
+     one cursor position lights; the two thicknesses are the ring widths the masks cut. */
+  --glow-radius: 150px;
+  --glow-line: 1px;
+  --glow-bleed: 5px;
 }
 
 /* Every tile is the same shape whatever its media is, so the four read as a set. The ratio is
@@ -63,6 +72,91 @@
   height: 100%;
   object-fit: cover;
   -webkit-user-drag: none;
+}
+
+/* --- The hairlines light where the cursor is ---------------------------------
+
+   Five rings — the frame's and one per tile — each a radial gradient centred on the cursor and
+   masked down to that element's own border. So a ring paints only where it is within
+   `--glow-radius` of the pointer, and "the nearest borders glow" is the geometry rather than a
+   decision anything makes: the near edge of the near tile is lit, its far edge is not, and the
+   frame's edge picks it up as the pointer approaches the block from outside. `GalleryPreview.tsx`
+   hands each ring `--glow-x`/`--glow-y` in *its own* coordinates and one shared
+   `--glow-strength`; everything else is here.
+
+   Six things about it:
+
+   - **The ring is a mask, not a border.** Painting the real border orange would mean animating
+     `border-color`, which is one colour for the whole edge — it cannot be lit in one place and
+     dark two pixels along, which is the entire effect. `mask-clip: content-box` minus
+     `border-box`, composited `exclude`, leaves exactly the padding's thickness of ring.
+   - **`@supports` gates the whole thing, and the failure it guards is loud.** Two mask layers
+     with no compositing operator fall back to their *union*, which is the whole box — so an
+     engine without `mask-composite` would paint a large orange blob over the frame and its
+     photographs rather than a hairline. `layout.module.css` avoids the same trap by composing
+     two masks across two elements; here the two layers are the same shape at two clips, so
+     there is nothing to split, and not drawing at all is the honest fallback.
+   - **`background-origin: border-box`.** The mask's `padding` makes the padding box smaller than
+     the element, and a gradient is positioned against the background positioning area — so
+     without this the light would sit a pixel off the cursor, differently on each ring.
+   - **The far stop is the same hue at zero alpha, never `transparent`**, which would drag the
+     falloff through black. The note on `.sectionHeader h2` in `Profile.module.css` has the same
+     trap.
+   - **Two rings, not one, and that is what makes it a glow rather than a lit line.** `::after`
+     is the hairline itself at full strength; `::before` is a wider, fainter band inside it. It
+     bleeds inwards only: a tile carries `overflow: hidden`, so a negative inset would simply be
+     clipped away, and the frame is the one element that could bleed outwards — one of five
+     doing it would read as an inconsistency rather than as depth.
+   - **`opacity` carries the approach**, so the ramp from the proximity zone costs one
+     compositor property rather than five gradients being rebuilt, and the transition is what
+     turns "the pointer left the window" into a fade instead of a cut.
+   - **The same literal `#fb4107` the section marks wear, and one value for both themes.** The
+     site has exactly one orange and states it as a literal in two places already; a glow that
+     mixed its own would read as a second accent. It does not follow the theme for the reason
+     `.sectionIcon` gives, and needs no per-theme strength either: measured in both, the light
+     that lands on a hairline is the same either way — it is a hue against a neutral rather than
+     a tint *of* the ink, which is what makes `--section-title-tint-strength` asymmetric. */
+@supports (mask-composite: exclude) or (-webkit-mask-composite: xor) {
+  .frame::before,
+  .frame::after,
+  .tile::before,
+  .tile::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: var(--glow-strength, 0);
+    transition: opacity 200ms linear;
+    background-origin: border-box;
+    background-image: radial-gradient(
+      circle var(--glow-radius) at var(--glow-x, 50%) var(--glow-y, -100%),
+      rgb(251 65 7 / 1) 0%,
+      rgb(251 65 7 / 0.6) 35%,
+      rgb(251 65 7 / 0) 100%
+    );
+    -webkit-mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+    -webkit-mask-clip: content-box, border-box;
+    -webkit-mask-composite: xor;
+    mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+    mask-clip: content-box, border-box;
+    mask-composite: exclude;
+  }
+
+  /* The hairline, lit. */
+  .frame::after,
+  .tile::after {
+    padding: var(--glow-line);
+  }
+
+  /* The bleed: the same light on a wider ring, held back so it reads as the hairline's spill
+     rather than as a second, thicker hairline. */
+  .frame::before,
+  .tile::before {
+    padding: var(--glow-bleed);
+    opacity: calc(var(--glow-strength, 0) * 0.45);
+  }
 }
 
 /* The same hover the CV's heading links wear — the underline wipes in from the left and the

@@ -23,10 +23,84 @@
    the page's ink and the emphasis weight rather than the browser's `bolder`, which on a
    variable face resolves to 700 — a step past anything else on the site and, beside 350 body
    copy, a different voice rather than an emphasis. Declared on the element because `RichText`
-   emits classless markdown; there is no other handle. */
+   emits classless markdown; there is no other handle — which is safe here because the paragraph
+   has exactly one bold phrase and it is this one. */
 .description strong {
   color: var(--foreground-primary);
   font-weight: var(--weight-emphasis);
+}
+
+/* One orange sweep across that phrase, timed to take over from the signature above it.
+
+   The whole treatment sits inside `no-preference` rather than being declared and then switched
+   off, so a reader who asked for less motion gets the plain rule above and nothing else — not
+   even the `background-clip` and the transparent `color`, which are machinery for an effect they
+   are not being shown.
+
+   Six things:
+
+   - **Two layers, and the order is the mechanism.** The band paints on top and the page's ink
+     underneath, both clipped to the glyphs, with `color: transparent` to get the UA's own fill
+     out of the way — the arrangement `.sectionHeader h2` uses in `Profile.module.css`, and the
+     same trap: `color` cannot simply stay opaque, because a background paints *behind* the text
+     colour and an opaque fill would hide the sweep entirely.
+   - **`background-image`, never the `background` shorthand**, which resets `background-clip` to
+     `border-box` and would paint two rectangles across the paragraph instead.
+   - **The band moves by `background-position`, and the geometry is the reason it can.** At
+     `background-size: 300%` the image is three times the box, so a position percentage resolves
+     against a *negative* `box − image`: the band's centre lands at `1.5 − 2P` box-widths from
+     the left edge, which is why a *falling* percentage sweeps it left to right, the direction
+     the sentence is read in.
+   - **The keyframes are 80% → 20%, not 100% → 0%, and the difference is half the animation.**
+     That arithmetic puts the band on the box only while P is between 0.75 and 0.25 — so the
+     full range spends the first quarter and the last quarter of the duration travelling with
+     nothing to show, which measured as a sweep that crossed the phrase and then left it
+     untouched for 350ms. 80% starts it just off the left edge and 20% carries it just past the
+     right, so the whole duration is the crossing.
+   - **`linear`, for the reason the nib is linear**: shaping belongs in a schedule rather than
+     in a timing function, and here there is one stroke to shape. Eased, the light appeared to
+     hesitate at the edge it was entering from.
+   - **The far stops are the same hue at zero alpha, never `transparent`**, which would drag the
+     feathered edges through black. The rule the section-title tint and the page glow follow.
+   - **`both` is load-bearing, exactly as it is on the signature's nib.** It holds the *from*
+     state through the 1.25s delay, so nothing is tinted while the hand is still writing, and
+     the *to* state afterwards, so the phrase rests in plain ink. The animation never replays:
+     About is rendered by the layout, so switching tabs does not remount it — the same reason
+     the signature draws once per load rather than once per route.
+   - **Nothing here depends on the phrase staying on one line, but it does.** Measured at 375px,
+     the narrowest width the site supports: one fragment, 186px wide, with "6+ years, owning"
+     still beside it — so the wrapped case does not arise today on any supported width. If a
+     longer claim ever wrapped, an inline box's background positioning area is the box as if
+     unfragmented (`box-decoration-break: slice`), so the band would cross both fragments at
+     once and arrive at each at a different point in its own width. No background can follow
+     text flow, which is the accepted limit `.sectionHeader h2` records for its own tint. */
+@media (prefers-reduced-motion: no-preference) {
+  .description strong {
+    background-image:
+      linear-gradient(
+        100deg,
+        rgb(251 65 7 / 0) 45%,
+        rgb(251 65 7 / 0.9) 50%,
+        rgb(251 65 7 / 0) 55%
+      ),
+      linear-gradient(var(--foreground-primary), var(--foreground-primary));
+    background-size: 300% 100%, 100% 100%;
+    background-repeat: no-repeat;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: shimmer var(--shimmer-duration) linear var(--shimmer-delay) both;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 80% 0, 0 0;
+  }
+
+  to {
+    background-position: 20% 0, 0 0;
+  }
 }
 
 /* Derived from the text rather than from a fixed grey, so the rule tracks whatever the link is

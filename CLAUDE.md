@@ -1193,7 +1193,42 @@ Three things it depends on:
     resolves `bolder` to 700 — a step past `--weight-emphasis` and, beside 350 body copy, a
     different voice rather than an emphasis. It takes `--foreground-primary` with it, so the
     phrase reads as the page's ink and the rest of the sentence as secondary. Declared on the
-    element because `RichText` emits classless markdown; there is no other handle.
+    element because `RichText` emits classless markdown; there is no other handle — which is
+    safe because the paragraph has exactly one bold phrase and it is this one.
+  - **One orange sweep crosses that phrase as the signature finishes writing it**, and the two
+    being one gesture is the whole point: `--shimmer-delay` is
+    `calc(var(--signature-delay) + var(--signature-duration) * 0.82)` — 1.25s, while the `H`'s
+    last contour (which opens at 1.40s) is still being drawn. Waiting for the hand to lift reads
+    as the second item in a queue; overlapping reads as one movement crossing the page. **That
+    is why `--signature-duration` and `--signature-delay` moved to `globals.css`**: two
+    components now have to agree about when the hand finishes, and written twice the sum is two
+    chances to update one of them, the argument `--sticky-top` already makes.
+    `--signature-min-stroke` stayed in `Signature.module.css`, being the nib's own floor.
+
+    It is the `background-clip: text` construction `.sectionHeader h2` uses — a band on top, the
+    page's ink underneath, `color: transparent` to get the UA's fill out of the way — with the
+    band moved by `background-position` rather than held still. Four things:
+    - **The whole treatment lives inside `@media (prefers-reduced-motion: no-preference)`**,
+      declared there rather than declared and then switched off, so a reader who asked for less
+      motion gets the plain rule and not even the clip or the transparent `color` — machinery for
+      an effect they are not being shown.
+    - **The keyframes are 80% → 20%, not 100% → 0%, and that is half the animation.** At
+      `background-size: 300%` a position percentage resolves against a negative `box − image`, so
+      the band's centre lands at `1.5 − 2P` box-widths from the left edge — on the box only while
+      P is between 0.75 and 0.25. The full range therefore spends its first and last quarters
+      travelling with nothing to show: measured, a sweep that crossed the phrase and then left it
+      untouched for 350ms. Sampled at the real duration through `getAnimations()`, the trimmed
+      range puts the band on "Pro" at 100ms, "gner" at 450ms and "eer" at 800ms.
+    - **`both` is load-bearing, exactly as on the signature's nib**: it holds the *from* state
+      through the delay, so nothing is tinted while the hand is still writing, and the *to* state
+      after, so the phrase rests in plain ink. It never replays — About is rendered by the layout,
+      so switching tabs does not remount it, the same reason the signature draws once per load
+      rather than once per route.
+    - **Nothing depends on the phrase staying on one line, but it does**: measured at 375px, the
+      narrowest width supported, it is one 186px fragment with "6+ years, owning" still beside
+      it. A wrapped phrase would take one band across both fragments, since an inline box's
+      positioning area is the box as if unfragmented — no background can follow text flow, the
+      limit that title tint records too.
 - **`GalleryPreview.tsx` — the 2x2 teaser — is the CV page's first block**, rendered by
   `Profile.tsx` and not by the layout. That is what makes it CV-only without a route test: the
   layout is never told which route it is rendering, so anything conditional up there needs
@@ -1529,7 +1564,9 @@ load-bearing, and most of them were found by rendering the thing and looking:
   different, much bolder script — so it is left out and the mark rests as pure fill.
 - **Timing is a share of contour length, not a share of the letters.** `span` in the generated
   module is proportional to how far the nib travels through that contour, and
-  `Signature.module.css` multiplies it by one `--signature-duration` (1.4s). A fixed beat per
+  `Signature.module.css` multiplies it by one `--signature-duration` (1.4s, and declared in
+  `globals.css` — About's shimmer starts while this hand is still moving, so the two cannot be
+  allowed to disagree about when that is). A fixed beat per
   glyph would crawl through `t` and sprint through the `H`; this is one hand at one speed.
 - **The strokes overlap, and the schedule for that is computed in the generator, not in CSS.**
   Because the nib traces a *contour*, it runs up one side of a stroke and back down the other,

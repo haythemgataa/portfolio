@@ -312,6 +312,28 @@
      the pills snapping while the page eases. */
   --ground-fade: 320ms;
 
+  /* The signature's hand, and the shimmer that follows it across About's opening claim.
+
+     **These two live here rather than on `.signature` because two components now have to agree
+     about when the hand finishes**: `Signature.module.css` schedules eighteen strokes from them,
+     and `About.module.css` starts its shimmer while the last one is still being drawn. Written
+     twice, the sum is two chances to update one of them — the argument `--sticky-top` already
+     makes. `--signature-min-stroke` stays in the component: it is the nib's own floor and
+     nothing else can want it.
+
+     The generator normalises the schedule so the last contour ends at exactly 1.0 of the
+     timeline, which is what makes `delay + duration` the moment the hand lifts — 1.5s.
+
+     The shimmer opens at 82% of that, 1.25s, while the `H`'s final contour (which starts at
+     1.40s) is still going. Overlapping is the point: handed over mid-gesture the two read as one
+     movement crossing the page, where a shimmer waiting for 1.5s reads as the second item in a
+     queue. It is one sweep and then nothing — `both` holds the finished state, so the phrase
+     rests in plain ink exactly as it did before any of this. */
+  --signature-duration: 1.4s;
+  --signature-delay: 0.1s;
+  --shimmer-delay: calc(var(--signature-delay) + var(--signature-duration) * 0.82);
+  --shimmer-duration: 0.9s;
+
   /* The page's own left and right padding — `.page` in `layout.module.css` — and, below 480px,
      the indent the CV's rows take inside it.
 

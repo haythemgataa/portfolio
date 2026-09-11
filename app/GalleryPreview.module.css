@@ -23,12 +23,12 @@
   /* The rings below are its own and its tiles' pseudo-elements. */
   position: relative;
 
-  /* The three knobs of the glow, declared here so they inherit into the tiles and the frame and
+  /* The two knobs of the glow, declared here so they inherit into the tiles and the frame and
      its four tiles cannot come to disagree about them. `--glow-radius` is how much of a border
-     one cursor position lights; the two thicknesses are the ring widths the masks cut. */
+     one cursor position lights; `--glow-line` is the thickness the mask cuts, which is the
+     hairline's own. */
   --glow-radius: 150px;
   --glow-line: 1px;
-  --glow-bleed: 5px;
 }
 
 /* Every tile is the same shape whatever its media is, so the four read as a set. The ratio is
@@ -84,7 +84,7 @@
    hands each ring `--glow-x`/`--glow-y` in *its own* coordinates and one shared
    `--glow-strength`; everything else is here.
 
-   Six things about it:
+   Seven things about it:
 
    - **The ring is a mask, not a border.** Painting the real border orange would mean animating
      `border-color`, which is one colour for the whole edge — it cannot be lit in one place and
@@ -102,11 +102,12 @@
    - **The far stop is the same hue at zero alpha, never `transparent`**, which would drag the
      falloff through black. The note on `.sectionHeader h2` in `Profile.module.css` has the same
      trap.
-   - **Two rings, not one, and that is what makes it a glow rather than a lit line.** `::after`
-     is the hairline itself at full strength; `::before` is a wider, fainter band inside it. It
-     bleeds inwards only: a tile carries `overflow: hidden`, so a negative inset would simply be
-     clipped away, and the frame is the one element that could bleed outwards — one of five
-     doing it would read as an inconsistency rather than as depth.
+   - **It is the hairline and nothing wider.** A second, fainter ring inside it was the obvious
+     way to buy bleed and it was the wrong object: the bleed can only go *inwards*, since a tile
+     carries `overflow: hidden` and would clip a negative inset, so what it actually drew was a
+     soft band lying on the photographs and on the mat rather than light coming off an edge. The
+     ramp along the border is what reads as a glow here; the falloff is the gradient's, not a
+     halo's. Both rings are therefore one ring, and nothing paints over the media.
    - **`opacity` carries the approach**, so the ramp from the proximity zone costs one
      compositor property rather than five gradients being rebuilt, and the transition is what
      turns "the pointer left the window" into a fade instead of a cut.
@@ -117,9 +118,7 @@
      that lands on a hairline is the same either way — it is a hue against a neutral rather than
      a tint *of* the ink, which is what makes `--section-title-tint-strength` asymmetric. */
 @supports (mask-composite: exclude) or (-webkit-mask-composite: xor) {
-  .frame::before,
   .frame::after,
-  .tile::before,
   .tile::after {
     content: "";
     position: absolute;
@@ -142,20 +141,9 @@
     mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
     mask-clip: content-box, border-box;
     mask-composite: exclude;
-  }
-
-  /* The hairline, lit. */
-  .frame::after,
-  .tile::after {
+    /* The ring's thickness. It is the border's own, so the light lands on the hairline exactly
+       rather than beside it. */
     padding: var(--glow-line);
-  }
-
-  /* The bleed: the same light on a wider ring, held back so it reads as the hairline's spill
-     rather than as a second, thicker hairline. */
-  .frame::before,
-  .tile::before {
-    padding: var(--glow-bleed);
-    opacity: calc(var(--glow-strength, 0) * 0.45);
   }
 }
 

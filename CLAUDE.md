@@ -1221,7 +1221,10 @@ Three things it depends on:
     gradient centred on the pointer, masked to that element's own border by the
     `content-box`-minus-`border-box` trick. `border-color` could not do it: it is one colour for
     a whole edge, where the entire effect is an edge lit in one place and dark two pixels along,
-    so "the nearest borders" is the geometry rather than a decision anything makes. Five things:
+    so "the nearest borders" is the geometry rather than a decision anything makes. It is the
+    hairline and nothing wider — a second, fainter ring inside it was tried for bleed and can
+    only bleed *inwards*, since a tile carries `overflow: hidden`, so what it drew was a soft
+    band lying on the photographs rather than light coming off an edge. Five things:
     - **`@supports` gates the whole block, and the failure it guards is loud.** Two mask layers
       with no compositing operator fall back to their *union*, which is the whole box — a large
       orange blob over the frame and its photographs. `layout.module.css` dodges the same trap by

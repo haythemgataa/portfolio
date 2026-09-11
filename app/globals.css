@@ -191,6 +191,12 @@
      reflection on the selected tab's black pill. Same sweep at the same scale in both, so
      the reflection samples the hue that is actually overhead — declared once so they cannot
      drift. Lowering the fraction widens the glow; see `.topGradient`. */
+  /* The cursor glow on the page's hairlines — `EdgeGlow.tsx` and `EdgeGlow.module.css`. It is
+     named apart from the `--glow-*` pair below on purpose: those are the wash at the top of the
+     page and its reflection on the tab pill, and the two effects share nothing but a word. This
+     is how much of a border one cursor position lights. */
+  --edge-glow-radius: 150px;
+
   --glow-fraction: 0.43;
   --glow-sweep: linear-gradient(
     90deg,

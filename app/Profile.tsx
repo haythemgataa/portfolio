@@ -14,6 +14,7 @@ import { groupContactRows } from "./lib/contentTypes";
 import GalleryPreview from "./GalleryPreview";
 import SectionIcon from "./SectionIcon";
 import styles from "./Profile.module.css";
+import glow from "./EdgeGlow.module.css";
 import Attachments from "./Attachments";
 import { cloudflareImageUrl } from "./lib/cloudflareImage";
 import type {
@@ -407,6 +408,8 @@ const ContactProfile: React.FC<ContactRowProps> = ({
     <a
       className={[
         styles.contactPill,
+        glow.ring,
+        glow.onBorder,
         styles.contactCompact,
         marked ? '' : styles.contactCompactLabel,
       ].filter(Boolean).join(' ')}
@@ -473,7 +476,7 @@ const ContactAddress: React.FC<ContactRowProps> = ({
   return (
     <button
       type="button"
-      className={`${styles.contactPill} ${styles.contactAddress}`}
+      className={`${styles.contactPill} ${glow.ring} ${glow.onBorder} ${styles.contactAddress}`}
       onClick={copy}
       data-copied={copied || undefined}
     >

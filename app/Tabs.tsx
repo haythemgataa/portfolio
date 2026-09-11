@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import styles from "./Tabs.module.css";
+import glow from "./EdgeGlow.module.css";
 
 type TabsProps = {
   /**
@@ -118,7 +119,7 @@ const Tabs: React.FC<TabsProps> = ({ showGallery = true }) => {
             <Link
               key={tab.href}
               href={tab.href}
-              className={styles.tab}
+              className={`${styles.tab} ${glow.ring} ${glow.onBorder}`}
               // Only for clicks that will actually navigate *this* tab. `onClick` runs before
               // next/link decides, and it bails on a modified event — so cmd-clicking Gallery
               // opened a new tab and left this page's pill parked on Gallery with `data-active`

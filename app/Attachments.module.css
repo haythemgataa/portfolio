@@ -327,6 +327,17 @@
   pointer-events: none;
 }
 
+/* The cursor's light, on the hairline above — `.ringUnder` in `EdgeGlow.module.css`. It repeats
+   that hairline's box rather than the button's: `inset: 0` is inside the white rim, where the
+   line actually is, and the radius is the same subtraction for the same reason. `z-index: 10`
+   to clear the frame and its shadow, exactly as the hairline does. */
+.media::before {
+  inset: 0;
+  padding: 1px;
+  border-radius: calc(10px - var(--thumb-border));
+  z-index: 10;
+}
+
 .media:active {
   cursor: -webkit-grabbing;
 }

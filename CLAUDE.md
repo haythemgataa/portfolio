@@ -1216,64 +1216,23 @@ Three things it depends on:
     *less its 1px border on each side*, the same arithmetic (and the same reason) as a
     thumbnail's. The blur-up is the lightbox's, down to the checks-before-it-subscribes effect
     and the `setTimeout` rather than `requestAnimationFrame` — see `LightboxImage`.
-  - **The hairlines light orange under the cursor, and the light is a masked gradient rather
-    than a border colour.** Five rings — the frame's and one per tile — each carry a radial
-    gradient centred on the pointer, masked to that element's own border by the
-    `content-box`-minus-`border-box` trick. `border-color` could not do it: it is one colour for
-    a whole edge, where the entire effect is an edge lit in one place and dark two pixels along,
-    so "the nearest borders" is the geometry rather than a decision anything makes. It is the
-    hairline and nothing wider — a second, fainter ring was tried for bleed and drew a soft
-    band lying on the photographs rather than light coming off an edge. Nine things:
-    - **`@supports` gates the whole block, and the failure it guards is loud.** Two mask layers
-      with no compositing operator fall back to their *union*, which is the whole box — a large
-      orange blob over the frame and its photographs. `layout.module.css` dodges the same trap by
-      splitting its two masks across two elements; here both layers are the same shape at two
-      clips, so there is nothing to split and drawing nothing is the honest fallback.
-    - **`background-origin: border-box` is required**, since the mask's `padding` shrinks the
-      background positioning area and the light would otherwise sit a pixel off the cursor.
-    - **The ring is `inset: calc(var(--glow-line) * -1)`, not `inset: 0`, and that is the trap.**
-      An absolutely positioned box is laid out against its containing block's *padding* box, so
-      `0` starts inside the hairline and the light lands beside the border rather than on it —
-      two parallel lines, one grey and one orange, which is exactly how it shipped first.
-      Pulling it out by the border's own width makes the pseudo-element's box the border box,
-      which is also what makes its `border-radius: inherit` right: that is the border-box radius.
-    - **A tile therefore clips nothing, and its picture rounds itself.** Overflow clips at the
-      padding edge, so on a tile — the one box here that used to clip — `hidden` does not shift
-      the ring, it deletes it. `overflow-clip-margin` looks like the answer and is a trap worth
-      recording, because it produces a *different* bug rather than none: pushing the clip edge
-      out to the border box stops it trimming anything at the corners, so each picture's square
-      corner fills the arc its own border is drawing and the tiles read as square photographs
-      in rounded frames. One clip cannot be both tight enough to round the picture and loose
-      enough to spare the ring, so the clip is gone: `.image` and `.clip` carry
-      `calc(var(--tile-radius) - var(--hairline))` — the border's *inner* radius, measured at
-      7px against the tile's 8px, which is the curve `overflow: hidden` was producing all along.
-      (`.clip` had `inherit` and so was a pixel too round; invisible only because the tile was
-      re-clipping it correctly.) That also retired an `@supports` guard and the Safari 16 floor
-      it carried — worth knowing it was needed: Lightning CSS minifies against modern targets
-      and **drops a plain `overflow: hidden` fallback declaration**, verified in the export, so
-      the fallback had to be asked as a condition rather than written as one.
-    - **`--hairline` is the border's width, stated once and read four times** — both borders,
-      the ring's thickness, the outset that puts the ring on the border box, and the picture's
-      inner radius. Four things that must agree to the pixel, so they are one number.
-    - **The rings are found by `[data-glow]`, and each is handed the cursor in its own
-      coordinates.** So `useBorderGlow` knows neither how many rings there are nor where they
-      sit, which is what makes it right at every column width and inside the Studio's canvas —
-      which reuses this component — with no second arrangement.
-    - **A wheel scroll has to repaint it**, because it moves the block under a stationary cursor
-      and changes every distance the hook measures without producing one `pointermove`. The
-      listener is in the capture phase: scroll does not bubble, and in the Studio the scroller is
-      the canvas rather than the window. An `IntersectionObserver` is what keeps a `pointermove`
-      handler off the window while the block is off screen, with the proximity zone as its margin
-      so the light is live before the block's edge appears.
-    - **It is gated on a hovering pointer *and* on motion being allowed**, and the second is a
-      drop rather than a still: unlike `LocalTime`'s clock there is no information under the
-      animation to keep, so under `prefers-reduced-motion` the listeners are never attached and
-      the CSS — whose `--glow-strength` defaults to 0 — paints nothing.
-    - **It is the literal `#fb4107` again, at one strength for both themes.** The site has one
-      orange and already states it as a literal twice; a glow mixing its own would read as a
-      second accent. It needs no per-theme number — unlike `--section-title-tint-strength`, this
-      is a hue laid on a neutral hairline rather than a tint of the page's ink, so there is no
-      starting chroma for it to spend itself cancelling.
+  - **Its hairlines light under the cursor, and the mechanism is shared** — `.ring` plus
+    `.onBorder` from `EdgeGlow.module.css`, five rings here (the frame's and one per tile). See
+    **Lit edges** for how the light works and what it costs; two things are this block's own.
+    It is the hairline and nothing wider: a second, fainter ring was tried for bleed and drew a
+    soft band lying on the photographs rather than light coming off an edge, where the ramp
+    *along* the border is what reads as a glow. And `--hairline` is stated once here and read
+    four times — both borders, the picture's inner radius, and, through `--edge-glow-line`, the
+    ring's thickness and the distance it is pulled out to reach the border box. Four things that
+    must agree to the pixel, so they are one number.
+  - **A tile clips nothing, and its picture rounds itself**, which is what makes room for that
+    ring — `.image` and `.clip` carry `calc(var(--tile-radius) - var(--hairline))`, the border's
+    inner radius, measured at 7px against the tile's 8px and exactly the curve the tile's old
+    `overflow: hidden` was drawing. (`.clip` had `inherit` and so was a pixel too round;
+    invisible only because the tile was re-clipping it correctly.) The trap that sent it this
+    way is under **Lit edges**: a clip at the padding edge does not shift a ring lying on the
+    border, it deletes it, and `overflow-clip-margin` trades that for square-cornered
+    photographs inside rounded frames.
 - **Above the bar, nothing carries a narrow-viewport indent.** About's body copy used to take
   `margin-left: 16px` below 480px, inherited from the days when it was a CV section whose text
   lined up past a section title. It sits under the tabs now, with a full-width surface directly
@@ -1363,6 +1322,99 @@ whose rect is the whole grid; every one is a no-op and is dropped rather than re
 is the single exception — measured, its path reaches 16.004 in a 16 box, so that clip was doing
 0.004 units of real work. At 16px on a 3x screen that is 0.012 of a device pixel, which is why it
 is not worth carrying.
+
+### Lit edges
+
+**Every hairline on the site lights orange under the cursor, and the light is one light.**
+`EdgeGlow.tsx` writes the pointer's position onto `<html>` and renders nothing else;
+`EdgeGlow.module.css` turns that into a ring on a border. Adding a lit border is a class and,
+where the geometry is unusual, three lines — no JavaScript at all.
+
+**`background-attachment: fixed` is the whole mechanism.** A fixed background's positioning area
+is the viewport, so one `at var(--edge-glow-x) var(--edge-glow-y)` lands on the same spot of the
+screen in every ring on the page: the light is continuous as it crosses from a tab pill to the
+frame below it, and nothing has to be measured. The first version of this lit only the gallery
+teaser and handed each ring the cursor in *its own* coordinates — a rect read and two writes per
+ring per frame, which would not have survived being asked of the 59 rings the CV page now
+carries. Three things fell out of the change, and all three are deletions: no scroll listener
+(scrolling moves the borders *under* a stationary light, which is what a light in a room does),
+no `IntersectionObserver` (nothing per-element to switch on), and no proximity ramp — how near
+the pointer must be is the gradient's own falloff, so `--edge-glow-strength` is now only the
+pointer's presence: the fade when it leaves the window, and the reason a page never pointed at
+draws nothing.
+
+Measured rather than assumed, because 59 masked gradients repainting on every pointer frame is
+the obvious objection: frame intervals are identical with the gradients live and with them
+switched off (median 8.3ms, p95 9.3 against 9.2), so there is no proximity gate and no need for
+one.
+
+**What is lit, and what is not.** The `.ring` class goes on hosts whose `::after` is free — the
+tab pills, the contact pills, the avatar well, the theme switch, and the teaser's frame and
+tiles, which all pair it with `.onBorder` because their hairline is the element's own border.
+`.ringUnder` is the second slot, for a host whose `::after` *is* its hairline: `Attachments`'
+thumbnails and the lightbox's opened media both draw theirs as an inset pseudo-element, so the
+light takes `::before` and paints under it — which costs almost nothing, since `--border` is 6%
+of an ink and 94% of the orange comes through. Those two place their own ring, because an inset
+hairline sits where its owner decided and carries that box's radius rather than the element's.
+
+Three deliberate exclusions:
+
+- **The gallery's items.** A light chasing the cursor down a column of large media reads as
+  restless where the same light on a small control reads as attention. Excluded by not carrying
+  the class; `/gallery` therefore lights only the chrome it shares with the CV — the avatar, the
+  tabs, the switch.
+- **The 404.** `global-not-found.tsx` bypasses the root layout and ships no client JavaScript at
+  all, which is worth more than one effect. It renders no driver, so its borders simply never
+  light.
+- **The colophon's sheet.** It is its own scroll container, and an absolutely positioned ring
+  inside one scrolls with the content — the light would drift off the border as the list moves.
+  Fixable only by moving the scroll to an inner element, which is a change to the dialog's layout
+  rather than to this effect.
+
+Five traps, four of them paid for in full before they were understood:
+
+- **The band must be the ring's `padding`, never a `border` of the same width.** They look
+  interchangeable — both leave exactly the same gap between content box and border box for the
+  mask to keep — and they are not: a background *image*'s positioning area is the padding box,
+  so a band cut out of the border area lies outside the gradient's own box and gets filled by
+  the repeated tile's far edge, which on this gradient is its transparent end. It draws nothing,
+  in total silence. What makes it vicious is that a background *colour* paints there perfectly,
+  so the obvious way to check a ring's geometry — swap the gradient for flat lime — reports the
+  geometry as fine. `background-origin: border-box` does not rescue it. This is why `.ringUnder`
+  exists at all rather than the light simply being added to an existing bordered pseudo-element.
+- **`inset: 0` is the padding box, not the border box.** An absolutely positioned box is laid
+  out against its containing block's padding box, so a ring at `0` starts inside the hairline and
+  the light lands *beside* the border rather than on it — two parallel lines, one grey and one
+  orange. `.onBorder` pulls it out by the border's own width, which is also what makes
+  `border-radius: inherit` right there: that is the border-box radius.
+- **A clip at the padding edge deletes the ring.** `overflow: hidden` on a host clips at the
+  padding edge and an `.onBorder` ring lies outside that, on the border — so the picture-rounding
+  clip that `.tile` and `.profilePhoto` both used to carry had to go, with the media taking the
+  border's *inner* radius instead (`calc(radius - hairline)`, the curve the clip was drawing
+  anyway). `overflow-clip-margin` looks like the alternative and is a worse bug: pushing the clip
+  edge out stops it trimming anything at the corners, so each picture's square corner fills the
+  arc its own border draws.
+- **It re-anchors inside a transformed, filtered or `will-change`d ancestor**, which is the one
+  real limit: such a ring is positioned against that ancestor and its light sits in the wrong
+  place. Prefer moving the transform onto a descendant — the thumbnail hover tilt and
+  `Attachments`' `filter: drop-shadow` are both on `.frame`, a child of the lit `.media`, which
+  is why they cost nothing. Where that is impossible, leave the edge unlit rather than ship a
+  light that disagrees with the others.
+- **`@supports` gates the whole thing**, because two mask layers with no compositing operator
+  fall back to their *union* — the whole box — so an engine without `mask-composite` would paint
+  an orange blob over the element rather than a hairline. Drawing nothing is the honest fallback.
+
+The colour is the literal `#fb4107` the section marks and the footer's cursor wear, at one
+strength for both themes: the site has one orange, and this is a hue laid on a neutral hairline
+rather than a tint of the page's ink, so it needs no per-theme number the way
+`--section-title-tint-strength` does. The selected tab pill shows no light, and that is correct
+rather than missed — the travelling pill's opaque ground covers the tab it is over, so the
+selection reads as a solid object passing over a surface the light plays on.
+
+Gated on a hovering pointer *and* on motion being allowed. Under `prefers-reduced-motion` it is
+dropped rather than stilled: unlike `LocalTime`'s clock there is no information under the
+animation to keep, so the listeners are never attached and every ring's opacity resolves through
+a `--edge-glow-strength` that is then never written.
 
 ### The signature
 
@@ -1990,7 +2042,7 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
 ### Component Patterns
 
 - **Server components** (async): `layout.tsx`, `page.tsx`, `[slug]/page.tsx` — handle data loading
-- **Client components** (`"use client"`): `Profile.tsx`, `Attachments.tsx`, `Lightbox.tsx`, `Scrollbar.tsx`, `RichText.tsx`, `Gallery.tsx`, `Tabs.tsx`, `LastUpdated.tsx`, `LocalTime.tsx`, `Colophon.tsx`
+- **Client components** (`"use client"`): `Profile.tsx`, `Attachments.tsx`, `Lightbox.tsx`, `Scrollbar.tsx`, `RichText.tsx`, `Gallery.tsx`, `Tabs.tsx`, `LastUpdated.tsx`, `LocalTime.tsx`, `Colophon.tsx`, `EdgeGlow.tsx` (renders nothing — see **Lit edges**)
 - **`SiteFooter.tsx` is in the root layout**, below the bar, so it closes both routes — the gallery
   would otherwise just stop after its last item. It is a stack against a control: the place above
   the published date at one end, and the colophon at the other. Eight things there:

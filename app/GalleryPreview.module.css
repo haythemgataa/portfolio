@@ -23,14 +23,12 @@
   /* The rings below are its own and its tiles' pseudo-elements. */
   position: relative;
 
-  /* Declared here so they inherit into the tiles and the frame and its four tiles cannot come
-     to disagree about them. `--glow-radius` is how much of a border one cursor position lights.
-     `--hairline` is the border's width, stated once and read four times — both borders, the
-     glow ring's thickness, the distance that ring is pulled out to reach the border box, and
-     the picture's inner radius below. It was named for the ring while the ring was its only
-     reader, which understated what now depends on it. */
-  --glow-radius: 150px;
+  /* The border's width, stated once and read four times — both borders, the picture's inner
+     radius below, and, through `--edge-glow-line`, both the thickness of the lit ring
+     `EdgeGlow.module.css` draws and the distance it is pulled out to reach the border box.
+     Four things that must agree to the pixel, so they are one number. */
   --hairline: 1px;
+  --edge-glow-line: var(--hairline);
   --tile-radius: 8px;
 }
 
@@ -90,87 +88,6 @@
      as `.clip`, since the two stand in exactly the same box. */
   border-radius: calc(var(--tile-radius) - var(--hairline));
   -webkit-user-drag: none;
-}
-
-/* --- The hairlines light where the cursor is ---------------------------------
-
-   Five rings — the frame's and one per tile — each a radial gradient centred on the cursor and
-   masked down to that element's own border. So a ring paints only where it is within
-   `--glow-radius` of the pointer, and "the nearest borders glow" is the geometry rather than a
-   decision anything makes: the near edge of the near tile is lit, its far edge is not, and the
-   frame's edge picks it up as the pointer approaches the block from outside. `GalleryPreview.tsx`
-   hands each ring `--glow-x`/`--glow-y` in *its own* coordinates and one shared
-   `--glow-strength`; everything else is here.
-
-   Seven things about it:
-
-   - **The ring is a mask, not a border.** Painting the real border orange would mean animating
-     `border-color`, which is one colour for the whole edge — it cannot be lit in one place and
-     dark two pixels along, which is the entire effect. `mask-clip: content-box` minus
-     `border-box`, composited `exclude`, leaves exactly the padding's thickness of ring.
-   - **`@supports` gates the whole thing, and the failure it guards is loud.** Two mask layers
-     with no compositing operator fall back to their *union*, which is the whole box — so an
-     engine without `mask-composite` would paint a large orange blob over the frame and its
-     photographs rather than a hairline. `layout.module.css` avoids the same trap by composing
-     two masks across two elements; here the two layers are the same shape at two clips, so
-     there is nothing to split, and not drawing at all is the honest fallback.
-   - **`background-origin: border-box`.** The mask's `padding` makes the padding box smaller than
-     the element, and a gradient is positioned against the background positioning area — so
-     without this the light would sit a pixel off the cursor, differently on each ring.
-   - **The far stop is the same hue at zero alpha, never `transparent`**, which would drag the
-     falloff through black. The note on `.sectionHeader h2` in `Profile.module.css` has the same
-     trap.
-   - **It is the hairline and nothing wider.** A second, fainter ring inside it was the obvious
-     way to buy bleed, and what it drew was a soft band lying on the photographs and on the mat
-     rather than light coming off an edge. The ramp *along* the border is what reads as a glow
-     here — that falloff is the gradient's, not a halo's — so one ring says it and nothing
-     paints over the media. Nothing clips a tile any more, so a wider or outward ring is now
-     possible; it is left out because it looked worse, not because it cannot be drawn.
-   - **`opacity` carries the approach**, so the ramp from the proximity zone costs one
-     compositor property rather than five gradients being rebuilt, and the transition is what
-     turns "the pointer left the window" into a fade instead of a cut.
-   - **The same literal `#fb4107` the section marks wear, and one value for both themes.** The
-     site has exactly one orange and states it as a literal in two places already; a glow that
-     mixed its own would read as a second accent. It does not follow the theme for the reason
-     `.sectionIcon` gives, and needs no per-theme strength either: measured in both, the light
-     that lands on a hairline is the same either way — it is a hue against a neutral rather than
-     a tint *of* the ink, which is what makes `--section-title-tint-strength` asymmetric. */
-@supports (mask-composite: exclude) or (-webkit-mask-composite: xor) {
-  .frame::after,
-  .tile::after {
-    content: "";
-    position: absolute;
-    /* **Not `inset: 0`, and this is the trap.** An absolutely positioned box is laid out
-       against its containing block's *padding* box, so `0` starts inside the hairline and the
-       ring lands beside the border rather than on it — two parallel lines, one grey and one
-       orange. Pulling it out by the border's own width makes the pseudo-element's box the
-       border box exactly, which is also what makes `border-radius: inherit` below correct:
-       that is the border-box radius, and at `inset: 0` it was a pixel too round for the box it
-       was drawing. */
-    inset: calc(var(--hairline) * -1);
-    box-sizing: border-box;
-    border-radius: inherit;
-    pointer-events: none;
-    opacity: var(--glow-strength, 0);
-    transition: opacity 200ms linear;
-    background-origin: border-box;
-    background-image: radial-gradient(
-      circle var(--glow-radius) at var(--glow-x, 50%) var(--glow-y, -100%),
-      rgb(251 65 7 / 1) 0%,
-      rgb(251 65 7 / 0.6) 35%,
-      rgb(251 65 7 / 0) 100%
-    );
-    -webkit-mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
-    -webkit-mask-clip: content-box, border-box;
-    -webkit-mask-composite: xor;
-    mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
-    mask-clip: content-box, border-box;
-    mask-composite: exclude;
-    /* The ring's thickness, and the same figure the negative inset above uses: one number,
-       because both are the hairline's own width and a ring thicker or thinner than the border
-       it lights would sit half on and half off it. */
-    padding: var(--hairline);
-  }
 }
 
 /* The same hover the CV's heading links wear — the underline wipes in from the left and the

@@ -3,6 +3,7 @@ import "./globals.css";
 import styles from "./layout.module.css";
 import About from "./About";
 import Analytics from "./Analytics";
+import EdgeGlow from "./EdgeGlow";
 import ProfileHeader from "./ProfileHeader";
 import SiteFooter from "./SiteFooter";
 import Tabs from "./Tabs";
@@ -159,6 +160,11 @@ export default async function RootLayout({
             document — inside the column it would be a child of a stacking context and could end
             up under the tab bar. */}
         {THEME_SWITCH_ENABLED && <ThemeSwitch />}
+        {/* Renders nothing: it writes the cursor's position onto `<html>` for every lit edge on
+            the page to read. Deliberately not in `global-not-found.tsx`, which is a server
+            component with no client JavaScript at all and is worth keeping that way for one
+            effect. */}
+        <EdgeGlow />
       </body>
     </html>
   );

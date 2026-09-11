@@ -80,6 +80,21 @@
   content: none;
 }
 
+/* The cursor's light, on the hairline above. `inset: 0` rather than `EdgeGlow`'s usual pull-out
+   because the thing being lit is that inset pseudo-element, not a border on this box — see
+   `.ringUnder` there. A floating asset has no hairline to light, so it gets no ring either,
+   for the reason its `::after` is dropped: the shadow follows the artwork's silhouette and a
+   rectangle traced around it is the edge that artwork has not got. */
+.imageWrap::before {
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+}
+
+.imageWrap[data-floating="true"]::before {
+  content: none;
+}
+
 /* Losing the wrapper's clip above would leave an opaque image with square corners, so the
    rounding moves onto the media itself. It is exact rather than approximate: the wrapper is
    already sized to the media's own aspect ratio, so `object-fit: contain` fills it edge to edge

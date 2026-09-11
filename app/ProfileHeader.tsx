@@ -1,5 +1,6 @@
 import Image from "next/image";
 import styles from "./ProfileHeader.module.css";
+import glow from "./EdgeGlow.module.css";
 import Signature from "./Signature";
 import { SIGNATURE } from "./lib/signature";
 import { IS_DEV_BRANCH } from "./lib/site";
@@ -30,7 +31,7 @@ type ProfileHeaderProps = {
 const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profile }) => {
   return (
     <header className={styles.header}>
-      <div className={styles.profilePhoto}>
+      <div className={`${styles.profilePhoto} ${glow.ring} ${glow.onBorder}`}>
         <Image
           src={profile.profilePhoto}
           alt=""

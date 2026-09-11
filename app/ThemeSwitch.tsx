@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { THEME_STORAGE_KEY } from "./lib/theme";
 import styles from "./ThemeSwitch.module.css";
+import glow from "./EdgeGlow.module.css";
 
 /**
  * The three states, in the order the button cycles them.
@@ -144,7 +145,7 @@ const ThemeSwitch: React.FC = () => {
   return (
     <button
       type="button"
-      className={styles.switch}
+      className={`${styles.switch} ${glow.ring} ${glow.onBorder}`}
       onClick={cycle}
       // The label carries the current state rather than the next one, and the button is not
       // `aria-pressed`: this is a three-way cycle, not a toggle, so there is no "on" to report.

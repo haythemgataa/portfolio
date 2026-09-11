@@ -11,6 +11,7 @@ import useResizeObserver from "use-resize-observer";
 import { useHasHover } from "./useHasHover";
 import { usePrefersReducedMotion } from "./usePrefersReducedMotion";
 import styles from "./Attachments.module.css";
+import glow from "./EdgeGlow.module.css";
 
 import { cloudflareImageUrl } from "./lib/cloudflareImage";
 
@@ -563,7 +564,7 @@ const Attachment: React.FC<AttachmentProps> = ({
       }}
       aria-label={accessibleName}
       data-framed={media.framed}
-      className={styles.media}>
+      className={`${styles.media} ${glow.ringUnder}`}>
       {/* Sized to the image's box, so the shadow falls under the image rather than around the
           mat. It cannot go on the img itself: with `object-fit`, the element's border box is
           still the whole frame — only the bitmap inside it is inset — so a shadow there would

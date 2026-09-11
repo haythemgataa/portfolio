@@ -10,6 +10,7 @@ import { useScrollLock } from "./useScrollLock";
 import { usePrefersReducedMotion } from './usePrefersReducedMotion';
 import { cloudflareImageUrl } from './lib/cloudflareImage';
 import styles from './Lightbox.module.css';
+import glow from './EdgeGlow.module.css';
 
 /**
  * Widths offered for a full-screen image, in CSS px before DPR — the browser picks one from
@@ -842,7 +843,7 @@ const LightboxImage: React.FC<LightboxImageProps> = ({
         ref={containerRef}
         className={styles.lightboxInner}>
         <div
-          className={styles.imageWrap}
+          className={`${styles.imageWrap} ${glow.ringUnder}`}
           // Drops the border and adds a silhouette shadow — see `.imageWrap[data-floating]`.
           data-floating={media.floating === true}
           // Lifts the wrap's clip so the progress bar below it is not cut off; the media keeps its

@@ -17,19 +17,21 @@
   grid-template-columns: 1fr 1fr;
   gap: 4px;
   padding: 8px;
-  border: 1px solid var(--border);
+  border: var(--hairline) solid var(--border);
   border-radius: 12px;
   background-color: var(--background-muted);
   /* The rings below are its own and its tiles' pseudo-elements. */
   position: relative;
 
-  /* The two knobs of the glow, declared here so they inherit into the tiles and the frame and
-     its four tiles cannot come to disagree about them. `--glow-radius` is how much of a border
-     one cursor position lights; `--glow-line` is the hairline's own width — the frame's and the
-     tiles' borders are both 1px — which the ring uses twice, as its thickness and as the
-     distance it is pulled out to reach the border box. */
+  /* Declared here so they inherit into the tiles and the frame and its four tiles cannot come
+     to disagree about them. `--glow-radius` is how much of a border one cursor position lights.
+     `--hairline` is the border's width, stated once and read four times — both borders, the
+     glow ring's thickness, the distance that ring is pulled out to reach the border box, and
+     the picture's inner radius below. It was named for the ring while the ring was its only
+     reader, which understated what now depends on it. */
   --glow-radius: 150px;
-  --glow-line: 1px;
+  --hairline: 1px;
+  --tile-radius: 8px;
 }
 
 /* Every tile is the same shape whatever its media is, so the four read as a set. The ratio is
@@ -38,35 +40,18 @@
 .tile {
   position: relative;
   aspect-ratio: 4 / 3;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--tile-radius);
   box-sizing: border-box;
-  /* The rounded corner on the picture. */
-  overflow: hidden;
-}
-
-/* The clip edge, pushed out to the border box so the glow ring survives it.
-
-   Overflow clips at the *padding* edge, and the ring lies entirely outside that — it is drawn
-   on the border — so `hidden` does not shift a tile's light, it deletes it. `overflow: clip` is
-   the only one that takes a margin; at the hairline's width the clip edge lands exactly on the
-   border box, corner radius included. Nothing else pays for the swap: the picture is the
-   padding box exactly, so there is no overflow for the extra pixel to let through, and `clip`
-   is the non-scrolling one of the two anyway — the reason `globals.css` prefers it too.
-
-   **The `@supports` is load-bearing and a plain fallback declaration is not**, which is worth
-   knowing before simplifying this back to `overflow: hidden; overflow: clip`. Lightning CSS
-   minifies against modern targets and *drops* the first of those two — verified in the export —
-   so on an engine without `clip` the whole declaration is invalid and overflow resolves to
-   `visible`: not a tile that fails to light, but a photograph with square corners. Asked as a
-   condition instead, the fallback is a separate rule that nothing can remove, and the window it
-   covers is real if narrow — `overflow: clip` and `overflow-clip-margin` are both Safari 16,
-   where `:has()`, which this site already leans on unguarded, arrived in 15.4. */
-@supports (overflow-clip-margin: 1px) {
-  .tile {
-    overflow: clip;
-    overflow-clip-margin: var(--glow-line);
-  }
+  /* **No `overflow` here; the picture rounds itself** — see `.clip` and `.image`. A clip on
+     this box had two jobs and they want opposite boxes: tight on the padding edge, to trim the
+     picture to the border's inner curve, and loose on the border box, so the glow ring — which
+     lies *on* the border, outside the padding edge — survives at all. Neither `hidden` nor
+     `clip` can be both. `overflow-clip-margin` looks like the answer and is the trap: pushing
+     the clip edge out to the border box stops it trimming anything at the corners, so each
+     picture's square corner fills the arc its own border is drawing, which reads as a square
+     photograph inside a rounded frame. With nothing clipping here the ring is free, the radius
+     is stated on the thing being rounded, and there is no `@supports` floor to carry. */
 }
 
 /* Holds the blurred stand-in, and nothing else. The blur is on the image *inside* this rather
@@ -76,7 +61,10 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
-  border-radius: inherit;
+  /* The border's *inner* radius, not `inherit`. This box is the padding box, so the tile's own
+     radius is a hairline too round for it — which was invisible only while the tile clipped
+     everything at the right curve anyway. */
+  border-radius: calc(var(--tile-radius) - var(--hairline));
   pointer-events: none;
 }
 
@@ -97,6 +85,10 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  /* What rounds the picture now that the tile does not. `border-radius` clips a replaced
+     element's own content, so this needs no clipping box around it — at the same inner radius
+     as `.clip`, since the two stand in exactly the same box. */
+  border-radius: calc(var(--tile-radius) - var(--hairline));
   -webkit-user-drag: none;
 }
 
@@ -129,11 +121,11 @@
      falloff through black. The note on `.sectionHeader h2` in `Profile.module.css` has the same
      trap.
    - **It is the hairline and nothing wider.** A second, fainter ring inside it was the obvious
-     way to buy bleed and it was the wrong object: the bleed can only go *inwards*, since a tile
-     carries `overflow: hidden` and would clip a negative inset, so what it actually drew was a
-     soft band lying on the photographs and on the mat rather than light coming off an edge. The
-     ramp along the border is what reads as a glow here; the falloff is the gradient's, not a
-     halo's. Both rings are therefore one ring, and nothing paints over the media.
+     way to buy bleed, and what it drew was a soft band lying on the photographs and on the mat
+     rather than light coming off an edge. The ramp *along* the border is what reads as a glow
+     here — that falloff is the gradient's, not a halo's — so one ring says it and nothing
+     paints over the media. Nothing clips a tile any more, so a wider or outward ring is now
+     possible; it is left out because it looked worse, not because it cannot be drawn.
    - **`opacity` carries the approach**, so the ramp from the proximity zone costs one
      compositor property rather than five gradients being rebuilt, and the transition is what
      turns "the pointer left the window" into a fade instead of a cut.
@@ -155,7 +147,7 @@
        border box exactly, which is also what makes `border-radius: inherit` below correct:
        that is the border-box radius, and at `inset: 0` it was a pixel too round for the box it
        was drawing. */
-    inset: calc(var(--glow-line) * -1);
+    inset: calc(var(--hairline) * -1);
     box-sizing: border-box;
     border-radius: inherit;
     pointer-events: none;
@@ -177,7 +169,7 @@
     /* The ring's thickness, and the same figure the negative inset above uses: one number,
        because both are the hairline's own width and a ring thicker or thinner than the border
        it lights would sit half on and half off it. */
-    padding: var(--glow-line);
+    padding: var(--hairline);
   }
 }
 

@@ -1222,9 +1222,8 @@ Three things it depends on:
     `content-box`-minus-`border-box` trick. `border-color` could not do it: it is one colour for
     a whole edge, where the entire effect is an edge lit in one place and dark two pixels along,
     so "the nearest borders" is the geometry rather than a decision anything makes. It is the
-    hairline and nothing wider — a second, fainter ring inside it was tried for bleed and can
-    only bleed *inwards*, since a tile carries `overflow: hidden`, so what it drew was a soft
-    band lying on the photographs rather than light coming off an edge. Eight things:
+    hairline and nothing wider — a second, fainter ring was tried for bleed and drew a soft
+    band lying on the photographs rather than light coming off an edge. Nine things:
     - **`@supports` gates the whole block, and the failure it guards is loud.** Two mask layers
       with no compositing operator fall back to their *union*, which is the whole box — a large
       orange blob over the frame and its photographs. `layout.module.css` dodges the same trap by
@@ -1238,14 +1237,24 @@ Three things it depends on:
       two parallel lines, one grey and one orange, which is exactly how it shipped first.
       Pulling it out by the border's own width makes the pseudo-element's box the border box,
       which is also what makes its `border-radius: inherit` right: that is the border-box radius.
-    - **A tile therefore needs `overflow: clip` with a margin, behind `@supports`.** Overflow
-      clips at the padding edge, so on a tile — the one clipping box here — `hidden` does not
-      shift the ring, it deletes it; `overflow-clip-margin` at the hairline's width puts the clip
-      edge on the border box instead. The condition is not decoration: Lightning CSS minifies
-      against modern targets and **drops a plain `overflow: hidden` fallback declaration**
-      (verified in the export), which would leave an engine without `clip` resolving overflow to
-      `visible` — a photograph with square corners, rather than a tile that merely does not
-      light. As a `@supports` rule the fallback is a separate rule nothing can remove.
+    - **A tile therefore clips nothing, and its picture rounds itself.** Overflow clips at the
+      padding edge, so on a tile — the one box here that used to clip — `hidden` does not shift
+      the ring, it deletes it. `overflow-clip-margin` looks like the answer and is a trap worth
+      recording, because it produces a *different* bug rather than none: pushing the clip edge
+      out to the border box stops it trimming anything at the corners, so each picture's square
+      corner fills the arc its own border is drawing and the tiles read as square photographs
+      in rounded frames. One clip cannot be both tight enough to round the picture and loose
+      enough to spare the ring, so the clip is gone: `.image` and `.clip` carry
+      `calc(var(--tile-radius) - var(--hairline))` — the border's *inner* radius, measured at
+      7px against the tile's 8px, which is the curve `overflow: hidden` was producing all along.
+      (`.clip` had `inherit` and so was a pixel too round; invisible only because the tile was
+      re-clipping it correctly.) That also retired an `@supports` guard and the Safari 16 floor
+      it carried — worth knowing it was needed: Lightning CSS minifies against modern targets
+      and **drops a plain `overflow: hidden` fallback declaration**, verified in the export, so
+      the fallback had to be asked as a condition rather than written as one.
+    - **`--hairline` is the border's width, stated once and read four times** — both borders,
+      the ring's thickness, the outset that puts the ring on the border box, and the picture's
+      inner radius. Four things that must agree to the pixel, so they are one number.
     - **The rings are found by `[data-glow]`, and each is handed the cursor in its own
       coordinates.** So `useBorderGlow` knows neither how many rings there are nor where they
       sit, which is what makes it right at every column width and inside the Studio's canvas —

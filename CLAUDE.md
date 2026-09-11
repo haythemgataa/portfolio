@@ -1352,17 +1352,20 @@ one.
 tab pills, the contact pills, the avatar well, the theme switch, and the teaser's frame and
 tiles, which all pair it with `.onBorder` because their hairline is the element's own border.
 `.ringUnder` is the second slot, for a host whose `::after` *is* its hairline: `Attachments`'
-thumbnails and the lightbox's opened media both draw theirs as an inset pseudo-element, so the
-light takes `::before` and paints under it — which costs almost nothing, since `--border` is 6%
-of an ink and 94% of the orange comes through. Those two place their own ring, because an inset
-hairline sits where its owner decided and carries that box's radius rather than the element's.
+thumbnails draw theirs as an inset pseudo-element, so the light takes `::before` and paints under
+it — which costs almost nothing, since `--border` is 6% of an ink and 94% of the light comes
+through. That host places its own ring, because an inset hairline sits where its owner decided
+and carries that box's radius rather than the element's.
 
-Three deliberate exclusions:
+Four deliberate exclusions:
 
 - **The gallery's items.** A light chasing the cursor down a column of large media reads as
   restless where the same light on a small control reads as attention. Excluded by not carrying
   the class; `/gallery` therefore lights only the chrome it shares with the CV — the avatar, the
   tabs, the switch.
+- **The lightbox.** It was lit for one commit and came out: an opened image is a takeover, with
+  nothing around it to relate the light to and the reader's whole attention already on the one
+  object. A hairline stirring at the edge of it is interference rather than attention.
 - **The 404.** `global-not-found.tsx` bypasses the root layout and ships no client JavaScript at
   all, which is worth more than one effect. It renders no driver, so its borders simply never
   light.
@@ -1395,21 +1398,43 @@ Five traps, four of them paid for in full before they were understood:
   edge out stops it trimming anything at the corners, so each picture's square corner fills the
   arc its own border draws.
 - **It re-anchors inside a transformed, filtered or `will-change`d ancestor**, which is the one
-  real limit: such a ring is positioned against that ancestor and its light sits in the wrong
-  place. Prefer moving the transform onto a descendant — the thumbnail hover tilt and
-  `Attachments`' `filter: drop-shadow` are both on `.frame`, a child of the lit `.media`, which
-  is why they cost nothing. Where that is impossible, leave the edge unlit rather than ship a
-  light that disagrees with the others.
+  real limit: such a ring is positioned against *that* ancestor and its light sits in the wrong
+  place. `Attachments`' `filter: drop-shadow` is on `.frame`, a child of the lit `.media`, so it
+  costs nothing — but **the hover lift is a `transform` on `.media` itself**, which made a
+  hovered thumbnail the one place the effect looked broken rather than absent: its own ring
+  re-anchored to a 140x90 box, the light landed far outside it, and hovering a thumbnail put it
+  out. `.media:hover::before` answers that by stopping asking for the viewport — anchored to the
+  thumbnail and centred, via the `--edge-glow-at` seam so the ramp is not restated. It loses no
+  accuracy worth having: the light's radius is 150px against a thumbnail 140px wide, so a cursor
+  anywhere inside one already reaches its whole ring, where the alternative is per-element
+  measurement plus inverting a 1.2° rotation. Where neither is possible, leave the edge unlit
+  rather than ship a light that disagrees with the others.
 - **`@supports` gates the whole thing**, because two mask layers with no compositing operator
   fall back to their *union* — the whole box — so an engine without `mask-composite` would paint
   an orange blob over the element rather than a hairline. Drawing nothing is the honest fallback.
 
-The colour is the literal `#fb4107` the section marks and the footer's cursor wear, at one
-strength for both themes: the site has one orange, and this is a hue laid on a neutral hairline
-rather than a tint of the page's ink, so it needs no per-theme number the way
-`--section-title-tint-strength` does. The selected tab pill shows no light, and that is correct
-rather than missed — the travelling pill's opaque ground covers the tab it is over, so the
-selection reads as a solid object passing over a surface the light plays on.
+**The ramp is three stops and its order is the design: a little orange at the very centre, a
+darkened hairline around it, then the hairline as it was.** Straight orange to nothing was the
+first version and it shouted — a saturated line on a page whose loudest ink is a 6% hairline —
+so what reads as light here is mostly the *darkening*, with the hue only marking the point being
+touched. All three colours are tokens in `globals.css`, which is also where to tune it. Two
+things about them:
+
+- **`--edge-glow-ink` is `--overlay-ink` at 24%**, four times `--border`'s own strength, so the
+  lit hairline is the colour the hairline is already made of, turned up. Composited on a pill's
+  edge that is rgb(228 229 231) at rest against rgb(173 174 176) lit, with the core at
+  rgb(241 139 108). It is also what makes the dark theme right for free: `--overlay-ink` flips to
+  white there, where a *darker* border would be invisible — measured, rgb(60 63 68) at rest
+  against rgb(107 109 113) lit.
+- **`--edge-glow-tint` is the literal `#fb4107`** the section marks and the footer's cursor wear,
+  at one alpha for both themes: the site has one orange, and this is a hue laid on a neutral
+  hairline rather than a tint of the page's ink, so it needs no per-theme number the way
+  `--section-title-tint-strength` does. `--edge-glow-ink-fade` is that ink at zero alpha rather
+  than `transparent`, the rule the section-title tint and the page glow both follow.
+
+The selected tab pill shows no light, and that is correct rather than missed — the travelling
+pill's opaque ground covers the tab it is over, so the selection reads as a solid object passing
+over a surface the light plays on.
 
 Gated on a hovering pointer *and* on motion being allowed. Under `prefers-reduced-motion` it is
 dropped rather than stilled: unlike `LocalTime`'s clock there is no information under the

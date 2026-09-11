@@ -40,10 +40,10 @@
    - **The far stop is the same hue at zero alpha, never `transparent`**, which would drag the
      falloff through black. `Profile.module.css`'s section-title tint documents the same trap.
 
-   The colour is the literal `#fb4107` the section marks and the footer's cursor wear, at one
-   strength for both themes: the site has one orange, and this is a hue laid on a neutral
-   hairline rather than a tint of the page's ink, so it needs no per-theme number the way
-   `--section-title-tint-strength` does. */
+   The ramp is three stops and its order is the design — a little orange at the centre, a
+   darkened hairline around it, then the hairline as it was. All three live in `globals.css`,
+   with the reasoning; the short version is that what reads as light here is mostly the
+   *darkening*, and the hue only marks the point being touched. */
 @supports (mask-composite: exclude) or (-webkit-mask-composite: xor) {
   .ring::after,
   .ringUnder::before {
@@ -56,11 +56,16 @@
     opacity: var(--edge-glow-strength, 0);
     transition: opacity 200ms linear;
     background-attachment: fixed;
+    /* `--edge-glow-at` is a seam, not a knob: it lets one host override *where* the light is
+       without restating the ramp. `Attachments`' hovered thumbnail is the only caller — see the
+       note there — and the nested fallback is what keeps every other ring on the viewport's
+       coordinates. */
     background-image: radial-gradient(
-      circle var(--edge-glow-radius) at var(--edge-glow-x, -100%) var(--edge-glow-y, -100%),
-      rgb(251 65 7 / 1) 0%,
-      rgb(251 65 7 / 0.6) 35%,
-      rgb(251 65 7 / 0) 100%
+      circle var(--edge-glow-radius)
+        at var(--edge-glow-at, var(--edge-glow-x, -100%) var(--edge-glow-y, -100%)),
+      var(--edge-glow-tint) 0%,
+      var(--edge-glow-ink) 22%,
+      var(--edge-glow-ink-fade) 100%
     );
     -webkit-mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
     -webkit-mask-clip: content-box, border-box;

@@ -19,8 +19,17 @@
    little enough that nothing of the face is covered.
 
    `line-height: 0` because the SVG is a block-level replaced element and the `h1`'s own line box
-   would otherwise reserve a strut under it that nothing draws in. */
+   would otherwise reserve a strut under it that nothing draws in.
+
+   **`position: relative` is what keeps the overlap the right way up**, and it is a fix rather
+   than tidiness. The photo above became positioned when it took a lit edge — a ring is an
+   absolutely positioned pseudo-element and needs a containing block — and a positioned element
+   paints above in-flow content whatever the source order says. So the picture began covering the
+   ascender that is supposed to cross it: the signature looked like it had been moved below the
+   photo, when only the paint order had changed. Positioned too, and later in the tree, the
+   signature is back on top with no `z-index` needed by either. */
 .name {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;

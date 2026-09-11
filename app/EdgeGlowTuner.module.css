@@ -1,0 +1,82 @@
+/* Chrome for the dev-only edge-glow tuner. Deliberately plain: it borrows the site's tokens so
+   it does not need a palette of its own, and it is bottom-*left* because the theme switch owns
+   the bottom-right corner. `z-index` above both, since it has to stay reachable over the tab
+   bar and the lightbox's backdrop while tweaking. */
+.panel {
+  position: fixed;
+  z-index: 1000;
+  left: 16px;
+  /* Clear of Next's own dev indicator, which sits in this corner. */
+  bottom: 64px;
+  width: 260px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background-color: var(--background-primary);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  color: var(--foreground-secondary);
+  font-family: var(--default-font), sans-serif;
+  font-size: var(--secondary-type-size);
+  line-height: var(--line-height);
+}
+
+.panel[data-open="false"] {
+  width: auto;
+}
+
+.toggle {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--foreground-primary);
+  font: inherit;
+  font-weight: var(--weight-emphasis);
+  text-align: left;
+  cursor: pointer;
+}
+
+.body {
+  margin-top: 8px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 40px 1fr 44px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.row input {
+  width: 100%;
+  /* The one place on the site that wants a native control to look native. */
+  accent-color: var(--foreground-primary);
+}
+
+.label {
+  color: var(--foreground-tertiary);
+}
+
+.value {
+  color: var(--foreground-primary);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* The paste-me block. `user-select: all` so one click takes the whole declaration, and it
+   wraps rather than scrolling — the point is to be read at a glance. */
+.snippet {
+  margin: 8px 0 0;
+  padding: 8px;
+  border-radius: 8px;
+  background-color: var(--background-muted);
+  color: var(--foreground-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  user-select: all;
+}

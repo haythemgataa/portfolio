@@ -1420,16 +1420,25 @@ Five traps, four of them paid for in full before they were understood:
   an orange blob over the element rather than a hairline. Drawing nothing is the honest fallback.
 
 **There is no hue in it, which is worth saying because the files are named for a glow: the light
-is the hairline itself, ten points stronger.** `--edge-glow-ink` is `--overlay-ink` at 10%, laid
-over whatever `--border` already is, so a lit border is the colour it was made of turned up
-rather than a second colour arriving. Alpha of one ink over the same ink adds, so the 6% resting
-hairline composites to 15.4% and the dark theme's 8% to 17.2% — measured on a pill,
-rgb(228 229 231) → rgb(205 206 208) in light and rgb(60 63 68) → rgb(80 82 87) in dark. Stating
-it as the *overlay* ink rather than as a black is what buys that second row: one declaration
-darkens a light hairline and brightens a dark one, where a black would be invisible on the dark
-theme. The other dial is `--edge-glow-radius`, and it is the one that changes the character — at
-150px the light spanned most of a tab pill and read as a treatment along the edge; at 90 it reads
-as the point being touched.
+is the hairline itself, turned up.** `--edge-glow-ink` is `--overlay-ink` at 14%, laid over
+whatever `--border` already is, so a lit border is the colour it was made of rather than a second
+colour arriving. Alpha of one ink over the same ink adds, so the 6% resting hairline composites to
+19.2% and the dark theme's 8% to 20.9% — measured on a pill, rgb(228 229 231) → rgb(196 197 199)
+in light and rgb(60 63 68) → rgb(87 90 94) in dark. Stating it as the *overlay* ink rather than as
+a black is what buys that second row: one declaration darkens a light hairline and brightens a
+dark one, where a black would be invisible on the dark theme. The other dial is
+`--edge-glow-radius`, and it is the one that changes the character — at 150px the light spanned
+most of a tab pill and read as a treatment along the edge; at 90 it reads as the point being
+touched.
+
+**`EdgeGlowTuner.tsx` is a temporary dev-only panel over those two dials** — two sliders writing
+them onto `<html>`, printing the declarations to paste back into `globals.css`. It is gated on
+`process.env.NODE_ENV`, a build-time literal, so a production build renders nothing: measured,
+no panel markup in `out/index.html`, `out/gallery.html` or `out/404.html`. It does **not** keep
+the code out of the bundle — the layout's `import` is static, so the component and its stylesheet
+ship as a few hundred dead bytes, the same thing `ThemeSwitch` documents about its own gate.
+Which is why this is a file to delete rather than a flag to leave off: remove it, its stylesheet
+and its line in `layout.tsx` once the numbers are settled.
 
 **Three versions with orange in them were tried and dropped**, which is worth knowing before
 reaching for the hue again: full-strength orange to nothing *shouted*, a saturated line on a page
@@ -1600,6 +1609,15 @@ flattening it would bake the light theme's wash into the picture —
 and `.name`'s `margin-top: -14px` puts the ink's top 12.5px above the photo's lower edge, about a
 quarter of the picture. Enough for the `H`'s flourish to read as crossing it, little enough that
 none of the face is covered.
+
+**`.name` carries `position: relative` to keep that overlap the right way up**, and it is a fix
+rather than tidiness. The well above became positioned the day it took a lit edge — a ring is an
+absolutely positioned pseudo-element and needs a containing block — and a positioned element
+paints above in-flow content whatever the source order says, so the picture started covering the
+ascender that is supposed to cross it. It read as the signature having *moved below* the photo
+when only the paint order had changed, which is the shape to recognise: anything given a ring can
+quietly start painting over whatever used to overlap it. Positioned too and later in the tree, the
+signature is back on top and neither needs a `z-index`.
 
 **The name is no longer edited on the Studio's canvas**, and that is the canvas/inspector split
 holding rather than an omission: what a visitor can read is edited where it sits, and a visitor

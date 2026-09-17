@@ -64,6 +64,13 @@
      everything at the right curve anyway. */
   border-radius: calc(var(--tile-radius) - var(--hairline));
   pointer-events: none;
+  /* **Lifted, because the picture is positioned now too.** This stands *over* the picture until
+     it has loaded — that is the whole blur-up — and it used to get that for free: a positioned
+     box paints above in-flow content whatever the source order says. Now that `.image` is
+     positioned as well, the two are in one layer where the later sibling wins, and the picture
+     comes second. Without this the stand-in sits behind the thing it is standing in for, which
+     fails invisibly: on a warm cache the picture is there immediately and nothing looks wrong. */
+  z-index: 1;
 }
 
 /* Scaled past the box because blurring leaves the outer few pixels part-transparent, which at
@@ -78,14 +85,40 @@
   transform: scale(1.06);
 }
 
+/* **Out of flow, in the same box `.clip` occupies — and that is load-bearing in WebKit rather
+   than tidiness.** In flow it was the only child still contributing to the tile's intrinsic
+   size, and that broke the grid there: a `1fr` track is `minmax(auto, 1fr)`, so a tile cannot
+   be narrower than its own *automatic minimum size*, and WebKit derives that for an
+   `aspect-ratio` box with an in-flow percentage-sized replaced child as 4/3 of the picture's
+   height — 261.66px against the 259px the track should give. The 2x2 block then overran the
+   frame's padding on the right and bottom while the left and top stayed put, which reads as
+   every picture shifted down and to the right. Measured in WebKit: tile 261.656x198.234 and
+   frame 540x414.5, against Chromium's 259x194.25 and 540x410.5. Blink sizes it correctly, so
+   this was invisible in Chrome on both desktop and mobile.
+
+   **The tile's old `overflow: hidden` is what had been hiding it, and not by clipping.** An
+   item whose `overflow` is not `visible` has an automatic minimum size of *zero*, so that clip
+   was silently holding the grid to its 1fr share. Removing it — for the glow ring, which lies
+   on the border and cannot survive a clip at the padding edge — took the prop out with it.
+   Restoring the clip fixes the sizing too, which is why the two look interchangeable and are
+   not: only this keeps the ring.
+
+   Positioning also settles the *picture's* own box, which `min-width: 0` on the tile would
+   not: percentages on an absolutely positioned box resolve against the containing block's
+   padding box, which is definite, rather than against a height the aspect ratio produced —
+   WebKit had it 2px tall over. Verified against Chromium's numbers exactly, in both engines:
+   tile 259x194.25, picture 257x192.25, margins 9px on all four sides.
+
+   `border-radius` is what rounds the picture now that the tile does not; it clips a replaced
+   element's own content, so this still needs no clipping box around it — at the same inner
+   radius as `.clip`, since the two stand in exactly the same box. */
 .image {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  /* What rounds the picture now that the tile does not. `border-radius` clips a replaced
-     element's own content, so this needs no clipping box around it — at the same inner radius
-     as `.clip`, since the two stand in exactly the same box. */
   border-radius: calc(var(--tile-radius) - var(--hairline));
   -webkit-user-drag: none;
 }

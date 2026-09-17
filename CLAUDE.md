@@ -1287,6 +1287,30 @@ Three things it depends on:
     way is under **Lit edges**: a clip at the padding edge does not shift a ring lying on the
     border, it deletes it, and `overflow-clip-margin` trades that for square-cornered
     photographs inside rounded frames.
+  - **Dropping that clip broke the grid in WebKit, and the clip had been load-bearing for a
+    reason that has nothing to do with clipping.** A `1fr` track is `minmax(auto, 1fr)`, so a
+    tile cannot be narrower than its own *automatic minimum size* — and an item whose `overflow`
+    is not `visible` has an automatic minimum size of **zero**. The old `overflow: hidden` was
+    therefore holding the tiles to their 1fr share as a side effect. Without it WebKit sizes an
+    `aspect-ratio` box with an in-flow percentage-sized replaced child from the picture's height
+    through the ratio: measured 261.656x198.234 against Chromium's 259x194.25, so the 2x2 block
+    overran the frame's padding on the right and bottom while the left and top stayed put. That
+    reads as all four pictures shifted down and to the right, and only in Safari — desktop and
+    mobile alike, since it is a WebCore layout difference rather than a mobile one. Blink is
+    correct, so nothing in Chrome ever showed it.
+  - **The fix is `.image` being absolutely positioned, not a restored clip**, which would take
+    the ring with it again. Out of flow it contributes nothing to the tile's automatic minimum
+    size, so the track is its 1fr share; and percentages on an absolutely positioned box resolve
+    against the containing block's *padding* box, which is definite, rather than against a height
+    the aspect ratio produced — WebKit had the picture 2px tall over, which `min-width: 0` on the
+    tile fixes the track but not the picture. Verified in both engines at 259x194.25 tile,
+    257x192.25 picture, 9px margins on all four sides; and pixel-identical to the previous build
+    in Chromium across 24 viewport/DPR/theme/ring combinations.
+  - **`.clip` needs `z-index: 1` once the picture is positioned too.** The stand-in covers the
+    picture until it loads, and it used to get that for free — a positioned box paints above
+    in-flow content whatever the source order says. With both positioned they are one layer where
+    the later sibling wins, and the picture is second. Getting this wrong fails invisibly: on a
+    warm cache the picture is there immediately and nothing looks wrong.
 - **Above the bar, nothing carries a narrow-viewport indent.** About's body copy used to take
   `margin-left: 16px` below 480px, inherited from the days when it was a CV section whose text
   lined up past a section title. It sits under the tabs now, with a full-width surface directly

@@ -105,7 +105,12 @@ const CaseStudy: React.FC<CaseStudyProps> = ({ study, doc, images }) => (
       // makes in `Profile.tsx`.
       <section key={index} className={profile.profileSection}>
         <div className={profile.sectionHeader}>
-          <SectionNumber index={index} />
+          {/* In the study's colour, as the badge and the glow are. A study on the fallback ink
+              keeps the numeral's own orange rather than turning it into a second heading. */}
+          <SectionNumber
+            index={index}
+            color={study.color !== FALLBACK_FOLDER_COLOR ? study.color : undefined}
+          />
           <h2>{section.label}</h2>
         </div>
         <div className={styles.body}>

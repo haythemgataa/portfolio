@@ -2405,6 +2405,14 @@ makes it read as this site rather than as a detached page, at the cost of no req
   keeps numbers because its sections are an outline read in order. It pins at `--sticky-top: 0`
   under the bare `.sectionHeader` rule, the headroom offset having been retired with the CV's
   ordinals; the numeral is centred on the title's line box, so it stays inside the header.
+- **The numerals are drawn in the study's colour**, like the badge and the glow. `SectionNumber`
+  takes an optional `color` and writes it inline as `--section-number-color`; every stop of its band
+  is a `color-mix()` of that one value against `transparent`, with Figma's `#fb4107` as the
+  fallback when nothing sets it. A study on the fallback ink keeps the orange. `color-mix` rather
+  than relative colour syntax because it is supported further back, and a colour function the
+  engine rejects would leave the numeral with no paint at all. It still honours the numeral's
+  never-`transparent` rule: a premultiplied mix keeps the hue and only lowers the alpha, and the
+  lowest stop is 25%.
 - **The ordinal is derived, and `parseCaseStudy` strips the authored one.** The draft numbers its
   own headings ("## 1. Board Viewer…") because it was written as one flat document; leaving that in
   would print "01 1. Board Viewer" and the two could disagree the moment a section moved. Same rule

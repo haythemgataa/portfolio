@@ -279,13 +279,29 @@ merge-patches it, so the cancelled timeout was the sole carrier of that value. T
 do *not* go through `run()`'s stale-hash replay — their payload is a whole value, and replaying it
 could overwrite a change this tab never saw.
 
-`Studio.module.css` positions the tool `fixed; inset: 0` because `/studio` sits under the site's
-root layout and would otherwise render below `ProfileHeader` and the tab bar.
+**`/studio` has its own root layout, `app/studio/layout.tsx`.** There is no `app/layout.tsx`
+any more (the site's routes are split into `(site)` and `(study)` route groups), and `/studio` is in
+neither, so for a while it rendered with no `<html>` or `<body>` and the dev overlay said so on every
+load. The layout carries exactly what the Studio used to get from the site's root layout:
+`globals.css`, the font's variable class, the theme script, and the lit-edge driver. None of the
+site's chrome, which the canvas draws for itself. `Studio.module.css` still positions the tool
+`fixed; inset: 0`; that began as the way to cover the chrome it used to render under, and now just
+keeps it a tool rather than a scrolling page.
+
+**The layout is the one Studio file without the `.studio` extension, and it has to be.** As
+`layout.studio.tsx` it broke `npm run build` on any checkout where `npm run dev` had run: Next writes
+a type validator per layout, `tsconfig.json` includes the dev server's copy (`.next/dev/types`), and
+that copy checks a `/studio` layout against a global `LayoutProps` declared, during a build, from
+the production route list, which had no such layout. Pages and route handlers are checked through
+local types, not that global, so they can be dev-only. A fresh clone, like a Cloudflare deploy, has
+no `.next/dev` and never shows it. As a plain file it is in both route lists, and it still ships
+nothing, because in production there is no page under it. Verified: nine pages in the export, as
+before, and no file or string from the Studio.
 
 It exists only in `npm run dev`, enforced two ways in `next.config.ts`:
 
-- Its files are named `page.studio.tsx` / `route.studio.ts`, which only resolve
-  as routes via the dev-only `pageExtensions`.
+- Its page and route handlers are named `page.studio.tsx` / `route.studio.ts`, which only resolve
+  as routes via the dev-only `pageExtensions`. The layout is not, for the reason above.
 - `output: 'export'` is applied to production builds only, because it rejects
   non-static route handlers even when merely running `next dev`. The tradeoff is
   that static-export violations now surface at `npm run build` rather than in dev.

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import StickyFade from "./StickyFade";
 import styles from "./Tabs.module.css";
+import glow from "./EdgeGlow.module.css";
 
 type TabsProps = {
   /**
@@ -75,8 +76,13 @@ const Tabs: React.FC<TabsProps> = ({ showGallery = true }) => {
     return () => observer.disconnect();
   }, []);
 
+  // **"Home", not "CV".** The label was "CV" and named the *document* where its neighbour names
+  // a place — so the pair read as one category label beside one destination, and on `/gallery`
+  // the way back was labelled with a genre rather than with somewhere to go. Both are routes, so
+  // both are places. It costs the pill nothing: tabs are `flex: 1 1 0`, so the geometry is
+  // derived from the count and never from a label's width.
   const tabs = [
-    { href: "/", label: "CV" },
+    { href: "/", label: "Home" },
     ...(showGalleryTab ? [{ href: "/gallery", label: "Gallery" }] : []),
   ];
 
@@ -89,11 +95,21 @@ const Tabs: React.FC<TabsProps> = ({ showGallery = true }) => {
 
   return (
     <>
+      {/* The resting air the pinned bar does not keep. It is the bar's own space — nothing else
+          renders it, and About's `margin-bottom` is still 0 — but it is in flow rather than in
+          the sticky wrapper's padding, so it scrolls away and the parked band is 56px instead of
+          96px. Before the sentinel, or the stick would fire this much early; see `.airTop`. */}
+      <div className={styles.airTop} aria-hidden="true" />
       <div ref={sentinelRef} className={styles.sentinel} aria-hidden="true" />
       <div className={styles.sticky} data-stuck={isStuck}>
         <nav
           className={styles.tabs}
-          aria-label="Sections"
+          // "Pages", not "Sections" — which followed from the rename rather than being a separate
+          // idea. The CV's own sticky headings are the sections; a bar that switches between two
+          // routes announcing itself as section navigation sent a screen reader looking for
+          // headings. It was already loose when the tabs read "CV"/"Gallery"; naming them as
+          // places made it plainly wrong.
+          aria-label="Pages"
           // The two numbers the pill's geometry is derived from. Everything else about it
           // lives in the stylesheet; these are the only parts that depend on runtime state.
           style={{
@@ -104,7 +120,7 @@ const Tabs: React.FC<TabsProps> = ({ showGallery = true }) => {
             <Link
               key={tab.href}
               href={tab.href}
-              className={styles.tab}
+              className={`${styles.tab} ${glow.ring} ${glow.onBorder}`}
               // Only for clicks that will actually navigate *this* tab. `onClick` runs before
               // next/link decides, and it bails on a modified event — so cmd-clicking Gallery
               // opened a new tab and left this page's pill parked on Gallery with `data-active`
@@ -179,6 +195,10 @@ const Tabs: React.FC<TabsProps> = ({ showGallery = true }) => {
           context. The bar's own stuck state is passed in rather than observed again — see
           `StickyFade`. */}
       <StickyFade stuck={isStuck} />
+      {/* The other half of the resting air, and it has to come after the fade: the fade pins at
+          `--sticky-top` and its flow position is whatever follows the wrapper, so a spacer
+          between them would delay its pin and expose the band's hard edge. */}
+      <div className={styles.airBottom} aria-hidden="true" />
     </>
   );
 };

@@ -10,9 +10,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run check:cdn` — Assert the Cloudflare image gate emits `/cdn-cgi/image/` URLs for
   production builds and none outside them. Runs two builds; not part of `npm run build`.
 
-`scripts/` holds `clean-export.mjs` and `fetch-font.mjs`, both of which `npm run build` runs
-(the second via `prebuild`, and also on `postinstall` and `predev`). The one-shot migrations that
-produced the current content model are gone — see git history if you need them.
+`scripts/` holds `branch.mjs` — which is where `PRODUCTION_BRANCH` and the `CF_PAGES_BRANCH`
+lookup live, read by both `next.config.ts` and `clean-export.mjs` so the two cannot come to
+disagree about what "production" is — plus `clean-export.mjs` and `fetch-font.mjs`, both of which `npm run build` runs
+(the second via `prebuild`, and also on `postinstall` and `predev`), plus `gen-signature.mjs`,
+which is wired to nothing and is meant to be. The one-shot migrations that produced the current
+content model are gone — see git history if you need them.
+
+- `node scripts/gen-signature.mjs <path to ThePrestigeSignature-Subset.otf>` — re-trace the
+  signature into `app/lib/signature.ts`. Run it by hand, on a machine that has the OTF, when the
+  name or its size changes; see **The signature** below for why the font is neither committed nor
+  served, and therefore why a fresh clone can build without ever having it.
 
 - `npm run fetch:font` — download `app/fonts/Switzer-Variable.woff2` if it is missing or does not
   match the pinned hash. Normally there is no reason to run it by hand; it is wired to the three
@@ -20,7 +28,17 @@ produced the current content model are gone — see git history if you need them
 
 No test framework is configured.
 
-`out/` is gitignored — Cloudflare Pages runs `npm run build` on deploy, so the export is never committed.
+`out/` is gitignored, so the export is never committed.
+
+**Cloudflare Pages does *not* run `npm run build` on deploy — its build command is
+`npx next build`.** This line said otherwise and was wrong. npm lifecycle scripts only run for
+`npm run <script>`, so on a deploy neither `prebuild` nor `clean-export.mjs` executes; the font
+still arrives because `postinstall` runs during `npm clean-install`. Two consequences, and the
+second is the one that bites: `/__placeholder__` is a live 200 URL on the deployed site (see the
+404 section), and **anything added to the `build` script is a local-only step.** An `X-Robots-Tag`
+injection was added to `clean-export.mjs` and was silently a no-op on every deploy — verified only
+after the fact, which is the lesson. Check a claim like this against the project's actual build
+config before relying on it.
 
 ### Content Studio (`localhost:3000/studio`)
 
@@ -43,13 +61,20 @@ matches `/gallery` to 0.01px across every entry.
 
 Anything a visitor can read is edited on the canvas. Anything else is a fact about the document
 rather than a thing on it, and gets a panel: a link's *target* (the page shows only an arrow),
-an asset's intrinsic dimensions, its poster frame, the `framed`/`floating` flags, a section's
-machine-facing `key`, and the orphan report.
+an item's `icon` (a picture is not text to click, and which pool file it is is a fact about the
+document), an asset's intrinsic dimensions, its poster frame, the `framed`/`floating` flags, a
+section's machine-facing `key`, `profile.displayName` (the page shows a drawing of it — see **The
+signature**), and the orphan report.
 
 The rule is worth keeping: **a field that appears in both places is a field with two truths on
 screen at once**, and the one not being looked at is the one that will surprise you.
 
-**A contact row is the case where that rule moved a field rather than placing one.** Its
+**Two fields have been *moved* by that rule rather than placed by it, and both are worth knowing
+about.** The name is the shorter story: the heading is a traced signature, so there is no text on
+the page to click and no way to retype it into a shape that face could set — it became a fact
+about the document and moved to the Profile panel. The longer one:
+
+**A contact row is the other case where that rule moved a field rather than placing one.** Its
 `platform` and `handle` were both edited on the canvas while contact was a year-gutter row that
 printed them. As pills they mostly stopped being readable — a compact pill shows a mark and
 nothing else — so for those two the pair became facts about the link and moved to the inspector.
@@ -104,13 +129,14 @@ boxes either way, so their placeholder is faded with **opacity** — the one rev
 move anything, which keeps an empty slot clickable at rest. The subheading and description are
 omitted entirely by the site, so they are conditionally rendered on selection; an always-present
 empty `.details` would leave a phantom 11.2px gap under every item, because
-`.subheading ~ .details .detailsInner` carries a top padding.
+`.experienceContent:has(.subheading) .details .detailsInner` carries a top padding.
 
 #### What the canvas restates, and what it reuses
 
 Reused outright: `Attachments` (the whole thumbnail row — the frame arithmetic, the mat, the
-fades, the drag), `GalleryPreview`, `RichText`, `LastUpdated`, `TagIcon`, `Arrow12`, and every
-relevant `.module.css`.
+fades, the drag), `GalleryPreview`, `Signature`, `RichText`, `LastUpdated`, `TagIcon`,
+`SectionIcon`, `Arrow12`,
+and every relevant `.module.css`.
 
 `Attachments` took **one optional prop, `onSelect`**, which overrides its press from "open the
 lightbox" to "edit this asset". The alternative was a second thumbnail renderer carrying a copy
@@ -459,12 +485,29 @@ exists before pointing at it — the same shape as `hasGalleryItems()` gating th
 Without it a build with no artwork still advertises `/opengraph-image.png` and every scraper
 following it gets a 404, where the root simply emits no `og:image` at all.
 
-**No case studies exist yet.** `content/case-studies/` is absent, but `output: 'export'` requires
-`generateStaticParams()` to return at least one route, so `[slug]/page.tsx` emits a synthetic
-`__placeholder__` slug that calls `notFound()`. The export still writes that page to disk, so
-`scripts/clean-export.mjs` deletes it after every build — otherwise Cloudflare would serve
-`/__placeholder__` as a real 200 URL. Once real case studies are added, the placeholder path is
-unused and the cleanup step becomes a no-op.
+**The two paragraphs above describe the single-root-layout arrangement, and it no longer holds.**
+Splitting into `(site)` and `(study)` moved `/` into a route group, where the file convention no
+longer attaches, so every route that declares a card, `/` included, now names the image through
+`ogImages()`, which derives the dimensions, the alt text and the cache-busting hash from the bytes.
+See **The case study page** for how that was found and what it measures.
+
+**The placeholder slug only exists for an empty `content/case-studies/`.** `output: 'export'`
+requires `generateStaticParams()` to return at least one route, so with no markdown there
+`[slug]/page.tsx` emits a synthetic `__placeholder__` slug that calls `notFound()`, and
+`scripts/clean-export.mjs` deletes the page the export still writes. With `deeppcb.md` present,
+`generateStaticParams()` returns real slugs, so neither the placeholder nor the cleanup does
+anything. Both stay for the day the directory is empty again.
+
+**On a deploy built without a study, that cleanup does not run and `/__placeholder__` is live.**
+That is production until this branch lands. Measured:
+`https://haythem.cv/__placeholder__` answers 200 with a 44 KB page. The cause is the build command
+— see Deployment — not this file. What it costs is smaller than it sounds and worth stating
+precisely, because the fix is a settings change nobody should make in a panic: Next stamps
+`<meta name="robots" content="noindex">` on that render, the route is in no sitemap, and nothing
+links to it, so it is not an indexing problem. It is a URL that should not exist answering as
+though it does — and answering with Next's *default* not-found UI inside the root layout, which is
+exactly the cramped hole `global-not-found.tsx` exists to avoid (the note at the end of that file
+already predicted this shape).
 
 ### Data Layer
 
@@ -494,10 +537,36 @@ without that would mean re-deriving both transcribed ramps.
 Behind the glow, `.dotTexture` is a full-bleed dot grid masked to fade out down the page —
 page grain rather than part of the content column, at `z-index: -2` so the glow reads over it.
 
-Should site chrome ever need a real image file, note that it does **not** belong in
-`public/media/`. That pool is reference-counted against `content/media.json`, and anything in
-it that nothing references is reported as an orphan and can be swept; chrome has no content
-record to be referenced by, so it belongs at the `public/` root instead.
+Site chrome that needs a real image file does **not** belong in `public/media/`. That pool is
+reference-counted against `content/media.json`, and anything in it that nothing references is
+reported as an orphan and can be swept; chrome has no content record to be referenced by, so it
+belongs at the `public/` root instead. **The favicons are the first files to take that route**
+(`favicon-light.png` / `favicon-dark.png`), and they surfaced the second half of the rule:
+
+**A `public/` root asset needs its own cache key, and `app/lib/chromeAsset.ts` is where it comes
+from.** `_headers` gives `/*.png` a year of `immutable`, so the filename *is* the cache key and
+nothing ever re-checks it — publishing new bytes at a fixed path is exactly the bug the pool's
+`?v=` hashes were introduced to fix, observed live on `dev.haythem.cv` serving a previous encode
+with `Cf-Cache-Status: HIT`. `chromeAssetUrl()` is `assetUrl()`'s shape for the `public/` root: a
+content hash (never the mtime — git does not preserve those, so every fresh clone would invent
+new URLs and throw away a warm cache), memoised per file per build, and a missing file degrades
+to an unversioned path rather than failing the build. It is deliberately *not* folded into
+`mediaRegistry.ts`, whose neighbours are the registry and the reference counting — teaching that
+module a second root would blur the one distinction keeping chrome out of the sweep's way. It is
+server-only, which is also why it is not in `lib/site.ts`: `ProfileHeader` pulls that into the
+browser.
+
+**The favicons are one per theme, and the metadata config is what makes that possible.**
+`faviconIcons()` in the same module returns the `icons` block, with a `prefers-color-scheme`
+query on *both* entries rather than on the dark one alone — naming only dark leaves the light PNG
+unconditional, so two candidates match in light mode and the choice falls to document order.
+Next's `app/icon.png` file convention would hash the URL for free but has no way to express a
+media query, which is the whole request; hence config for the `media` and `chromeAssetUrl` for
+the hash. `app/favicon.ico` stays as the unconditional fallback and Next emits it alongside. Both
+`layout.tsx` and `global-not-found.tsx` read the helper, because the 404 replaces the root layout
+and inherits nothing from it — the same trap the pre-paint theme script and the font already
+document there. Verified in the export: three `<link rel="icon">` on `/`, `/gallery` (inherited)
+and `/404.html`, each PNG carrying its `?v=` hash.
 
 There is a third option worth reaching for before either: inline chrome, needing no file at all.
 `Arrow12.tsx` writes its single monochrome path straight into the document, which also solves
@@ -573,7 +642,8 @@ The schema and its rationale are documented in **`CONTENT-SCHEMA.md`**; the type
   reminder that it is still there. Only the operations that say *delete* — item, section, and
   gallery-entry deletion — collect garbage.
 - **That collection is reference-counted.** A file goes only when nothing references it — CV item
-  media, item icons, the profile photo, gallery entries and poster frames all count, so an item
+  media, an item's own icon, its inline heading icons, the profile photo, the gallery teaser,
+  gallery entries and poster frames all count, so an item
   deleted out from under a thumbnail leaves it alone if the gallery still shows it (and vice versa).
   `planGarbage()` is pure and the route writes JSON *before* deleting files, so a rejected write
   cannot destroy media. `collectReferences()` is the **only** counter — `planGarbage` and
@@ -609,6 +679,38 @@ The schema and its rationale are documented in **`CONTENT-SCHEMA.md`**; the type
     referenced exactly when the light one is — the same rule as a video's poster. Without that it
     reads as unreferenced and the sweep deletes it. It is also added to `itemFiles`, where a
     non-existent name is harmless because `planGarbage` skips anything absent from the registry.
+- **`item.icon` is the other item icon, and the two are different things rather than two sizes of
+  one.** A `[filename]` token puts a 20px logo *inline in the heading's words*; `icon` names one
+  pool file drawn at **40px to the left of the heading and the subheading** — the App Store
+  arrangement, with the description and the thumbnail row running full width below rather than
+  indented behind it. Only Personal Projects uses it today. Six things:
+  - **It is a field on the item, never a setting on the section.** `sections[]` is homogeneous
+    precisely so reordering it is safe, and a treatment that switched on which section an item sat
+    in would be the `kind` discriminator this content model already replaced with a shape. An item
+    either names an icon or it does not, in any section.
+  - **It is a new *kind* of pool reference**, so `collectReferences()` bumps it and its derived
+    `-dark` sibling and the Studio's `cvUses` mirrors that. Missing it is the failure that rule
+    exists for: the sweep would report an icon the CV is currently drawing as unreferenced.
+  - **`resolveIcon` in `resolveContent.ts` is shared with the heading tokens**, which is what
+    keeps the `-dark` convention, the must-be-an-image rule and the missing-dimensions rule from
+    being stated twice. The callers differ only in the fallback, and deliberately: a token that
+    does not resolve stays visible as its own literal text, where an item simply draws no icon.
+  - **`icon` is destructured out in `resolveItem`, and that is not tidiness.** That function
+    spreads the rest of the item verbatim, so an authored `icon` left in place would reach the
+    component as a bare filename where every other resolved field is a URL. `media` is stripped
+    for the same reason.
+  - **Wrapping the title and subheading is what moved `.subheading ~ .details` onto `:has()`.** An
+    icon standing beside both lines needs them in one box, and `~` is a DOM relationship rather
+    than a layout one — so the rule that spaces a description under a subheading silently stopped
+    matching the moment the wrapper appeared (`display: contents` would not have rescued it
+    either). `.experienceContent:has(.subheading)` asks the question the rule was always asking,
+    of a box no wrapper can come between. The wrapper is unconditional, icon or not: measured, an
+    item with no icon has the same title baseline and the same content height as before, and two
+    markup paths through the row would have been two for the Studio's canvas to keep matching.
+  - **No border and no radius on the box.** These are app icons — the artwork carries its own
+    squircle on transparency, so a frame would trace an edge it has not got and a radius would
+    clip the one it has. That is the `floating` argument from `media.json`, applied to a box that
+    is always this kind of picture rather than sometimes.
 - **Every video carries a `poster`, and that is a load-time contract rather than a nicety.**
   Nothing resizes video: Cloudflare Image Resizing does not accept it, so a `<video>` always
   fetches the whole file whatever box it is shown in. The poster is what both surfaces show at
@@ -819,16 +921,23 @@ it flips to white at 8% — is what carries the edge there.
     resting tertiary; pressed goes the whole way to `--foreground-primary`, so an active filter is
     legible without the pointer anywhere near it. They were briefly both `--foreground-secondary`,
     which made an active tag indistinguishable from one under the cursor.
-- **The tag marks are inlined in `app/TagIcon.tsx`, not files.** The `Arrow12.tsx` rule: each is a
-  single monochrome path, and `currentColor` only sees the page's colour when the SVG is part of
-  the document, so a file would have meant a `-dark` sibling or a filter plus a request apiece.
-  They are chrome, so `public/media/` would be the wrong home regardless — that pool is
-  reference-counted, and anything in it with no content record reads as an orphan. `TAG_PATHS`'s
-  keys **are** the vocabulary: an unlisted tag still filters, it just renders unadorned, which is
-  what a newly hand-authored label should look like until a mark is drawn for it. The date's mark
-  is deliberately *not* in that record — it is not a tag and filters nothing. `.metaIcon`'s
-  `vertical-align: -3px` is half the 14px box less half the measured 8.3px cap height; verified at
-  0.15px off the text's optical centre, so changing the size means revisiting it.
+- **The tag marks are inlined in `app/TagIcon.tsx`, not files**, and they are drawn through the
+  shared `DuotoneMark.tsx` — see **The drawn marks** below for why every mark on this site is
+  inline SVG and what a closed vocabulary buys. `TAG_MARKS`'s keys **are** the vocabulary: an
+  unlisted tag still filters, it just renders unadorned, which is what a newly hand-authored label
+  should look like until a mark is drawn for it. The date's mark is deliberately *not* in that
+  record — it is not a tag and filters nothing. `.metaIcon`'s `vertical-align: -3px` is half the
+  14px box less half the measured 8.3px cap height; verified at 0.15px off the text's optical
+  centre, so changing the size means revisiting it.
+
+  **The set is duotone now, and it is a redesign rather than a duotone pass over the old marks.**
+  Animation, Design System and Framer are different glyphs, so nothing in the record is its
+  predecessor with a silhouette added. `Personal` is the exception, and it is the reason
+  `DuotoneMark` carries its grid per mark: it arrived on a 16 grid where the other nine are 14, and
+  a family that assumed one grid would have drawn it 14% large. Measured with `getBBox`, its ink
+  fractions are 0.6875 x 0.8749 — identical to the 14-grid mark it replaces, so it renders
+  unchanged in the same 14px box. The line still costs nothing: the byline measures 19.1953px with
+  the new marks, exactly as it did with the old.
 - **That line is inline flow, not flex, and it was flex once.** Flex was right while the tags were
   filled pills, because a pill is a box and boxes need aligning; text does not. Inline layout puts
   the date and every tag on one baseline for free, wraps at the spaces, and needs no `gap`. The
@@ -928,6 +1037,15 @@ holds the row's height before the media loads — verified at CLS 0.
 `Tabs.tsx` switches between `/` and `/gallery`. They are real routes, not client-side tab
 state, so the tabs are `<Link>`s with `aria-current="page"` rather than `role="tab"`.
 
+**They read "Home" and "Gallery", and the first was "CV".** The pair was one category label
+beside one destination — a document name next to a place — so on `/gallery` the way back was
+labelled with a genre rather than with somewhere to go. Both are routes, so both are places. It
+costs the travelling pill nothing, because tabs are `flex: 1 1 0` and its geometry is derived
+from `--tab-count` rather than from any label's width. The `<nav>`'s accessible name followed:
+`aria-label="Pages"`, not "Sections", which was already loose and became plainly wrong once the
+tabs named places — the CV's own sticky headings are the sections, and a bar announcing itself as
+section navigation sends a screen reader looking for headings it does not have.
+
 The styling started as shadcn/ui's Tabs ported into `Tabs.module.css` against this project's
 tokens and has since diverged — the actual component was never used because it is
 Tailwind-based and Radix Tabs switches panels within one document rather than navigating.
@@ -1026,39 +1144,166 @@ layout overrides it to `0` when the tab bar is not rendered at all.
 
 Three things it depends on:
 
-- **`ProfileHeader.tsx` holds the avatar, name and byline, and deliberately nothing else** —
-  it is the *entire* content above the tab bar. The bar is sticky and shared, so its resting
-  height is however tall that block is; keeping it to the three things that are identical on
-  both routes is what stops the bar landing at a different height per route and jumping when
-  the tabs are switched.
-- **About renders *below* the bar, from the root layout** (`About.tsx`), and this is the second
-  arrangement rather than the original. It used to sit above the bar, with the header, on the
-  reasoning that it read as one introduction — which was fine while it was the only thing that
-  wanted to be up there. It stopped being fine when the CV grew a gallery teaser that
-  `/gallery` has no business showing: CV-only content above the bar moved the bar 500px between
-  routes. Moving About down made the space under the tabs route-free, which is what the teaser
-  now uses. Three things follow:
+- **`ProfileHeader.tsx` holds the photo and the signature, and About sits directly under it** —
+  together they are the *entire* content above the tab bar. The rule the bar imposes is not
+  about which blocks go up there but about whether they are route-dependent: the bar is sticky
+  and shared, so its resting height is however tall everything above it is, and anything that
+  differs between `/` and `/gallery` makes it land at a different height per route and jump when
+  the tabs are switched. The photo, the signature and the introduction are identical on both.
+- **The byline no longer renders anywhere.** It was "Product Designer {& Engineer}" directly
+  under the name, and the description that replaced it opens with the same claim in full a few
+  pixels lower — one sentence said twice, stacked. The *field* stays in `cv.json`, because it was
+  never only a line on the page: it is the site's `description`, `og:description` and
+  `twitter:description`, and a short phrase is worth more there than the paragraph now on screen.
+  So `profile.byline` is now a metadata-only field, which is the one thing to know before
+  wondering why editing it changes nothing visible.
+- **About renders *above* the bar, from the root layout** (`About.tsx`), and this is the third
+  arrangement. It began there, moved below the bar when the CV grew a gallery teaser that
+  `/gallery` has no business showing, and has come back up with the signature — which is fine,
+  because the thing that had to move was never About. CV-only content above the bar moved the bar
+  500px between routes; About is identical on both, so it costs the bar nothing. What the earlier
+  move actually bought was the space *under* the tabs, and the teaser still has it. Three things
+  follow:
   - **The layout renders About, not each page.** The text is identical on both routes, so a
     per-page copy would be two copies of one fact. Anything genuinely per-route goes in the
-    page, below it.
-  - **The air either side of the bar is split across three files** — `.header`'s
-    `margin-bottom`, `--tab-bar-gap-top` / `--tab-bar-gap-bottom`, and `.about`'s `margin-top`.
-    The two sides are deliberately close to even so the bar reads as sitting *between* the name
-    and the page rather than being pushed onto one of them.
+    page, below the bar.
+  - **The bar owns all of its own air, and nothing else contributes any.** `.about` has no
+    `margin-bottom` and neither the CV's teaser nor the gallery's list has a `margin-top`;
+    everything between About and the first row is rendered by `Tabs.tsx`. It is **32px on each
+    side at rest and 8px on each side once pinned** — a 96px band collapsed to 48px, which is
+    what the split below buys.
+
+    That 8px is also the lever for how much air sits above a pinned section title or the
+    gallery's filter bar, and the right one to reach for: both park at `--sticky-top` and this is
+    two thirds of it, where the header's own 6px padding is load-bearing for the 39.59375px box
+    everything is measured against. Measured, the gap from the pills' bottom edge to a pinned
+    title's cap is 14px, down from 22px when this was 12px and the CV additionally applied
+    `--section-number-headroom` — and it is now 14px on *both* routes, which is the first time
+    they have agreed.
+  - **Which pixels are padding decides which of them survive the stick, and that is the whole
+    mechanism.** Padding on a sticky wrapper is inside the box being pinned, so it cannot scroll
+    away; a bar whose gaps are all padding parks in exactly as much space as it rests in. Only
+    `--tab-bar-gap-stuck` is therefore padding. The remainder — `--tab-bar-gap-top` and
+    `--tab-bar-gap-bottom` less that — is two plain flow boxes either side of the wrapper
+    (`.airTop` / `.airBottom`), which scroll off like any other content. Four things about it:
+    - **Nothing moves, at rest or on the way in.** `spacer + padding` is the same total on each
+      side, so the document's height and the bar's position in it are unchanged to the pixel —
+      verified against the previous build at six widths on both routes, and the resting
+      screenshot at 917px is byte-identical.
+    - **Shrinking the padding on `[data-stuck]` instead is the version that does not work.** It
+      shortens the bar's flow box at the threshold and jumps everything below it up by the
+      difference; animating that is 160ms of relayout on a 5,400px document, with scroll
+      anchoring pulling the other way.
+    - **It needs no transition, because there is no edge to move.** At rest the wrapper's
+      background is transparent — that is what lets the glow and the dot texture run behind it —
+      so where its box ends is invisible until the band fades in, already parked, at 48px.
+    - **`.airBottom` goes *after* `.fade`, not between it and the bar.** The fade pins at
+      `--sticky-top` and its flow position is whatever follows the wrapper, so a spacer in
+      between would delay its pin by that much scroll and leave a strip of unfaded content
+      between the band's hard bottom edge and the top of the fade. Immediately after the
+      wrapper, the two pin on the same pixel, because the wrapper's box *is* `--sticky-top`
+      tall. Measured across the threshold: the band's bottom and the fade's top are equal at
+      every scroll position.
+  - **Symmetry within each state is the rule, not symmetry between them.** The gaps were 16 above
+    and 32 below, with About's 24px `margin-bottom` making up the difference on top — which
+    looked deliberate at rest and came apart the moment the bar stuck, because the margin scrolls
+    away and the padding does not: the pill sat 16px from the top of the window and 32px off the
+    page beneath it. That was an accident of where the air lived. The two states differ
+    deliberately now, and both are even.
+  - **`--sticky-top` is the *pinned* height, `--tab-bar-stuck-height`.** A pinned section title
+    parks flush under the bar however these change, and the resting height is irrelevant to it:
+    the bar sits above those headers in flow and is taller than this, so it has always stuck
+    first — a header cannot pin under an unstuck bar. It is a named token rather than a sum
+    because `layout.tsx` (which overrides it per route) and the Studio's canvas both restate it,
+    and three copies of one calc is three chances to update two of them.
+    Margins on the followers could not have done that job either: a margin does not collapse into
+    padding, so `Gallery.module.css`'s `.list` had to give up its own `margin-top: 36px`
+    (invisible for a long time, shadowed by About's larger margin collapsing against it) or the
+    gallery would have started 36px lower than the CV.
+  - **`.sentinel` in `Tabs.module.css` carried a `margin-top: 12px`, and it was a fourth,
+    invisible contributor to the gap above the bar.** The zero-height marker the stick observer
+    watches sits immediately before the wrapper, so its margin is simply more air above the tabs
+    — which is how the gap measured 44px against 32px below while `--tab-bar-gap-top` said 32.
+    Nothing named it and nothing accounted for it. It is gone; removing it does not move the
+    sentinel *relative to* the wrapper, which is the only relationship the observer depends on —
+    and that relationship is also why `.airTop` goes *before* the sentinel: air between the two
+    would fire the stick that much early.
   - It still carries no visible title: a sticky heading would have nothing to pin under, and
     the `<section>` takes its accessible name from `aria-label`.
+  - **`.description strong` is a real rule, not the browser's `bolder`.** The opening claim is
+    `**Product Designer & Engineer**` in the markdown, and left to the UA a variable face
+    resolves `bolder` to 700 — a step past `--weight-emphasis` and, beside 350 body copy, a
+    different voice rather than an emphasis. It takes `--foreground-primary` with it, so the
+    phrase reads as the page's ink and the rest of the sentence as secondary. Declared on the
+    element because `RichText` emits classless markdown; there is no other handle — which is
+    safe because the paragraph has exactly one bold phrase and it is this one.
+  - **Two orange bands cross that phrase in one sweep as the signature finishes writing it**,
+    and they replay when it is hovered. The two being one gesture is the point: `--shimmer-delay` is
+    `calc(var(--signature-delay) + var(--signature-duration) * 0.82)` — 1.25s, while the `H`'s
+    last contour (which opens at 1.40s) is still being drawn. Waiting for the hand to lift reads
+    as the second item in a queue; overlapping reads as one movement crossing the page. **That
+    is why `--signature-duration` and `--signature-delay` moved to `globals.css`**: two
+    components now have to agree about when the hand finishes, and written twice the sum is two
+    chances to update one of them, the argument `--sticky-top` already makes.
+    `--signature-min-stroke` stayed in `Signature.module.css`, being the nib's own floor.
+
+    It is the `background-clip: text` construction `.sectionHeader h2` uses — a band on top, the
+    page's ink underneath, `color: transparent` to get the UA's fill out of the way — with the
+    band moved by `background-position` rather than held still. Five things:
+    - **The load sweep runs on `.description` and the hover sweep on the phrase itself, both
+      animating one registered property.** `@property --shimmer-position` in `globals.css` is
+      what makes a custom property interpolate at all (unregistered, it is a token stream and
+      steps discretely) and what lets the value be produced by an ancestor and read by the
+      `<strong>`. **The obvious arrangement — one animation on the phrase, another on `:hover` —
+      has a bug that is easy to ship and hard to attribute**: leaving a hover state restarts
+      whatever animation the resting rule declares, so every un-hover queues the load sweep
+      again, delay and all. Handed down from above, the resting rule declares no animation, so
+      there is nothing to restart. Verified: on un-hover the phrase has zero animations and holds
+      10% both immediately and 1.6s later.
+    - **Both bands live in one gradient, and that is what makes them chase each other.** They
+      are two peaks in a single stop list, at 1/3 and 1/2 of the image, so one sweep carries
+      both and the second is on the phrase while the first is still crossing it. Two
+      *iterations* of a one-band sweep is what this replaced, and it read as what it was: two
+      passes with a pause, however short the pause was made — and the pause could not be
+      removed, because CSS has no way to state a gap *between* iterations, so it had to be held
+      inside the keyframes where it was visible.
+    - **The range is 90% → −15%, and both ends exist so nothing is tinted at rest.** At
+      `background-size: 300%` a position percentage resolves against a negative `box − image`, so
+      a band at image-fraction `f` sits at `3f − 2P` box-widths from the left edge: the pair is
+      at `1.5 − 2P` and `1 − 2P`, half a box-width apart. The ends put the leading band at −0.3
+      and the *trailing* one at +1.3, each clear of the phrase at the end it is nearest — and the
+      trailing band is why the far end is negative, having half a box-width further to travel.
+      Getting this wrong is quiet: 80% → 20% shipped for a day and left about 0.05 of a box-width
+      of the feathered edge *on* the phrase at each end, orange on the "P" before the animation
+      and on the "r" forever after.
+    - **`112deg`, so the bands lean**, and 12% of the image wide rather than the 10% they started
+      at. Upright they read as a progress bar passing through rather than as light catching a
+      surface, and at 10% the light was a hairline rather than a highlight.
+    - **Nothing depends on the phrase staying on one line, but it does**: measured at 375px, the
+      narrowest width supported, it is one 186px fragment with "6+ years, owning" still beside
+      it. A wrapped phrase would take one band across both fragments, since an inline box's
+      positioning area is the box as if unfragmented — no background can follow text flow, the
+      limit that title tint records too.
+
+    The whole treatment sits inside `@media (prefers-reduced-motion: no-preference)`, declared
+    there rather than declared and then switched off, so a reader who asked for less motion gets
+    the plain rule and not even the clip or the transparent `color` — machinery for an effect
+    they are not being shown. The hover half is additionally gated on `hover: hover`, since on
+    touch `:hover` sticks after a tap and would leave the phrase mid-sweep.
 - **`GalleryPreview.tsx` — the 2x2 teaser — is the CV page's first block**, rendered by
   `Profile.tsx` and not by the layout. That is what makes it CV-only without a route test: the
   layout is never told which route it is rendering, so anything conditional up there needs
-  `usePathname()`, whereas inside the CV page being on the CV *is* the condition. Four things
+  `usePathname()`, whereas inside the CV page being on the CV *is* the condition. Five things
   worth knowing before touching it:
   - **It must stay below the bar.** Above it, the bar's resting height stops matching
     `/gallery`'s and the jump comes back — measured at 500px, the block's height plus its
     margin.
-  - **`.wrap` deliberately carries no top margin.** `.about` already ends in `margin-bottom:
-    52px`, and adjacent sibling margins collapse, so one declared here would simply be shadowed
-    by the larger of the two — the gap above the teaser is About's, and it is the same gap the
-    gallery's first row gets on the other route.
+  - **`.wrap` deliberately carries no top margin**, though the reason has changed. It used to be
+    that `.about` ended in `margin-bottom: 52px` right above it and adjacent margins collapse, so
+    anything here was shadowed. About has moved above the bar; the gap is now
+    `--tab-bar-gap-bottom`, padding on the bar's sticky wrapper, and a margin here would *add* to
+    it rather than collapse into it — which would leave the teaser lower than the gallery's first
+    row, the one thing this gap exists to keep equal.
   - **The frame's fill and hairline are `--background-muted` and `--border`** —
     the unselected pill's and the thumbnails' own tokens, not literals — so the three surfaces
     cannot drift and the dark theme needs no second rule.
@@ -1067,16 +1312,410 @@ Three things it depends on:
     *less its 1px border on each side*, the same arithmetic (and the same reason) as a
     thumbnail's. The blur-up is the lightbox's, down to the checks-before-it-subscribes effect
     and the `setTimeout` rather than `requestAnimationFrame` — see `LightboxImage`.
-- **Nothing in the content column carries a narrow-viewport indent any more.** About's body
-  copy used to take `margin-left: 16px` below 480px, inherited from the days when it was a CV
-  section whose text lined up past a section title. It sits under the tabs now, with a
-  full-width surface directly beneath it, so the indent read as a misalignment; About and the
-  teaser both take the whole column at every width, the same edges the avatar and the bar use.
+  - **Its hairlines light under the cursor, and the mechanism is shared** — `.ring` plus
+    `.onBorder` from `EdgeGlow.module.css`, five rings here (the frame's and one per tile). See
+    **Lit edges** for how the light works and what it costs; two things are this block's own.
+    It is the hairline and nothing wider: a second, fainter ring was tried for bleed and drew a
+    soft band lying on the photographs rather than light coming off an edge, where the ramp
+    *along* the border is what reads as a glow. And `--hairline` is stated once here and read
+    four times — both borders, the picture's inner radius, and, through `--edge-glow-line`, the
+    ring's thickness and the distance it is pulled out to reach the border box. Four things that
+    must agree to the pixel, so they are one number.
+  - **A tile clips nothing, and its picture rounds itself**, which is what makes room for that
+    ring — `.image` and `.clip` carry `calc(var(--tile-radius) - var(--hairline))`, the border's
+    inner radius, measured at 7px against the tile's 8px and exactly the curve the tile's old
+    `overflow: hidden` was drawing. (`.clip` had `inherit` and so was a pixel too round;
+    invisible only because the tile was re-clipping it correctly.) The trap that sent it this
+    way is under **Lit edges**: a clip at the padding edge does not shift a ring lying on the
+    border, it deletes it, and `overflow-clip-margin` trades that for square-cornered
+    photographs inside rounded frames.
+- **Above the bar, nothing carries a narrow-viewport indent.** About's body copy used to take
+  `margin-left: 16px` below 480px, inherited from the days when it was a CV section whose text
+  lined up past a section title. It sits under the tabs now, with a full-width surface directly
+  beneath it, so the indent read as a misalignment; About and the teaser both take the whole
+  column at every width, the same edges the avatar and the bar use.
+
+  **Below the bar the CV's rows still do, and it is `--content-indent` (20px under 480px, 0
+  above).** `.experiences` and `.contacts` declare `margin-left` once and unconditionally rather
+  than inside a media query, which is what the 0 at wide widths buys. The gallery's list takes
+  none — it is a column of full-width surfaces, like About.
+
+  **That token and `--page-gutter` live in globals.css because a third file is measured against
+  them.** `Attachments.module.css`'s mobile rule bleeds the thumbnail row out to the viewport's
+  edges, and its offsets *are* the two: the left bleed is gutter plus indent, the right bleed is
+  the gutter alone, and the first child's compensating margin puts it back on the column edge by
+  the same sum. They were hardcoded as `40px` and `24px`, correct only because the gutter was 24
+  and the indent 16. At 20 and 20 the left sum is still 40 while the right is not — so a literal
+  right offset would have pushed the row 4px past the viewport and had that much of its last
+  thumbnail clipped by `overflow-x: clip`, silently, in the one file nobody would think to check.
+  Measured at 375px: the row's content box spans exactly 0 to 375 on every row, with
+  `--hover-room`'s 10px of overpaint outside it.
 - `.profile` and `.gallery` are both centred (`margin: 0 auto`), which is what makes the
   full-bleed `calc(50% - 50vw)` margins land symmetrically on either route.
 - `globals.css` uses `overflow-x: clip` (not `hidden`) on `html, body`. `hidden` makes them
   scroll containers, which silently breaks `position: sticky`. `hidden` is still declared
   first as a fallback for browsers without `clip` support.
+
+### The drawn marks
+
+**Every icon on this site is inline SVG, and `app/DuotoneMark.tsx` is the one renderer.** Three
+families go through it — the gallery's tag marks and its date (`TagIcon.tsx`, a 14 grid), the
+contact row's platform glyphs and its envelope/copy/check trio (`ContactIcon.tsx`, 16), and the
+mark beside a section title (`SectionIcon.tsx`, 16). All three are Phosphor-style duotone: a
+20%-opacity silhouette with a full-strength outline over it.
+
+It exists because those three files were three copies of the same eleven-line `<svg>` wrapper
+carrying three copies of the same rationale. That is the `handPaths.ts` move — the shape lives
+once, and what actually differs between callers (the grid, the CSS box, the colour) is a prop.
+The rationale, stated once there rather than three times:
+
+- **`currentColor` only sees the page's colour when the SVG is part of the document**, the
+  `Arrow12.tsx` rule. As an `<img>` every mark that follows the theme would have needed either a
+  `-dark` sibling or a filter, plus a request apiece for one or two paths.
+- **They are chrome, so `public/media/` is the wrong home even for the orange ones**, which do not
+  follow the theme: that pool is reference-counted against `content/media.json`, and anything in
+  it with no content record reads as an orphan and can be swept.
+
+Every record is keyed by name and is a **closed vocabulary with an honest empty case** — an
+unlisted tag, platform or section key draws no mark, which is what a newly authored one should
+look like until a mark is drawn for it. (The contact row is the one place that cannot leave it at
+that: a compact pill *is* its mark, so an unmarked platform falls back to a wider pill spelling
+out its name. See the contact bullet under **CV interactions**.)
+
+Four things about the data are load-bearing, and three of them are traps the obvious
+representation walks into:
+
+- **The grid is carried per mark, not per family.** They are not all the same: the tag set is a 14
+  export and `Personal` arrived on 16. A `viewBox` scales to the CSS box either way, so being
+  right about it is free — and assuming one grid for the family would have drawn that mark 14%
+  large.
+- **Each layer is an array of `d`, not one string.** Joining a layer's contours into a single path
+  is *not* equivalent: under nonzero winding two overlapping contours drawn in opposite directions
+  cancel to a hole. Two marks arrived as two separate paths (`DeepPCB`'s silhouette,
+  `Unsplash`'s), so the general case is the only safe one. Most carry a single entry.
+- **The silhouette is one `<g opacity>`, never an `opacity` per path.** That is what the exports
+  themselves do, and it is not interchangeable: with the opacity applied per path, two overlapping
+  contours composite to 0.36 instead of staying at 0.2.
+- **Every layer is a fill, and that invariant is worth defending.** `Unsplash` arrived once drawn
+  as two nested *stroked* polygons — the only `stroke=` in the set — which needed a `strokeFg`
+  flag on `DuotoneMark` and a second branch in the renderer, because filled, those contours are
+  the outline's centrelines and paint the mark as two solid blocks instead of the notch it is. It
+  was redrawn as fills and the flag is gone. If a future export arrives stroked, redraw it rather
+  than reviving the branch: one mark carrying its own rendering mode is a mark that will be
+  visually out of step with the other 27 at some size nobody checked.
+
+The `evenOdd` flag the previous single-path exports needed for the octocat and Unsplash's notch is
+gone: nothing in the set declares a `fill-rule`, because a duotone export states its counters as
+separate contours rather than relying on a winding rule to punch them out.
+
+**The paths were extracted from the source SVGs by script rather than transcribed**, and the
+result was diffed back: all 29 marks match their source file's `d` strings, grid and stroke flag
+exactly. Worth repeating if the set is ever redrawn — these are 2-5 KB of path data apiece and a
+hand-copied one is a mark that is subtly wrong in a way review will not catch.
+
+One dropped clip worth knowing about. Most exports arrive wrapped in a full-bounds `clipPath`
+whose rect is the whole grid; every one is a no-op and is dropped rather than repeated. `toolbox`
+is the single exception — measured, its path reaches 16.004 in a 16 box, so that clip was doing
+0.004 units of real work. At 16px on a 3x screen that is 0.012 of a device pixel, which is why it
+is not worth carrying.
+
+### Lit edges
+
+**Every hairline on the site lights orange under the cursor, and the light is one light.**
+`EdgeGlow.tsx` writes the pointer's position onto `<html>` and renders nothing else;
+`EdgeGlow.module.css` turns that into a ring on a border. Adding a lit border is a class and,
+where the geometry is unusual, three lines — no JavaScript at all.
+
+**`background-attachment: fixed` is the whole mechanism.** A fixed background's positioning area
+is the viewport, so one `at var(--edge-glow-x) var(--edge-glow-y)` lands on the same spot of the
+screen in every ring on the page: the light is continuous as it crosses from a tab pill to the
+frame below it, and nothing has to be measured. The first version of this lit only the gallery
+teaser and handed each ring the cursor in *its own* coordinates — a rect read and two writes per
+ring per frame, which would not have survived being asked of the 59 rings the CV page now
+carries. Three things fell out of the change, and all three are deletions: no scroll listener
+(scrolling moves the borders *under* a stationary light, which is what a light in a room does),
+no `IntersectionObserver` (nothing per-element to switch on), and no proximity ramp — how near
+the pointer must be is the gradient's own falloff, so `--edge-glow-strength` is now only the
+pointer's presence: the fade when it leaves the window, and the reason a page never pointed at
+draws nothing. The one thing the driver still does per element is the transformed-host exception
+below, and it is bounded to whichever single element is under the pointer.
+
+Measured rather than assumed, because 59 masked gradients repainting on every pointer frame is
+the obvious objection: frame intervals are identical with the gradients live and with them
+switched off (median 8.3ms, p95 9.3 against 9.2), so there is no proximity gate and no need for
+one.
+
+**What is lit, and what is not.** The `.ring` class goes on hosts whose `::after` is free — the
+tab pills, the contact pills, the avatar well, the theme switch, and the teaser's frame and
+tiles, which all pair it with `.onBorder` because their hairline is the element's own border.
+`.ringUnder` is the second slot, for a host whose `::after` *is* its hairline: `Attachments`'
+thumbnails draw theirs as an inset pseudo-element, so the light takes `::before` and paints under
+it — which costs almost nothing, since `--border` is 6% of an ink and 94% of the light comes
+through. That host places its own ring, because an inset hairline sits where its owner decided
+and carries that box's radius rather than the element's.
+
+Four deliberate exclusions:
+
+- **The gallery's items.** A light chasing the cursor down a column of large media reads as
+  restless where the same light on a small control reads as attention. Excluded by not carrying
+  the class; `/gallery` therefore lights only the chrome it shares with the CV — the avatar, the
+  tabs, the switch.
+- **The lightbox.** It was lit for one commit and came out: an opened image is a takeover, with
+  nothing around it to relate the light to and the reader's whole attention already on the one
+  object. A hairline stirring at the edge of it is interference rather than attention.
+- **The 404.** `global-not-found.tsx` bypasses the root layout and ships no client JavaScript at
+  all, which is worth more than one effect. It renders no driver, so its borders simply never
+  light.
+- **The colophon's sheet.** It is its own scroll container, and an absolutely positioned ring
+  inside one scrolls with the content — the light would drift off the border as the list moves.
+  Fixable only by moving the scroll to an inner element, which is a change to the dialog's layout
+  rather than to this effect.
+
+Five traps, four of them paid for in full before they were understood:
+
+- **The band must be the ring's `padding`, never a `border` of the same width.** They look
+  interchangeable — both leave exactly the same gap between content box and border box for the
+  mask to keep — and they are not: a background *image*'s positioning area is the padding box,
+  so a band cut out of the border area lies outside the gradient's own box and gets filled by
+  the repeated tile's far edge, which on this gradient is its transparent end. It draws nothing,
+  in total silence. What makes it vicious is that a background *colour* paints there perfectly,
+  so the obvious way to check a ring's geometry — swap the gradient for flat lime — reports the
+  geometry as fine. `background-origin: border-box` does not rescue it. This is why `.ringUnder`
+  exists at all rather than the light simply being added to an existing bordered pseudo-element.
+- **`inset: 0` is the padding box, not the border box.** An absolutely positioned box is laid
+  out against its containing block's padding box, so a ring at `0` starts inside the hairline and
+  the light lands *beside* the border rather than on it — two parallel lines, one grey and one
+  orange. `.onBorder` pulls it out by the border's own width, which is also what makes
+  `border-radius: inherit` right there: that is the border-box radius.
+- **A clip at the padding edge deletes the ring.** `overflow: hidden` on a host clips at the
+  padding edge and an `.onBorder` ring lies outside that, on the border — so the picture-rounding
+  clip that `.tile` and `.profilePhoto` both used to carry had to go, with the media taking the
+  border's *inner* radius instead (`calc(radius - hairline)`, the curve the clip was drawing
+  anyway). `overflow-clip-margin` looks like the alternative and is a worse bug: pushing the clip
+  edge out stops it trimming anything at the corners, so each picture's square corner fills the
+  arc its own border draws.
+- **It re-anchors inside a transformed, filtered or `will-change`d ancestor**, which is the one
+  real limit: such a ring is positioned against *that* ancestor and its light sits in the wrong
+  place. `Attachments`' `filter: drop-shadow` is on `.frame`, a child of the lit `.media`, so it
+  costs nothing — but **the hover lift is a `transform` on `.media` itself**, which made a
+  hovered thumbnail the one place the effect looked broken rather than absent: its own ring
+  re-anchored to a 140x90 box, the light landed far outside it, and hovering a thumbnail put it
+  out. Such a host marks itself `data-edge-glow-local` and the driver writes the cursor in *that
+  element's* coordinates into `--edge-glow-at`, the seam `EdgeGlow.module.css` leaves for it, so
+  the ramp is not restated. **Centring the light on the element was the first attempt and it
+  flashed on the way out**: a light centred on a thumbnail lights its whole ring at once, which
+  is not what the shared light a pixel outside the element was doing, so the handover was a
+  visible jump in both directions. Tracking the cursor makes the two states agree exactly where
+  they swap — both put the light on the same point of the screen — which is the whole reason
+  this is worth one `:hover` match and one rect read per frame. The element's rotation is
+  ignored: 1.2° across 140px is under 1.5px of error on a soft 90px light, against inverting a
+  transform matrix every frame. Where neither route is possible, leave the edge unlit rather
+  than ship a light that disagrees with the others.
+- **`@supports` gates the whole thing**, because two mask layers with no compositing operator
+  fall back to their *union* — the whole box — so an engine without `mask-composite` would paint
+  an orange blob over the element rather than a hairline. Drawing nothing is the honest fallback.
+
+**There is no hue in it, which is worth saying because the files are named for a glow: the light
+is the hairline itself, turned up.** `--edge-glow-ink` is `--overlay-ink` at 16%, laid over
+whatever `--border` already is, so a lit border is the colour it was made of rather than a second
+colour arriving. Alpha of one ink over the same ink adds, so the 6% resting hairline composites to
+21% and the dark theme's 8% to 22.7% — measured on a pill, rgb(228 229 231) → rgb(192 192 194) in
+light and rgb(60 63 68) → rgb(91 94 98) in dark. Stating it as the *overlay* ink rather than as a
+black is what buys that second row: one declaration darkens a light hairline and brightens a dark
+one, where a black would be invisible on the dark theme. The other dial is `--edge-glow-radius`,
+at 130px, and it is the one that decides the character rather than the strength — at 150 the light
+spanned most of a tab pill and read as a treatment along the edge. Both numbers were settled on
+the page with a throwaway slider panel rather than argued about; it is gone, and this is where
+they live.
+
+**Three versions with orange in them were tried and dropped**, which is worth knowing before
+reaching for the hue again: full-strength orange to nothing *shouted*, a saturated line on a page
+whose loudest ink is a 6% hairline; orange over a darkened hairline was one thing too many on a
+1px line, where the darkening read as the border thickening rather than as light falling on it;
+and half-strength orange alone, which was still a colour statement on a palette of seven. The
+darkening alone is what survived.
+
+`--edge-glow-ink-fade` is that same ink at zero alpha rather than `transparent`, the rule the
+section-title tint and the page glow both follow. It takes relative colour syntax
+(`rgb(from var(--overlay-ink) r g b / 0)`) rather than a second `color-mix`, because
+`color-mix(… var(--overlay-ink) 0%, transparent)` resolves to transparent *black* whatever the
+ink was — which on the dark theme is a white-to-black ramp, harmless in any engine that
+interpolates premultiplied and exactly the assumption the rule exists to avoid depending on.
+
+The selected tab pill shows no light, and that is correct rather than missed — the travelling
+pill's opaque ground covers the tab it is over, so the selection reads as a solid object passing
+over a surface the light plays on.
+
+Gated on a hovering pointer *and* on motion being allowed. Under `prefers-reduced-motion` it is
+dropped rather than stilled: unlike `LocalTime`'s clock there is no information under the
+animation to keep, so the listeners are never attached and every ring's opacity resolves through
+a `--edge-glow-strength` that is then never written.
+
+### The signature
+
+**The name is drawn, not set.** `app/Signature.tsx` renders an inline SVG whose outlines
+`scripts/gen-signature.mjs` traced once from The Prestige Signature (Sigit Dwipa / Nirmana
+Visual) and wrote into `app/lib/signature.ts`; `ProfileHeader.tsx` lays it over the photo. Nothing
+at runtime — on the site or in the Studio — reads a font file, and none is committed.
+
+That is a licensing constraint answered by a technical one, and both point the same way. The face
+is commercial, and the copy here is subset to the nine glyphs of one name, so it can set exactly
+one string: shipping it as a webfont would mean publishing licensed Font Software from a public
+repo (the thing `scripts/fetch-font.mjs` exists to avoid for Switzer) to render a fixed piece of
+artwork. Tracing it is also what makes the mark behave like the rest of this site's chrome — it is
+the `Arrow12.tsx` / `handPaths.ts` rule again: `currentColor` only sees the page's colour when the
+SVG is part of the document, so an inline mark needs no `-dark` sibling and no filter.
+
+The animation is the one spell.sh's Signature component uses, with the two things that make it
+free here changed. It is worth knowing both, because the obvious way to adopt that component
+would have undone them:
+
+- **The paths are precomputed, not parsed in the browser.** spell.sh fetches the OTF at mount and
+  runs `opentype.js` over it — a parser, a font request and a layout pass in front of the first
+  pixel, for a string that cannot change. Traced at build time this is a **server component that
+  ships no JavaScript at all**.
+- **It animates in CSS, not framer-motion**, and that is what keeps the *finished* signature the
+  thing an inert page shows. `animation-fill-mode: both` holds the hidden state through each
+  stroke's delay and the drawn state after it, so with JavaScript off the marks still draw and
+  under `prefers-reduced-motion` they are simply already there. A motion component would have had
+  to render its hidden `initial` state into the server payload and wait for hydration to undo it.
+
+How it draws: the letterforms are painted as an ordinary `fill`, and *masked* by the same outlines
+stroked with a fat round nib whose `stroke-dashoffset` runs 1 → 0. So ink appears exactly where
+the pen has reached, and the resting state is the plain filled letterform. Eight details are
+load-bearing, and most of them were found by rendering the thing and looking:
+
+- **The mask is split per contour and the fill is grouped per glyph, and the two halves want
+  opposite things.** SVG restarts a dash pattern at the start of every subpath, so a `d` carrying
+  a letter's outer contour *and* its counters cannot be revealed progressively as a whole — every
+  contour in it starts at once and the reveal jumps. So the mask gets 18 one-contour elements, in
+  writing order. But winding is a property of a *path*: an `e`'s loop is cut out of the `e` only
+  while the two share one. Filled separately, every counter in the signature came out **solid** —
+  the `e`, the `a`s, the `H`, the `G` all blocked in — which is the bug that split introduced and
+  `GLYPH_PATHS` undoes by re-joining each glyph's contours for the fill alone. Hence `glyph` on
+  every stroke in the generated module.
+- **Per glyph, not one path for the whole name.** These letters overlap: script advances are
+  tight and the side bearings negative. Nonzero winding across the entire string would let one
+  letter's counter punch a hole through its neighbour's stem wherever the two crossed.
+- **The path data therefore appears twice in the markup**, once in `<defs>` for the nib and once
+  as the fill. That costs almost nothing on the wire — it is a byte-identical repeat well inside
+  deflate's window, and the whole SVG gzips to ~4.5 KB either way — so it is not worth a cleverer
+  arrangement. It is stored once: `signature.ts` carries only the contours and the component
+  joins them.
+- **`WEIGHT` is a 0.5-unit `currentColor` stroke on the filled paths, not a scale.** At 40px this
+  script's thinnest connectors land near a pixel, so the mark wanted a hair more body; a stroke
+  grows every stem by half that on each side, counters included, and leaves the letterforms'
+  proportions alone. It lives *inside* the masked group, so the pen reveals it along with the ink
+  it thickens. Small on purpose: at 1 unit the stem very nearly doubles and it reads as a
+  different, bolder script.
+- **`stroke-dasharray: 1 2`, not `1 1`.** With `pathLength="1"` the units are normalised, so `1 1`
+  looks like exactly "one whole contour, then one whole gap" — and it leaks. Measured at
+  `stroke-dashoffset: 1`, which should be blank: fragments of half a dozen letters sitting on the
+  page before the pen reaches them. A gap longer than the path cannot wrap, and is blank.
+- **Butt caps, not round.** Every contour is closed, so the two ends meet and there is nothing for
+  a cap to round — while a round cap on a *zero-length* dash is drawn as a dot, which is a stray
+  blob of ink in the mask before its stroke has started.
+- **The nib is 0.22em, and the figure is a threshold rather than a taste.** The outlines are
+  contours, so the pen runs up one side of a stroke and back down the other; a brush centred on
+  that contour has to reach across the stroke on the way *out* or the letter fills in two passes
+  and reads as a retrace. Checked against a plain filled render: at 8.8px the finished reveal is
+  identical to it, which is the proof that nothing is left behind.
+- **No hairline over the fill.** spell.sh lays a permanent 2px stroke on top of the filled paths.
+  At this face's weights that very nearly doubles the stem — rendered side by side it reads as a
+  different, much bolder script — so it is left out and the mark rests as pure fill.
+- **Timing is a share of contour length, not a share of the letters.** `span` in the generated
+  module is proportional to how far the nib travels through that contour, and
+  `Signature.module.css` multiplies it by one `--signature-duration` (1.4s, and declared in
+  `globals.css` — About's shimmer starts while this hand is still moving, so the two cannot be
+  allowed to disagree about when that is). A fixed beat per
+  glyph would crawl through `t` and sprint through the `H`; this is one hand at one speed.
+- **The strokes overlap, and the schedule for that is computed in the generator, not in CSS.**
+  Because the nib traces a *contour*, it runs up one side of a stroke and back down the other,
+  and the return reveals nothing the outbound pass has not already covered — so every contour
+  ends in a dead beat of roughly half its length. On an `a` that is invisible; the `H` is a fifth
+  of the signature, and its tail read as the pen stopping mid-name. `OVERLAP` opens each contour
+  when the one before it is 60% done, which is also what a hand does.
+
+  It has to accumulate, which is exactly what CSS cannot do here — a rule sees one stroke's
+  numbers and no others. Expressed per stroke as "start a share of the previous span early", the
+  shift does not carry forward: a short contour pulled back into the `G`'s tail finishes early,
+  and the one after it, whose own predecessor is now short, barely moves. Measured on the union
+  of the eighteen animations, that left a **66ms hole** two thirds of the way through the name.
+  Walking the schedule forward in the generator makes every stroke open before its predecessor
+  ends by construction — re-measured: no holes at all, delays monotonic, the whole hand 0.1s →
+  1.5s.
+- **`--signature-min-stroke` is a floor, and 55ms is not a round number by accident.** Four of
+  the eighteen contours are under 1% of the timeline — 6–15ms — and they pop into existence
+  rather than being drawn. The floor has to lift those and leave the rest alone: at 90ms it
+  caught thirteen of the eighteen and flattened the length-proportional pacing into a metronome.
+  A floored stroke only ever runs *longer* than its slot, which the overlapping schedule already
+  tolerates, so it cannot reopen a gap.
+
+**The name is selectable, and that is an invisible `<text>` under the mark rather than an HTML
+span over it.** A drawing cannot be selected, copied or found with Cmd-F, and a name is a thing
+people reasonably want to take, so the string is in the SVG at `fill="transparent"` with the
+drawing laid over it. Five things:
+
+- **`textLength` with `lengthAdjust="spacingAndGlyphs"` is the whole reason it is SVG text.** It
+  pins the run to the ink's exact width — measured, `getComputedTextLength()` comes back 167.04
+  against an ink width of 167.04 — so the highlight matches the mark whatever font resolves, and
+  goes on matching while Switzer is still loading and Arial is standing in. An HTML overlay would
+  have needed a font-size and a letter-spacing guessed per face.
+- **It is *before* the ink in document order**, because selection paints its background and then
+  the text over it. Under the drawing, the highlight goes behind the letterforms the way it goes
+  behind glyphs; after it, the highlight would cover the signature it is meant to be
+  highlighting.
+- **`fill="transparent"`, never `fill="none"`.** `none` is unpainted, and an unpainted glyph is
+  not hit-testable under the default `visiblePainted` — there would be nothing to start a drag
+  on. The ink above it takes `pointer-events: none` for the same reason: a press that landed on a
+  letterform rather than between two would otherwise begin no selection at all.
+- **The baseline is derived, and the font's own is the wrong line.** In this face the lowercase
+  floats 7.6px above the em box's baseline while the flourishes hang 10-12px below it, so text
+  set on it sits visibly under the word. The generator emits the *median* glyph ink bottom
+  instead — the eight letters resting on the writing line outvote the two capitals and the
+  descenders — which comes out at 31.36 and is robust to whatever string is traced next.
+- **`role="img"` stays on the wrapper.** The role prunes the subtree, so assistive technology
+  reads `aria-label` once rather than meeting the name twice; selection, copy and find-in-page do
+  not care about roles. Verified both ways: a drag across the mark selects and copies
+  `Haythem Gataa`, and the highlight spans the signature edge to edge.
+
+Two things about the box. It is the *ink's* box, not the em square — a script face's ascender and
+descender are enormous and mostly empty — so the SVG's `width`/`height` attributes reserve
+exactly the drawing's space and there is nothing to shift. And `--signature-pad` (1.5px of slack
+for antialiasing at the edges) travels with the data and is cancelled by a negative
+`margin-left` on `.name`, so the first stroke lands on the same column edge as the photo, the
+tabs and About rather than 1.5px inside it. Verified in the browser: ink `x` = the column's `x`.
+
+**The overlap is arithmetic, not a nudge.** The photo is a 48px square with a 6px radius — a
+square specifically because a disc has no bottom edge for a mark to cross, only a tangent. It
+ships at 192x192 (`profile.webp`, 9.3 KB at quality 85), which is 4x for that box, so it holds up
+to a 3x screen with room over. Two things about that file: it does **not** go through Cloudflare —
+the profile photo is a plain `assetUrl`, not a `cloudflareImageUrl` — so its own pixel size is the
+delivered size and `media.json` has to be updated by hand whenever it is swapped; and it is a
+**cutout**, opaque subject on a transparent ground, which is what the well's `--background-muted`
+fill is actually for. The ground behind the photograph is therefore the page's own surface colour
+and follows the theme, so an alpha-preserving encode is not optional here (`alphaQuality: 100`) —
+flattening it would bake the light theme's wash into the picture —
+and `.name`'s `margin-top: -14px` puts the ink's top 12.5px above the photo's lower edge, about a
+quarter of the picture. Enough for the `H`'s flourish to read as crossing it, little enough that
+none of the face is covered.
+
+**`.name` carries `position: relative` to keep that overlap the right way up**, and it is a fix
+rather than tidiness. The well above became positioned the day it took a lit edge — a ring is an
+absolutely positioned pseudo-element and needs a containing block — and a positioned element
+paints above in-flow content whatever the source order says, so the picture started covering the
+ascender that is supposed to cross it. It read as the signature having *moved below* the photo
+when only the paint order had changed, which is the shape to recognise: anything given a ring can
+quietly start painting over whatever used to overlap it. Positioned too and later in the tree, the
+signature is back on top and neither needs a `z-index`.
+
+**The name is no longer edited on the Studio's canvas**, and that is the canvas/inspector split
+holding rather than an omission: what a visitor can read is edited where it sits, and a visitor
+does not read text here, they look at a drawing of one fixed string. `displayName` is therefore a
+fact about the document — the heading's accessible name, every page's `<title>`, the card's
+`og:siteName` — and it has moved to the inspector's Profile panel, the same move
+`platform`/`handle` made when a contact row became a pill. The canvas imports the real
+`Signature` rather than restating it, so it cannot show a mark the build does not.
 
 ### CV interactions
 
@@ -1155,78 +1794,104 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
   `aria-pressed` — doing both makes a screen reader announce the state twice — and its
   accessible name says "in every section" rather than naming one, which would promise a
   scope it does not have.
-- **Section titles carry an ordinal, and it is derived rather than authored.** `SectionNumber.tsx`
-  renders `01`, `02` … from a section's position — array order is display order everywhere in this
-  content model, so the number is a restatement of where a section already sits rather than a
-  field that could disagree with it. Reordering in the Studio renumbers for free and there is no
-  way to commit a CV whose numbering skips or repeats. Contact is pinned outside `sections[]`, so
-  it continues the sequence from that array's length. It is `aria-hidden`: the heading beside it
-  is already the section's accessible name, and exposing the numeral prepends "01" to every one
-  of them.
+- **Section titles carry a mark, and it replaced the ordinal.** `SectionIcon.tsx` draws a
+  briefcase on Work Experience, a mortarboard on Education, a link on Contact & Socials — Phosphor
+  duotone at 16px, in the literal `#fb4107` the footer's cursor already wears (the
+  `FigmaCursor.tsx` reason: it is a reference to Figma, so it should not follow the page's theme,
+  and it carries on both grounds). The ordinal said where a section sat in the sequence; the mark
+  says what the section is about, which is the more useful thing for a reader landing halfway down
+  the page with the title pinned under the tab bar.
 
-  Five things about it are load-bearing:
-  - **It is absolutely positioned, and the header is its containing block for free** —
-    `.sectionHeader` is already `position: sticky`. Out of flow it adds nothing to the header's
-    height, which is not incidental: that figure is 39.578px, the tab bar parks every title
-    against it, and the Studio's canvas is measured to match `/` on it exactly. Verified unchanged
-    after the numeral grew to 40px, on both surfaces.
-  - **It is centred on the title's line, not parked on the title's baseline.** That is what leaves
-    numeral above *and* below the heading for the band to cut between; sharing the baseline put
-    nearly all of it above, which was right for a fading 28px ordinal and useless for this. The
-    offset is derived from both faces' real metrics rather than nudged: the title's line-box centre
-    sits exactly `LH` above the header's padding-box bottom (the box is `6px + LH + LH/2` tall, so
-    the 6px cancels), and the numeral's ink centre sits `0.499 * size` above its own box bottom.
-    Measured against the live page: ink centre 17.17px from the header's top against a title line
-    centre of 17.20px.
-  - **Bellina's constants are measured off the file, not read from `OS/2`.** With `TextMetrics` at
-    1000px: baseline `0.132em` up from the box bottom at `line-height: 1`, digits inking
-    `0.7656em` above it and `0.0313em` below — the slant dips just past the baseline. That puts the
-    ink centre within 0.03px of the box's own centre at 40px, which is a fact about this face and
-    not a rule, so the derivation stays rather than collapsing to `50%`.
-  - **The band across the middle is the title's cap band**, `(0.680 + 0.250) * --type-size` —
-    Switzer's real cap height and descender — halved either side of the numeral's ink centre. At
-    14px that is 13.0px, leaving 9.4px of ink standing at each end of a 40px ordinal. It was the
-    full font box (`0.980 + 0.250`, sized for the tallest ascender a heading could contain), and
-    that is the wrong thing to measure here: the numeral sits *behind* an opaque title, so the
-    band is a graphic device rather than a legibility clearance, and sized for an ascender it ate
-    more of the ordinal than it needed to. An ascender now crosses the ramp instead of the flat,
-    which is invisible either way. Percentages, because a gradient's line length *is* the box
-    height, so the stops track `--section-number-size` on their own. The band replaced a downward
-    fade, which had no way to say "here specifically" and whose midpoint at this size competed
-    with the title it sat under.
-  - **The band is dimmed to a quarter alpha, not cut to zero.** At zero the digits came apart into
-    two orange fragments with no numeral between them; a quarter keeps the strokes continuous
-    through the band, so what reads is one ordinal that the heading passes in front of. It is the
-    same judgement the old fade's 0.3 midpoint was making, applied to a band rather than a ramp.
-  - **The ramps into it are derived and eased, and both halves of that matter.** Length first:
-    `--section-number-cut` runs from the band's edge to the tip of the ink (7.33px at 40px,
-    against the 3px it started at), which is the longest ramp available — past the ink there is
-    nothing left to paint. `--section-number-ink` is half the digits' height, `0.3984 * size`,
-    from the same `TextMetrics` pass as the `bottom`. Then shape: a *linear* ramp meeting a flat
-    run leaves a corner in the alpha at each junction, and the eye finds a corner even when the
-    ramp is long — so three intermediate stops per side sample `smoothstep` at a quarter, a half
-    and three quarters (0.367, 0.625, 0.883 against the 0.25 floor), and the alpha leaves the band
-    and arrives at full strength with no slope change at either end. Lengthening the ramp alone
-    did not fix it; the corners were most of what read as sharp.
-  - **A pinned title parks below `--sticky-top`, not at it.** Centred, the numeral no longer
-    overhangs the header at all — its ink stops 1.24px inside the top edge — so
-    `--section-number-headroom` is 4px of daylight rather than the rescue it was: the tab bar's
-    sticky wrapper is exactly `--sticky-top` tall and opaque once stuck, and a numeral stopping
-    1.24px short of it reads as kissing the bar. Measured stuck: 5.24px of clearance.
-    `--sticky-top` itself cannot absorb the offset, because the bar's fade pins to the same value
-    and has to stay flush with the bar; widening it would open a band with no cover and no fade.
-    The gallery's filter bar keeps the bare `--sticky-top`: it pins in the same slot but carries no
-    numeral, and `Gallery.tsx` measures its scroll clearance off that value directly. **The ceiling
-    on the size is now the header rather than the bar**: the ink is `0.797 * size` tall against
-    39.578px, so it reaches both edges at 49.7px.
-  - **The band's stops are the same orange, never `transparent` and never a grey.**
-    `transparent` is `rgba(0, 0, 0, 0)`, so interpolating towards it in sRGB drags the ramp
-    through black — a grey cast on both edges of a band whose whole job is to be clean. That still
-    binds at a quarter alpha: it is the *hue* being held across the ramp that matters, not the
-    alpha it lands on. The
-    orange is the literal `#fb4107` the footer's cursor already wears, for the reason given in
-    `FigmaCursor.tsx`: it is a reference to Figma, so it should not follow the page's theme. It
-    carries on both grounds.
+  Six things about it:
+  - **The record is keyed on `section.key`, never `label`** — the same choice `isAddressContact`
+    makes over "the one called Email". `label` is free text an author is invited to rename, and a
+    mark that fell off when a title was reworded is a mark nobody could rely on. Contact is pinned
+    outside `sections[]` and so has no `key` in the file; `Profile.tsx` passes the literal
+    `'contact'`, where it used to pass `sections.length` for the ordinal that continued the
+    sequence past that array.
+  - **It re-introduces a coupling the content model otherwise avoids, and the empty case is what
+    makes that acceptable.** `section.key` replaced a hardcoded `SECTION_MAP` so that adding a
+    section needs no code change — that still holds for *rendering*, but a new section gets no
+    mark until one is drawn for it. `SECTION_MARKS[key]` misses, `SectionIcon` returns null, and
+    the header lays out exactly as it did before any of this existed. It is the bargain
+    `TAG_MARKS` already strikes with a newly authored tag. `caseStudies` is the pinned case studies
+    block's mark. Like contact, that block has no `key` in the file, so `Profile.tsx` and the
+    Studio's canvas pass the literal. The name was chosen before the block existed, to match what
+    the Studio would derive from a section labelled "Case Studies".
+  - **The mark and the heading are one flex item (`.sectionTitle`), not two.** `.sectionHeader` is
+    `justify-content: space-between`, so left flat the three children spread with the title
+    stranded mid-column — and the header's 16px `column-gap`, which exists to separate the title
+    from the Show/Hide control, would become the mark's gap as well. Grouped, the existing
+    two-item spacing is untouched and the mark takes a gap of its own: `--section-title-gap`,
+    8px, and 4px below 480px. The column is at its narrowest there and the mark is the one thing
+    in the header that cannot shrink, so that 4px is the cheapest on the row — and tighter, the
+    mark reads as belonging to the title rather than sitting beside it. The header's own 16px is
+    left alone at every width, because that gap separates two things which genuinely are
+    separate.
+  - **It adds nothing to the header's height, and that figure is still load-bearing**: 39.59375px
+    is what the tab bar parks every pinned title against and what the Studio's canvas is measured
+    to match `/` on. The box is `6px + LH + LH/2` around its tallest child, so any child shorter
+    than the h2's 22.4px line box is free — a 16px mark is. Measured after the swap: 39.59375px on
+    all nine headers on *both* surfaces, `.sectionTitle` measuring 22.3984px (the h2's own
+    height, so the wrapper contributes nothing), and the h2's top still exactly on the 6px padding
+    edge — so neither the box nor the title moved.
+  - **No `vertical-align`, and adding one does nothing.** This is the `.filterTag` trap from
+    `Gallery.module.css` all over again: the mark is a flex item under `align-items: center`, so
+    it is *placed* rather than baseline-aligned, and `.metaIcon`'s `-3px` sitting a few lines away
+    invites arithmetic that has no effect. Measured across all nine, the ink centre lands between
+    0.55px above and 0.46px below the title's cap-band centre — and the spread is the point: every
+    glyph has its own ink bounds inside the same 16 grid, so there is no single offset to apply.
+  - **The title carries a second fill in the mark's orange**, so its first letters read as tinted
+    by the thing beside them. `.sectionHeader:has(.sectionIcon) h2` lays a 24px horizontal ramp
+    of `#fb4107` over a solid layer of the heading's ink and clips both to the glyphs — the
+    `background-clip: text` trick `SectionNumber.module.css` already uses, with one more layer.
+    Five things:
+    - **The order of the two layers is the mechanism.** Ink underneath, orange on top, and
+      `color: transparent` to get the UA's own fill out of the way. `color` cannot simply stay
+      opaque: a background paints *behind* the text colour, so an opaque fill would hide the
+      orange entirely.
+    - **It is a fill on the text, not a glow behind it** — and that was the first attempt. A soft
+      ellipse on `.sectionTitle::before`, anchored on the mark, was the wrong *object*: a wash
+      behind the header lights the whole band, including the gap, the page around the words and
+      the row below, so at any strength that made it visible it read as a highlighted stripe
+      across the column. Clipping the paint to the glyphs leaves nothing but letters to light.
+    - **`background-image`, never the `background` shorthand**, which resets `background-clip` to
+      `border-box` and would paint two rectangles across the header. The same note the ordinal
+      carries.
+    - **The far stop is the same hue at zero alpha, never `transparent`** — `rgb(0 0 0 / 0)`
+      would drag the handover from tinted to plain ink through black. Again the ordinal's trap.
+    - **`:has(.sectionIcon)` scopes it to a section that actually has a mark**, since a title
+      tinted by nothing is just a title in the wrong colour. The gallery's filter bar restates
+      the header's box but not this class, so it takes none either.
+
+    One accepted limit: the gradient is positioned against the element's box, so a title long
+    enough to wrap would tint the first 24px of its second line too. No section label wraps at
+    any width the site supports (measured to 375px), and no background can follow text flow, so
+    there is nothing to fix.
+
+    **The strength is 45% in light and 30% in dark, and the asymmetry runs the opposite way to
+    `--overlay-strength`'s.** Worth knowing why, because neither obvious metric predicts it: at
+    an earlier 30/42 the light theme read too subtle and the dark too loud, while ΔE from the
+    untinted ink said light was already the stronger of the two (0.157 against 0.132). What
+    matches the eye is *added chroma*, because the two inks do not start level — `#111827`
+    carries a blue cast (OKLab chroma 0.032) that orange spends its first alpha cancelling before
+    it adds any warmth, where `#e9ebef` is near-neutral (0.006) and every bit lands as visible
+    colour on a bright glyph. Composited in sRGB as the browser paints it, the old pair added
+    0.046 of chroma in light against 0.091 in dark; 45/30 gives 0.084 against 0.061, leaving
+    light deliberately ahead because a hue shift on a bright glyph against a dark ground is the
+    more conspicuous of the two. **That is twice on this one treatment that the tidy metric was
+    the wrong instrument** — see also the glow it replaced, where ΔE from the *ground* argued for
+    an alpha at which the effect was not there at all. Composite in sRGB, compare added chroma,
+    then look at it.
+  - **`SectionNumber.tsx` is still in the tree, and nothing on the CV renders it.** A case study's
+    section titles still do (see **The case study page**), so its `--section-number-*` tokens and
+    the Bellina face are live there — see the note on that font under Styling. **`--section-number-headroom` is now among them**: `.sectionHeader` takes
+    the bare `--sticky-top`, exactly as the gallery's filter bar does. That offset began as a
+    rescue for a numeral overhanging the header's top edge into an opaque tab bar; once the
+    numeral was centred it had already decayed into 4px of daylight, and a 16px mark overhangs
+    nothing at all — so the only thing it was still doing was holding the CV's titles 4px lower
+    than the gallery's, which was never a design. The two routes now pin on the same pixel, and
+    that is one rule rather than two that can disagree.
 
 - **Contact is a wrapping row of pills, and it is the one section allowed a shape of its own.**
   Every other section is a year gutter beside a heading, and `sections[]` is homogeneous
@@ -1254,6 +1919,16 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
     the same row. Testing the scheme is the same choice `section.key` makes over `section.label` —
     a rename or a reorder cannot invalidate it, where "the first row" and "the one called Email"
     both can.
+  - **The address pill's padding is asymmetric: 14px before the envelope, 10px after the copy
+    mark.** The two ends are not a symmetric pair — the envelope opens the pill and is part of its
+    subject, where the copy mark is a trailing affordance, and a trailing action reads as
+    belonging to the edge rather than floating inside it. Measured at a symmetric 14px the optical
+    gaps were 16.13px left (14 plus the envelope's 1.13px ink inset) against 17px right, which is
+    what made the right side look loose: the mark had the same air as the glyph anchoring the
+    other end. At 10px the right measures 13px and the pill comes in from 196.7px to 192.7px.
+    Note the two `.srOnly` spans contribute nothing to either end — they are `position:
+    absolute`, so the 8px `gap` never applies around them, which a `clip`-only visually-hidden
+    helper would not have given for free.
   - **The whole address pill copies; it is not a `mailto:` link.** A press on an address is
     nearly always a press meaning *give me that address*, so the pill is one `<button>` rather
     than a link with a copy button inset into it. That also retired the invalid nesting the split
@@ -1271,7 +1946,15 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
     was briefly tinted to its brand colour on hover; the row read as five logos rather than as one
     set of controls, and the fill and the ink coming forward already say which pill the pointer is
     on — in the page's own voice. What the tint was actually answering is "what is this glyph",
-    which a label answers better. `PLATFORM_MARKS` therefore carries paths and nothing else.
+    which a label answers better. `PLATFORM_MARKS` therefore carries paths and nothing else, and
+    monochrome is what lets one `currentColor` carry the resting, hover and dark-theme states with
+    no rule apiece.
+
+    **The whole row is duotone, and the envelope, copy and check came with it.** Those three used
+    to be a stroked trio — `fill: none` over a 1.25px stroke, a width tuned by eye to sit at the
+    brand marks' optical weight at 16px. They are drawn now, from the same set as everything else,
+    so the row is one family and the weight is the export's rather than a number matched against
+    it. See **The drawn marks**.
   - **The tooltip is an element, not a `::after`.** A pseudo-element would have to carry the
     platform through `content: attr(…)`, and generated content is exposed as text by some screen
     readers — the pill's accessible name already spells out the platform and the handle, so that
@@ -1292,7 +1975,11 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
     small snap. Under `prefers-reduced-motion` the transition is dropped and the swap is instant.
     The mark is 16px against the envelope's 18 — it is the affordance, not the pill's subject.
 
-    Two things about the green. It is `--green`, which is why the palette table now lists that
+    Three things about the green. It was `#32bd64` and is `#10a530`, which trades contrast between
+    the themes rather than only improving it — measured against the pill's own
+    `--background-muted`, 2.22:1 → 2.96:1 in light and 5.57:1 → 4.18:1 in dark. Both ends stay
+    clear and the light half is the one that needed it: a mid green on a near-white wash was much
+    the weaker of the two. It is `--green`, which is why the palette table now lists that
     token as shipping rather than as Studio-only: "it worked" is exactly what it means everywhere
     else here, and a confirmation that only changes *shape* asks the reader to compare two glyphs
     they see for half a second each. And **`.contactAddress:hover` needs `:not([data-copied])`,
@@ -1323,7 +2010,7 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
     the two shapes announcing identically rather than one of them doubling its platform. On the
     address pill the same `.srOnly` leads with "Copy email address", so the name reads as the
     action and then the value.
-  - **An unmarked platform spells its name; it does not render unadorned.** `TAG_PATHS`'s closed
+  - **An unmarked platform spells its name; it does not render unadorned.** `TAG_MARKS`'s closed
     set has an honest empty case, because a tag's label sits right beside its mark. A compact
     pill *is* its mark, so the same fallback would be an unlabelled dot — `PLATFORM_MARKS` in
     `ContactIcon.tsx` is therefore still a closed vocabulary, but a miss falls back to a wider
@@ -1516,14 +2203,12 @@ deleted precisely so no entry in the array could need different CSS. `contact` a
 `profile.galleryPreview` are the precedents for hoisting. A folder card renders nothing like a
 year gutter beside a heading, so it is hoisted too.
 
-**The ordinal offset is derived, never a constant.** Pinning a block *ahead* of `sections[]` shifts
-every number after it: case studies take `01`, the timeline sections start at `02`, and contact
-continues from `sections.length + 1`. `Profile.tsx` computes `ordinalOffset` from whether the block
-renders at all, so a CV with no case studies falls back to `01 Work Experience` with nothing to
-edit. `CvCanvas.tsx` makes the same derivation, and has to — the canvas's ordinals are a claim
-about what the rebuilt page will show. That also forced `CanvasSection` to take `ordinal`
-separately from `index`: `index` still addresses `cv.sections` for every reorder, and reusing it
-for the numeral would print numbers the site disagrees with.
+**Its title carries the `caseStudies` mark.** This block used to shift the section ordinals (case
+studies `01`, the timeline sections from `02`), which took a derived offset in `Profile.tsx` and in
+`CvCanvas.tsx`, and a separate `ordinal` prop on `CanvasSection`. The CV's ordinals have since been
+replaced by `SectionIcon`, which needs a name rather than a position, so all of that went in the
+merge. The block has no `key` in the file, so both pass the literal `'caseStudies'`, as they pass
+`'contact'` for the row at the bottom.
 
 Two guards live in the loader rather than in `resolveContent.ts`, because both need disk — which
 is exactly the seam that module exists to stay on the other side of:
@@ -1698,9 +2383,11 @@ makes it read as this site rather than as a detached page, at the cost of no req
   no bar here there was nothing covering it, so the document scrolled visibly behind a pinned
   title. The same component, in its self-observing mode; stack unchanged at fade (12) < header (15).
 - **The sections are the CV's own**, imported rather than restated: `Profile.module.css`'s
-  `.profileSection` and `.sectionHeader`, and `SectionNumber` itself. Measured against `/`: the
-  header is 39.59375px and the numeral sits at −2.844px / 0px relative to it on both routes, which
-  are the same numbers to three decimals.
+  `.profileSection` and `.sectionHeader`, and `SectionNumber` itself. The header is 39.59375px, as on the CV. **This is now the one route
+  that renders the ordinal**: the CV's section titles took `SectionIcon` marks, while a study
+  keeps numbers because its sections are an outline read in order. It pins at `--sticky-top: 0`
+  under the bare `.sectionHeader` rule, the headroom offset having been retired with the CV's
+  ordinals; the numeral is centred on the title's line box, so it stays inside the header.
 - **The ordinal is derived, and `parseCaseStudy` strips the authored one.** The draft numbers its
   own headings ("## 1. Board Viewer…") because it was written as one flat document; leaving that in
   would print "01 1. Board Viewer" and the two could disagree the moment a section moved. Same rule
@@ -1848,10 +2535,175 @@ an `fs` import would follow it into the browser bundle.
 ### Component Patterns
 
 - **Server components** (async): `layout.tsx`, `page.tsx`, `[slug]/page.tsx` — handle data loading
-- **Client components** (`"use client"`): `Profile.tsx`, `Attachments.tsx`, `Lightbox.tsx`, `Scrollbar.tsx`, `RichText.tsx`, `Gallery.tsx`, `Tabs.tsx`
+- **Client components** (`"use client"`): `Profile.tsx`, `Attachments.tsx`, `Lightbox.tsx`, `Scrollbar.tsx`, `RichText.tsx`, `Gallery.tsx`, `Tabs.tsx`, `LastUpdated.tsx`, `LocalTime.tsx`, `Colophon.tsx`, `EdgeGlow.tsx` (renders nothing — see **Lit edges**)
 - **`SiteFooter.tsx` is in the root layout**, below the bar, so it closes both routes — the gallery
-  would otherwise just stop after its last item. It carries the published date at one end and
-  `profile.location` at the other. Four things there:
+  would otherwise just stop after its last item. It is a stack against a control: the place above
+  the published date at one end, and the colophon at the other. Eight things there:
+  - **It sits on the column's own edge at every width, and carried a narrow-viewport indent
+    until it did.** Below 480px `.experiences` and `.contacts` take `margin-left: 16px` to clear
+    the section title, and the footer used to follow them. That matched the wrong thing: the
+    footer is page chrome closing both routes, not a CV item, and the chrome around it — the
+    avatar, About, the tab bar, every section title, the gallery's list — is all on the column
+    edge. Measured at 375px: all of those at x = 24 and the footer alone at x = 40, so "Last
+    updated" lined up with the CV's item bodies and with nothing whatever on `/gallery`. Only its
+    left edge ever moved, since the row is `space-between` against the column's right edge.
+    One consequence worth knowing: the row got 16px wider, which used to mean the date and the
+    location collided — and therefore stacked — at a narrower viewport than before. **That no
+    longer applies**: the two are stacked unconditionally now (see the next bullet), so the row's
+    two children are a two-line block and a button, and measured at 375px they occupy about 200px
+    of a 335px column. It does not wrap at any width the site supports.
+
+  - **The place sits *above* the date, and that order is the cursor's constraint rather than a
+    preference.** The Figma cursor's sequence ends below the date and the hand hangs some 61px
+    past it — which is what `.footer`'s `padding-bottom: 60px` reserves — so whatever is under the
+    date is something the hand lands on top of. `.row` used to express this with
+    `flex-wrap: wrap-reverse`, which hoisted the location above the date *only* once the two
+    collided; `.stack` states it in the markup instead, so it holds at every width. **The
+    reversal had to go rather than merely become redundant**: left in place it would have put the
+    colophon button above the stack the moment the row wrapped, which is the same bug aimed at a
+    different pair.
+
+    **`.row` is `align-items: last baseline`, which sits the colophon button on the *date's* line
+    rather than the place's, and plain `baseline` is the trap worth naming.** A flex item's
+    baseline is its *first* line's, so against a column-flex `.stack` that resolves to the place —
+    the top line, the one thing this must not align to. `last baseline` asks for the stack's final
+    line, which is the date. `flex-end` is declared first as the fallback, the same shape as
+    `overflow-x: hidden` before `clip`; it is a near miss rather than a different design, because
+    the stack's bottom edge *is* the date's line box. Measured both: `last baseline` puts the two
+    baselines 0px apart, `flex-end` 1px. `.colophon` carries no `align-self` for this reason — it
+    had `flex-start` while the button sat on the place's line, and that would now silently win.
+
+    Measured at 375 / 480 / 843px: the colophon's baseline and the date's are identical at every one,
+    place and colophon flush to the column's own edges, 4px between the two stacked lines, footer
+    126.8px on both routes, no horizontal overflow, and 22.5–23.3px of clear space below the
+    cursor's lowest frame at the end of the document.
+
+  - **Hovering, focusing or pressing the place swaps `{(GMT+1)}` for the actual time there**
+    (`LocalTime.tsx`). Five things:
+    - **It is a `<button>` reset to inherit the line it used to be.** Hover alone would make this
+      invisible on every phone and to every keyboard, which is the same argument that makes the
+      contact row's address pill a button rather than a link. The element changed and the
+      appearance deliberately did not — the only chrome it gains is a focus ring. `font: inherit`
+      is load-bearing: a `<button>` inherits neither the family nor the size, the trap `.tab`
+      already hit where the Studio's `<button>` twin fell back to Arial.
+    - **The resting render is the authored label, on the server and on the hydrating client's
+      first render alike**, and the clock is only ever read inside an event handler. So there is no
+      hydration mismatch and — the half that matters — no build-time `new Date()` leaking onto the
+      page. That is the same boundary `LastUpdated` exists to hold, now running both ways in one
+      footer: the date must stay the build's, and this must be the visitor's *now*.
+    - **`Africa/Tunis`, not a fixed `+01:00`.** Tunisia has not observed DST since 2008, so the
+      offset is right today — and that is exactly the kind of fact that goes stale unnoticed, where
+      an IANA zone cannot.
+    - **24-hour, which is a measurement rather than a taste**: `(17:54)` is exactly as many
+      characters as the `(GMT+1)` it replaces, where `(5:54 PM)` is two longer and visibly
+      stretches the line under the pointer that asked for it.
+    - **`.locationMuted` is monospaced, and that turns "nothing moves" from an observation into a
+      guarantee.** Proportionally set, the run narrowed ~11px on the swap — harmless, because
+      nothing sits to its right, but the scramble below cycles arbitrary glyphs through every
+      position and each frame would have been its own width. One advance per glyph plus one
+      character count makes the label, the clock and every frame between them identical by
+      construction. Measured across a full reveal: **110 consecutive frames, one distinct width**
+      for the run, for the button and for the colophon's left edge.
+
+      **It is not there because Switzer lacks tabular figures — Switzer's figures are already
+      tabular, and the `tabular-nums` it replaced was a no-op.** Measured with the real face
+      loaded: all ten digits are 8.0703px at 14px, and neither `font-variant-numeric` nor
+      `font-feature-settings: 'tnum' 1` moves one advance, because there is no proportional figure
+      set to switch away from. Monospacing answers a requirement tabular figures cannot reach:
+      **this swap trades letters for digits, not digits for digits.** `(GMT+1)` is 55.336px in
+      Switzer against `(17:54)`'s 44.133px — the 11.2px the run used to narrow by — and the
+      scramble is worse, since its A–Z plus 0–9 pool has **24 distinct widths spanning 11.368px**
+      in Switzer (`I` 3.398px, `W` 14.766px), so every frame of every position would be its own
+      width. In the mono face all 36 share one width and both strings measure 54.789px. Keeping
+      Switzer would mean pinning the box and letting the glyphs shift inside it, which is the one
+      thing a resolve-in-place effect must not do.
+
+      A system stack (`ui-monospace` first), so it costs no request — the site self-hosts exactly
+      one face and this is not worth a second. **The size steps down to 13px, and that is measured
+      rather than eyeballed**: a mono face carries a large cap for its nominal size, so at a
+      matched 14px its cap comes to 10.39px against the place's 10.08px — *larger* than the primary
+      text it is an aside to. At 13px it is 9.65px, 96% of the place, with the x-heights at the
+      same ratio, the baseline shared exactly and the line box untouched at 22.4px.
+    - **The transition scrambles into place (`scrambleText.ts`); the clock ticking does not.** A
+      380ms resolve, staggered left to right. Four things about the driver: a position whose
+      character is the same at both ends never scrambles, which is what holds the parentheses
+      still without a special case for them; glyphs re-roll on a ~34% chance per frame rather than
+      every frame, because ~23 fresh characters in 380ms is a strobe; the pool is uppercase letters
+      and digits, the two classes the real endpoints are drawn from, after punctuation read as line
+      noise; and it is a plain function returning its own cancel rather than a hook, because it is
+      driven from event handlers and there is no render to synchronise with.
+
+      **The once-a-second catch-up writes the new value straight in, and only while no run owns the
+      span.** Re-scrambling on a minute rollover would fire at an arbitrary moment under a
+      reader's eye. That gate is also the one place this can break badly: the completion callback
+      has to clear the cancel ref, or the tick sees a run that never ended and the clock freezes
+      permanently after the first reveal. Verified across a real rollover — `(19:50)` → `(19:51)`,
+      no scramble, one width throughout.
+    - **`prefers-reduced-motion` drops the animation, not the feature.** The value swaps instantly;
+      what it says is the information and the resolve is the ornament. Verified by forcing the
+      branch: 86 frames, zero of them noise.
+    - **The accessible name renames itself instead of carrying `aria-pressed`** — both would make
+      a screen reader announce the state twice, the argument the CV's Show/Hide Details control
+      already makes. An `.srOnly` span says what a press would do next ("Show local time" /
+      "Show time zone") while the visible text says what is on screen now.
+    - The press is filtered by `pointerType`. A mouse press would otherwise *cancel* the reveal
+      that the pointer arriving had just produced, so it reads as the feature refusing to work;
+      touch and pen toggle, because Safari does not focus a button on press and there is no hover
+      there to fall back on. `pointerleave` also declines to hide anything while the button still
+      holds focus, or a mouse user who clicks and moves away is left with a focus ring around a
+      reverted label.
+
+  - **The colophon button opens `Colophon.tsx`, and the list it shows lives in `app/lib/colophon.ts`.**
+    Named for the publishing sense of the word — the note at the back of a book naming the
+    typefaces, the materials and the people — which is both what the panel contains and where it
+    sits. It was "Credits", which is the label anything would carry: it says a list exists without
+    saying what kind, where this one names a shut-down platform, a signature face and a hosting
+    edge in one breath. The cost is a reader who has to open it to learn the word, which on a
+    footer link is a small price and arguably the invitation.
+    Four things:
+    - **A quiet text button, not a pill.** `.detailsToggle`'s treatment, borrowed for the third
+      time (the gallery's Clear was the second): resolving to nothing at rest and to
+      `--foreground-primary` under the pointer. A filled `--background-muted` pill here would be
+      the loudest thing in the footer for the whole length of the page's ending. It is set at
+      `--type-size` rather than `.detailsToggle`'s `--secondary-type-size`, because the register it
+      has to match is the footer's 14px text, not the CV header's 12px labels.
+    - **The list is code, not content.** `content/` is authored through the Studio and
+      reference-counted against `media.json`; credits are neither, so this is the `TAG_MARKS` /
+      `PLATFORM_MARKS` shape — a hand-authored closed vocabulary with an honest empty case, and a
+      fourth content file avoided. **It carries no version numbers**, because nothing would keep
+      them honest against `package.json`; that is the social card's hand-written dimensions and a
+      video's `media.json` measurements again. `href` is omitted where there is no address worth
+      sending a reader to — Read.cv's domain answers 402 — so that one renders as a plain name.
+    - **It credits what a reader could not infer, and nothing else.** TypeScript and CSS Modules
+      were listed and are gone: naming them says nothing a developer looking at a 2026 Next.js
+      site does not already assume, and a list padded with the obvious is one nobody reads to the
+      end of. The test for an entry is whether someone would be surprised to learn it. Two
+      consequences of applying it: **`Foundation` leads the list**, holding Read.cv alone — the
+      one entry that is not a tool, since everything else is something the site is built *with*
+      and that is what it is built *after* — and the brand-marks disclaimer that used to sit under
+      `Icons` is gone, because that claim is load-bearing in `LICENSE-CONTENT` and was only UI copy
+      here. `CreditGroup` lost its `note` field with it rather than keeping an unused one.
+    - **A credit line is inline flow, not flex, and it was flex once** — the call
+      `Gallery.module.css` documents for its date-and-tags line, made here for a reason of its own.
+      As a wrapping flex row, a note too long for the remaining width was pushed onto a line of its
+      own flush under the name (measured: two of the eleven were), and a full-width tertiary line
+      directly beneath an entry reads as *another entry*. Inline, the note continues the line and
+      wraps mid-phrase like the prose it is — and gets baseline alignment for free, which the flex
+      version needed `align-items: baseline` to buy back.
+    - **The dialog is structurally the lightbox's**, which is the only shippable overlay this
+      codebase has (the Studio's `AskDialog` is not a precedent: no portal, no scroll lock, no Tab
+      trap, because the Studio already owns the screen). Reused: the `window`-level key handler
+      with its `!root.contains(active)` recovery branch, the focus round trip, the shared
+      `useScrollLock`, the backdrop-as-sibling layering — which is what saves the content a
+      `stopPropagation` — and the close button's two-span cross. It portals without a mount guard
+      for the lightbox's reason: it is only reachable from state a press sets, so it is never part
+      of a server render. `z-index: 990`, deliberately below the lightbox's 999.
+    - **The backdrop veils rather than replaces**, and it is `--backdrop`'s first shipping use —
+      the palette table above had listed that token as Studio-only, exactly as it had `--green`
+      before the contact row's check. The lightbox's opaque `--background-primary` is right for a
+      total takeover of the gallery and wrong for a panel over a page still being read. The sheet
+      takes `max-height: calc(100dvh - 48px)`; `dvh` and not `vh`, or mobile Safari's toolbar
+      covers the last group.
   - Its "Last updated" is `new Date()` at module scope in a *server* component, so it is evaluated
     once during the build and baked into the export. That is what the phrase means for a static
     site, and it is deliberately not a content field: a date that has to be remembered goes stale,
@@ -1869,6 +2721,40 @@ an `fs` import would follow it into the browser bundle.
     finished date blank itself and retype. Measured on a stepped scroll: zero frames where the
     complete date is visible before the animation starts. Reduced motion is *derived* during render
     rather than written back as state — assigning it in the effect trips `set-state-in-effect`.
+  - **Once the sequence parks, the hand has gravity: it leans up to 6px towards the reader's
+    pointer from 120px out, and settles back when that pointer goes away.** The radius is six
+    times the clap's 20px on purpose — the two are halves of one approach rather than two
+    thresholds, the lean being the hand noticing someone coming and the clap the arrival. Four
+    things:
+    - **It moves the whole cursor, name pill included**, where the click, wave and clap move the
+      pointer group alone. Those are gestures *of* the hand and a pill riding along unchanged is
+      what a multiplayer cursor does; this is the cursor being pulled, and a hand drifting out
+      from under its own name reads as coming loose. So it needs a box of its own
+      (`.cursorPull`): `.cursorPointer` already animates `transform` for all three gestures, and
+      two things cannot own one property.
+    - **The anchor is `.clapZone`, which is deliberately left *outside* that box.** An anchor
+      that moved with the lean would feed its own output back in. `.userHand` stays outside it
+      for a different reason — it stands in for the reader's own pointer, so it has to sit
+      exactly where that pointer is. Verified: the drawn fingertip lands on the pointer to the
+      pixel while the hand is leaning, and `.cursor`'s own rect does not move.
+    - **The falloff is a smoothstep, flat at both ends**, so the lean neither switches on as the
+      pointer crosses the radius nor snatches the last pixels as the two meet — measured, 0.44px
+      at 100px out, 3.0px at 60px, 4.4px at 40px, 5.56px at 20px. It is capped at the gap itself, or the hand reaches
+      through the pointer and the direction it is reaching in goes to noise as the two coincide.
+    - **The offset is written to the DOM, not to state, and the transition is the damping.**
+      This is a value per animation frame, so it is a custom property on one element (the
+      `EdgeGlow` argument) rather than a render of the subtree 60 times a second. Re-easing
+      towards a fresh target each frame *is* the follow: the box covers a fraction of what is
+      left per frame, so the hand trails by a few frames instead of tracking rigidly, and the
+      release eases home for free. `display: block` on that box is load-bearing — `transform`
+      does not apply to a non-replaced inline element, so as a plain span the rule would
+      silently do nothing. Measured against the pre-change tree: the cursor's rect, the clap
+      zone, `.updated`, the footer's 126.8px and the document's height are all identical.
+    - Gated on a hovering pointer and on motion being allowed, and only while the hand is out —
+      so nothing listens while the arrow is still working (the sequence is a performance, not
+      something to shove) and nothing listens at all for a reader who never reached the footer.
+      The listener also returns early while the footer is off screen, which is what keeps its
+      cost for the whole page above at one boolean.
   - The gap above it is **padding, not margin**, and that is the only reason the two routes agree.
     The gallery's list ends in a margin, which collapses with an adjacent margin — a 16px top
     margin disappeared into the list's 60px and left the gallery 16px tighter than the CV, whose
@@ -1925,6 +2811,29 @@ an `fs` import would follow it into the browser bundle.
   And the steps are flex siblings of the dots rather than pinned to the left and right edges, which
   is what keeps them beside the dots at any item count — the dots' width grows with the number of
   items, so an offset from the centre would have to be recomputed to match.
+  **The cluster spans the viewport and centres its contents**, rather than being a shrink-to-fit box
+  pushed to the middle with `left: 50%` and a counter-translate. Those two are the same thing while
+  it fits, and only one of them has a width for the dots to wrap against: a shrink-to-fit box simply
+  grew past both viewport edges, symmetrically, so the outermost dots were cut off — at the
+  gallery's 30 entries the row is 414px, wider than any phone. Measured before the change at 390px:
+  the first dot at x = -12; at 320px, x = -47. Its 24px gutter is `.lightboxImage`'s own horizontal
+  padding restated, so the cluster stops where the media does. Three consequences:
+  - **It is `pointer-events: none`, with `auto` on the steps and the dots.** The box is now far
+    wider than its contents, and without that the full-width band would swallow every press in the
+    bottom 48px of the backdrop — a click either side of the arrows would stop dismissing the
+    viewer. The dots opt back in because a press on the pager has always landed on them and done
+    nothing, and letting it through instead would make pressing the position indicator close the
+    viewer.
+  - **`min-height: 48px`, not `height`.** A wrapped block has to be able to make the cluster
+    taller than one row, and it grows upwards from `bottom: 0`. Three rows still fit inside the
+    48px `.lightboxImage` already reserves below the media, so nothing has to be measured: 30
+    entries wrap to two rows (22px) at 390px and three (36px) at 320px, both clear of the media.
+    A fourth row would reach into it, which takes ~70 items at phone width.
+  - **`.dots` is the only shrinkable item** (the steps are `flex: 0 0 auto`), so it gives up
+    exactly the overflow: the arrows stay beside it and, at a width where the rows wrap, sit
+    against the gutter with the block between them. `justify-content: center` is what centres
+    every row including the last partial one, and the cluster's `align-items: center` centres a
+    two- or three-row block on the arrows rather than aligning it to either edge.
   The cluster sits at `z-index: 11`, above `.carousel` (10), which matters for the opposite case: on
   a wide image the click-half lands on top of a button and swallows the press, so the step still
   happened but the button never saw its own hover or focus. The halves are `aria-hidden` and out of
@@ -1943,7 +2852,9 @@ an `fs` import would follow it into the browser bundle.
   alongside the opacity — 25 identical marks with one of them slightly darker did not. Three things:
   - **The 8px *box* is constant; only a `transform: scale()` changes.** The dots are a flex row with
     a fixed gap, so animating `width`/`height` would shift every dot after the one that changed, and
-    a step changes two of them at once. Verified: the pitch stays 14px in every state.
+    a step changes two of them at once. Verified: the pitch stays 14px in every state. Now that the
+    row wraps, that argument is stronger rather than weaker — a size that changed the layout could
+    re-flow which dot lands on which row, so a step would reshuffle the whole block.
   - **The inactive opacity went 0.1 → 0.15.** A 5px dot at 10% of the foreground is very nearly not
     there; the shrink and the fade would otherwise compound.
   - Scale and opacity ride one transition, so the dot growing and the dot shrinking are a single
@@ -2054,11 +2965,19 @@ an `fs` import would follow it into the browser bundle.
 - **`aria-modal` is a promise, so Tab is trapped.** The key handler cycles focus within the portal
   root; without it one Tab off the close button walked into the page behind the backdrop, where
   Enter on a thumbnail opened a *second* lightbox over the first.
-- **The scroll lock is reference-counted at module scope.** Each instance used to save the inline
-  values it found and restore them on unmount, which is right for one lightbox and destructive for
-  two: the second captures the *locked* values, and whichever unmounts last writes
-  `overflow: hidden` and the gutter padding back onto the document — an unscrollable page with
-  nothing open and no recovery but a reload.
+- **The scroll lock is reference-counted at module scope, and it lives in `useScrollLock.ts`
+  rather than here.** Each instance used to save the inline values it found and restore them on
+  unmount, which is right for one lightbox and destructive for two: the second captures the
+  *locked* values, and whichever unmounts last writes `overflow: hidden` and the gutter padding
+  back onto the document — an unscrollable page with nothing open and no recovery but a reload.
+
+  **That counter is module state, which is what makes the hook mandatory rather than tidy.** A
+  second copy of the file gets a second counter and a second saved snapshot, and the bug above
+  comes straight back — silently, and only for a reader who has opened both overlays in one
+  session. There are two callers now, this and the footer's colophon; a third must import it.
+  Verified after the extraction: opening and closing the colophon, then a lightbox, leaves
+  `document.body.style.overflow` empty and `overflow-x` still computing to `clip` from
+  `globals.css` (an inline `unset` overriding that is the *other* trap the hook documents).
 - **Opening the lightbox reserves the scrollbar's width as `padding-right` on `<html>`.** Locking
   the scroll takes the scrollbar away, which widens the viewport by its width and slides the
   centred content column sideways by half of that — 7.5px at a 15px scrollbar — then back again on
@@ -2079,8 +2998,16 @@ an `fs` import would follow it into the browser bundle.
   `--font-switzer` variable it emits. Both faces are declared in `app/lib/font.ts` rather than
   beside their callers, because `localFont()` does not dedupe: calling it twice emits a second
   `@font-face` and a second stylesheet `<link>` on every page.
-- Second face: **Bellina Slant Condensed**, `app/fonts/Bellina-Numbers.woff2`, used for nothing
-  but the section ordinal. 1,688 bytes — the source is already a numbers-only cut, and
+- Second face: **Bellina Slant Condensed**, `app/fonts/Bellina-Numbers.woff2`, which is the
+  section ordinal's, and **the ordinal now renders only on a case study.** The CV's were replaced
+  by `SectionIcon`; a case study's numbered sections kept them, so this face is live on that route
+  alone. Know what that costs, because it is not nothing: `lib/font.ts` still calls
+  `localFont()` for it at module scope and that module is imported by the layout for Switzer, so
+  the build still emits the woff2 and still generates a `@font-face` and a variable class in the
+  shared CSS chunk. Verified in the export (before case studies landed): `Bellina_Numbers.p.*.woff2` is
+  emitted and `--font-bellina` appears in the CSS whether or not anything applies the class.
+
+  It is 1,688 bytes — the source is already a numbers-only cut, and
   `pyftsubset --unicodes=U+0030-0039` with hinting and layout features dropped loses nothing:
   `GPOS` and `GSUB` are both present but carry zero lookups and zero features, so there was never
   any kerning between these digits. **Unlike Switzer it is committed**, since a hand-made subset
@@ -2089,6 +3016,9 @@ an `fs` import would follow it into the browser bundle.
   policy about the directory when it was only ever a fact about one file's licence, and it
   silently swallowed the next font added beside it: a build that then fails only off a clean
   clone, since the file is present on the machine that added it.
+- Third face, and the reason for the scare quotes: **The Prestige Signature is not shipped as a
+  font at all.** See **The signature** below — it is traced to SVG paths at author time, so there
+  is no `@font-face`, no woff2, and nothing in `app/fonts/` for it.
 - No UI component library — all custom components
 - **Every paragraph of running prose is `text-wrap: pretty`**, declared once on `p` in
   `globals.css` rather than per surface — `RichText` emits classless `<p>`s, so the element is the
@@ -2117,8 +3047,9 @@ that cut it is worth knowing about before adding anything back.
 | `--foreground-secondary` | `#4b5563` | `#b4bac4` | Most running text and iconography |
 | `--foreground-tertiary` | `#9499a3` | `#868d99` | Dates, quiet text, the scrollbar thumb |
 | `--blue` | `#0788f5` | — | Links and every focus ring |
-| `--green` | `#32bd64` | — | The contact row's copied check, and the Studio |
-| `--backdrop`, `--red` | | | Studio only; these ship nowhere |
+| `--green` | `#10a530` | — | The contact row's copied check, and the Studio |
+| `--backdrop` | `rgb(0 0 0 / .3)` | `rgb(0 0 0 / .5)` | The veil behind the footer's colophon, and the Studio's dialogs |
+| `--red` | | | Studio only; this one ships nowhere |
 
 Plus two values derived from `--overlay-ink` (`#000` light, `#fff` dark), which is not a palette
 colour so much as the direction "away from the ground":
@@ -2131,8 +3062,10 @@ colour so much as the direction "away from the ground":
 `--overlay-strength` is **6% in light and 8% in dark**, and the asymmetry is the point: black over a
 near-white surface bites harder than white over a near-black one, so matching the numbers makes
 light heavy-handed and dark absent. It is a number, which is the one thing `light-dark()` cannot
-carry, so it is the only value besides `--tab-reflection-opacity` that still needs the
-`[data-theme]` rules. Resolved: `#f3f4f6 → #e4e5e7` in light, `#2b2e34 → #3c3f44` in dark.
+carry, so it is one of the three values that still need the `[data-theme]` rules —
+`--tab-reflection-opacity` and `--section-title-tint-strength` are the others, both for the same
+reason and both asymmetric the same way. Resolved: `#f3f4f6 → #e4e5e7` in light,
+`#2b2e34 → #3c3f44` in dark.
 
 **The thumbnail mat does not change on hover.** It holds `--background-muted` throughout: the mat
 sits *behind* the print, so darkening it moved a colour the pointer is not pointing at, and against
@@ -2207,6 +3140,9 @@ borrow the page's foreground and stay legible.
 - `react-scrollbooster` — Horizontal gallery scrolling on desktop
 - `sharp` (dev only) — measures image uploads in the Studio. The build never runs it: dimensions
   are always authored into `media.json`.
+- `opentype.js` (dev only) — read by `scripts/gen-signature.mjs` and by nothing else. Neither the
+  site nor the Studio imports it, and no lifecycle hook runs that script, so it never reaches a
+  bundle and a build with it uninstalled would still succeed.
 
 ### Deployment
 
@@ -2219,6 +3155,69 @@ stopped existing when `content/` moved out of `public/` to keep the JSON off the
 media pool had been served uncached, silently, since that migration. Extension rules are the
 backstop and `.webm` was missing from them, which is the pattern to watch: a new media type needs
 adding in both places or it inherits no cache policy at all.
+
+**Only the production branch is indexed, and until this existed none of that was true.** Verified
+live rather than reasoned about: `dev.haythem.cv/robots.txt` ended in `User-Agent: * / Allow: /`
+with a `Sitemap:` line pointing at production, `curl -I` returned no `X-Robots-Tag`, and `/` carried
+no robots meta — so the whole preview was crawlable and indexable, and its `sitemap.xml` handed any
+crawler that read it the *real* site's two URLs (because `SITE_URL` is hardcoded). Cloudflare's
+injected Managed Content block above our directives bars a handful of AI crawlers — `GPTBot`,
+`ClaudeBot`, `CCBot`, `Google-Extended` — and not `Googlebot`, so it was never doing this job.
+
+`NEXT_PUBLIC_IS_PRODUCTION` in `next.config.ts` feeds `IS_PRODUCTION_DEPLOY` in `lib/site.ts`, and
+three things read it. Five things about the arrangement:
+
+- **`robots.txt` still says `Allow: /` on every branch, and that is the deliberate, load-bearing
+  half.** `Disallow: /` is the obvious move for a preview host and the wrong one: a path a crawler
+  is forbidden to fetch is a path whose `noindex` it can never read, so anything already listed
+  keeps its stale entry indefinitely. Serving `noindex` on a *crawlable* page is the documented
+  removal path. What does change per branch is the `Sitemap:` line, which is omitted — a preview
+  has no sitemap worth submitting, and the one it would advertise is production's.
+- **The `robots` meta tag is declared once per root layout**, because metadata is inherited
+  *per field*: `/` and `/gallery` override `alternates` and `openGraph` without touching it, so
+  both pick it up from `(site)/layout.tsx`, and every case study picks it up from
+  `(study)/layout.tsx`. Nothing is inherited across root layouts, so the study shell restates it,
+  along with the favicons; before the merge that brought this rule in, the dev deploy's case
+  studies would have been the one indexable page on the host. `global-not-found.tsx` still declares none — Next injects `noindex` into that
+  route itself, and a second competing tag is the bug its own comment records. Measured on a dev
+  export: one tag on `/`, one on `/gallery`, exactly one on `404.html`.
+- **`X-Robots-Tag: noindex, nofollow` is declared per hostname in `public/_headers`**, and it is
+  not a duplicate of the meta tag — it reaches what a meta tag cannot. `sitemap.xml` and every file
+  in the pool are indexable URLs with nowhere to put a `<meta>`. `_headers` matches absolute URLs
+  by hostname (ignoring port and protocol), and every matching rule's headers apply cumulatively,
+  so the three hostname blocks coexist with the `/*` block below them.
+
+  **This replaced a build-time injection, and the way that failed is the more useful half of the
+  story.** It was written into `out/_headers` by `scripts/clean-export.mjs`, gated on
+  `IS_PRODUCTION_DEPLOY`, verified in the local export — and it never reached a single deploy,
+  because Cloudflare's build command is `npx next build` and no npm lifecycle script runs there.
+  It was caught by checking the live host afterwards and finding four of the `/*` block's five
+  headers arriving; the build log settled it, showing none of the script's output and
+  `Parsed 10 valid header rules`. **Verify a header at the host, not in `out/`.**
+
+  Stated by hostname it is also strictly better than the version it replaced: a branch gate could
+  only ever cover `dev.haythem.cv`, where `:project.pages.dev` and `:version.:project.pages.dev`
+  cover `readcv.pages.dev` and every per-deployment preview URL as well.
+- **`haythem.cv` and `www.haythem.cv` are deliberately not in those rules.** The apex is the site.
+  The `www` alias serves the same build and is kept out of the index by its canonical pointing at
+  the apex — measured, both it and `readcv.pages.dev` already carry that canonical. A canonical is
+  the right tool for a duplicate; noindex is the right tool for a host that should not be in search
+  at all.
+- **A dev page's canonical still points at production**, which is the one thing that was already
+  right — `SITE_URL` is hardcoded, so a crawler that reaches a preview is told where the real page
+  is. That is why it stays hardcoded rather than becoming per-branch.
+
+**Simple Analytics is gated on the same constant** (`app/Analytics.tsx`). It is a component rather
+than the tag written inline for `ThemeScript`'s reason: `global-not-found.tsx` bypasses the layout
+and has to emit the same thing, and a 404 is arguably the page most worth counting. React 19 hoists
+`<script async src>` into `<head>` and dedupes by `src`, so rendering it from a component lands it
+once — verified in the export, one script tag per page, in `<head>`. Two things worth knowing:
+**dev traffic is the author's own**, so counting it would corrupt the numbers rather than add to
+them, which is why this is branch-gated and not merely `localhost`-excluded; and
+**`data-collect-dnt="true"` is a real choice**, not boilerplate — it opts *into* counting visitors
+with Do Not Track set. The argument for it is that what is collected is the same either way, no
+cookie and no cross-site identifier, so honouring DNT would discard page views without withholding
+anything personal. Drop the attribute to exclude them.
 
 **Every pool URL therefore carries a `?v=<hash>` content hash, built in `assetUrl()`** — the one
 place a `/media/` URL is constructed, so item media, posters, item icons, dark variants and the

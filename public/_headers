@@ -27,6 +27,34 @@
 /*.html
   Cache-Control: public, max-age=3600, must-revalidate
 
+# Keep every host that is not the site itself out of search results.
+#
+# **Hostname rules rather than a build-time flag, and that is a correction rather than a
+# preference.** This began as an `X-Robots-Tag` injected into this file after the export by
+# `scripts/clean-export.mjs`, gated on the branch. It never once reached a deploy: Cloudflare's
+# build command is `npx next build`, so nothing in `npm run build` runs there and the injection was
+# silently a no-op. Stated here it needs no script, no build flag and no branch detection — and it
+# is strictly better than what it replaces, because a branch gate could only ever cover
+# `dev.haythem.cv`, leaving the pages.dev hosts below indexable.
+#
+# `_headers` matches absolute URLs by hostname, ignoring port and protocol, and every matching
+# rule's headers are applied cumulatively — so these coexist with the `/*` block underneath.
+# `:project` and `:version` are Cloudflare's own placeholders; the two together cover
+# `readcv.pages.dev` and every per-deployment URL like `abc1234.readcv.pages.dev`.
+#
+# **`haythem.cv` and `www.haythem.cv` are deliberately absent.** The apex is the site. The `www`
+# alias serves the same build and is kept out of the index by its canonical, which points at the
+# apex — a canonical is the right tool for a duplicate, where noindex is the right tool for a host
+# that should not be in search at all.
+https://dev.haythem.cv/*
+  X-Robots-Tag: noindex, nofollow
+
+https://:project.pages.dev/*
+  X-Robots-Tag: noindex, nofollow
+
+https://:version.:project.pages.dev/*
+  X-Robots-Tag: noindex, nofollow
+
 # Baseline security headers
 /*
   X-Content-Type-Options: nosniff

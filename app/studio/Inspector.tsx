@@ -345,10 +345,26 @@ const Inspector: React.FC = () => {
             <h3 className={styles.panelTitle}>Profile</h3>
             <p className={styles.path}>content/cv.json → profile</p>
             <p className={styles.hint}>
-              Name, byline, About and the footer location are edited on the page. Braces set a run
+              The byline, About and the footer location are edited on the page. Braces set a run
               in the lighter grey — <code>Software Designer {'{& Engineer}'}</code> — and are
               stripped from the search-result and social-card description.
             </p>
+            {/* The one profile string that is *not* edited on the canvas, because the canvas no
+                longer shows it: the name renders as a traced signature, a drawing of one fixed
+                string rather than text this face could set. So it is a fact about the document —
+                the heading's accessible name, the tab title, the card's site name — and that is
+                what this panel is for. */}
+            <Row
+              label="Name"
+              hint="Read out for the signature, and the title of every page. The drawing itself is traced by scripts/gen-signature.mjs and does not follow this."
+            >
+              <input
+                className={styles.input}
+                type="text"
+                value={cv.profile.displayName ?? ''}
+                onChange={(event) => setProfileField('displayName', event.target.value)}
+              />
+            </Row>
             <Row
               label="Photo"
               hint="The one field with no picker: the pool protects this filename, so the photo changes by replacing the file on disk."
@@ -360,7 +376,7 @@ const Inspector: React.FC = () => {
           <section className={styles.panel}>
             <h3 className={styles.panelTitle}>Gallery teaser</h3>
             <p className={styles.hint}>
-              The 2×2 grid under About, on the CV only. Pool filenames, in display order.
+              The 2×2 grid opening the CV under the tab bar, on that route only. Pool filenames, in display order.
             </p>
             <ul className={styles.mediaList}>
               {preview.map((file, index) => (
@@ -476,6 +492,44 @@ const Inspector: React.FC = () => {
                 value={item.url ?? ''}
                 onChange={(e) => setItemField(section.key, item.id, 'url', e.target.value)}
               />
+            </Row>
+            {/* The 40px app icon beside the heading and subheading. It is a fact about the
+                document rather than something a visitor reads, so it is here and not on the
+                canvas — the same split `platform`/`handle` and the profile's name make. */}
+            <Row
+              label="Icon"
+              hint="One pool image, drawn at 40px to the left of the heading and subheading. A `-dark` sibling in the pool is picked up automatically. Clear to remove the key."
+            >
+              <div className={styles.panelActions}>
+                <button
+                  type="button"
+                  className={styles.ghostButton}
+                  onClick={() =>
+                    pickAsset({
+                      title: "Choose this item's icon",
+                      imagesOnly: true,
+                      used: item.icon ? new Set([item.icon]) : undefined,
+                      onPick: (file) => setItemField(section.key, item.id, 'icon', file),
+                    })
+                  }
+                >
+                  {item.icon ?? 'Choose an icon'}
+                </button>
+                {item.icon ? (
+                  <button
+                    type="button"
+                    className={styles.ghostButton}
+                    // Detach, not delete: `mergePatch` drops a key patched with `''`, so this
+                    // removes the reference and leaves the file in the pool — where it surfaces
+                    // as an orphan until something else names it. Nothing is destroyed, so there
+                    // is no confirm, the same call the thumbnail row's `×` makes.
+                    title="Remove the icon — the file stays in the pool"
+                    onClick={() => setItemField(section.key, item.id, 'icon', '')}
+                  >
+                    Clear
+                  </button>
+                ) : null}
+              </div>
             </Row>
             <div className={styles.panelActions}>
               <button

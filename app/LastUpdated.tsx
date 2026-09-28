@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import UserHand from "./UserHand";
+import { useHasHover } from "./useHasHover";
 import { usePrefersReducedMotion } from "./usePrefersReducedMotion";
 import FigmaCursor from "./FigmaCursor";
 import styles from "./SiteFooter.module.css";
@@ -44,6 +45,22 @@ const CLAP_MS = 560;
 const WAVE_LEAD_IN_MS = 520;
 /** The drawn hand's fingertip, in its own 24x24 box — see UserHand.tsx. */
 const USER_HAND_HOTSPOT = { x: 12, y: 2 };
+
+/**
+ * How near the reader's pointer has to come before the hand starts leaning towards it, and how
+ * far it leans once the two meet.
+ *
+ * The radius is much wider than the clap's 20px on purpose: these are two halves of one
+ * approach, not two thresholds. The lean is what makes the hand *notice* someone coming, from
+ * far enough out that it reads as anticipation; the clap is the arrival. Set the two near each
+ * other and the hand would do nothing at all until it suddenly did everything.
+ *
+ * Six pixels is a quarter of the hand's width, which is enough to see against the name pill
+ * travelling with it and little enough that the hand stays where the sequence parked it — the
+ * gesture is a lean, not a second journey.
+ */
+const GRAVITY_RADIUS_PX = 120;
+const GRAVITY_PULL_PX = 6;
 
 
 /**
@@ -117,6 +134,13 @@ const LastUpdated: React.FC<LastUpdatedProps> = ({ date }) => {
   /** Read by the repeating wave, so it does not animate a footer nobody is looking at. */
   const onScreen = useRef(false);
   const prefersReducedMotion = usePrefersReducedMotion();
+  /**
+   * Whether the reader has a cursor at all — which is what decides whether the greeting is two
+   * hands meeting or one. See `startClap`, and the `hover: none` block in the stylesheet, which is
+   * the same query stated in CSS: the zone's size and the clap's peak are decided there, this is
+   * decided here, and using one query for both is what stops the two disagreeing.
+   */
+  const hasHover = useHasHover();
 
   // Complete on the server and on the hydrating client's first render, so the two agree.
   const [shown, setShown] = useState(date.length);
@@ -138,10 +162,14 @@ const LastUpdated: React.FC<LastUpdatedProps> = ({ date }) => {
   const clapTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   /**
    * Where to draw the reader's own hand, relative to the cursor element. Null when they are not
-   * over the zone, which is also when the native pointer is theirs again.
+   * over the zone, which is also when the native pointer is theirs again — and null throughout on
+   * a touch screen, where there is no pointer to have taken.
    */
   const [userHand, setUserHand] = useState<Point | null>(null);
   const cursorRef = useRef<HTMLSpanElement>(null);
+  /** The box the lean is written onto, and the box it is measured from — see the gravity effect. */
+  const pullRef = useRef<HTMLSpanElement>(null);
+  const clapZoneRef = useRef<HTMLSpanElement>(null);
   /** Per-leg travel time, so the parting move can be slower than the working ones. */
   const [moveMs, setMoveMs] = useState(MOVE_MS);
 
@@ -289,7 +317,126 @@ const LastUpdated: React.FC<LastUpdatedProps> = ({ date }) => {
   }, [date, prefersReducedMotion]);
 
   /**
-   * The clap, fired when the reader's own pointer arrives over the hand.
+   * The hand's gravity: it leans towards the reader's pointer as that pointer comes near, and
+   * settles back when it goes away.
+   *
+   * Five things about it.
+   *
+   * **It only exists once the hand is out.** The gate is `pointer`, so nothing is listening
+   * while the arrow is still working — the sequence is a thing being performed and a reader
+   * should not be able to shove it — and nothing is listening at all for anyone who never
+   * reached the footer, since the hand appears at the end of a sequence the observer arms.
+   *
+   * **It moves the whole cursor, pill included, where the click and the clap move the pointer
+   * alone.** Those are gestures *of* the hand, and a name pill riding along unchanged is what a
+   * multiplayer cursor does. This is the cursor being pulled, and an object under attraction
+   * takes its label with it — a hand drifting out from under its own name reads as coming loose,
+   * not as leaning. Hence a box of its own: `.cursorPointer` already animates `transform` for
+   * the click, the wave and the clap, and two things cannot own one property.
+   *
+   * **The falloff is a smoothstep, not a straight ramp.** It is flat at both ends, so the lean
+   * neither switches on the instant the pointer crosses the radius nor snatches the last few
+   * pixels as the two meet, which is the difference between mass and a magnet.
+   *
+   * **The lean is written to the DOM, not to state.** This is a value per animation frame, and
+   * the same argument `EdgeGlow` makes applies here: a custom property written on one element is
+   * a paint, where a `setState` is a render of this whole subtree sixty times a second. The
+   * property is read by `transform` in the stylesheet rather than set as a transform here, so
+   * the composition and the easing stay in one place.
+   *
+   * **The anchor is measured off `.clapZone`, which is deliberately *not* inside the leaning
+   * box.** That is what keeps this stable: an anchor that moved with the lean would feed its own
+   * output back in. It also means the 20px clap radius is measured from where the sequence
+   * parked the hand rather than from where it has leaned to, so the two hands are still a
+   * little apart at the moment they clap — which is the hand reaching out, and reads better than
+   * waiting for them to overlap.
+   *
+   * One accepted staleness: the position is recomputed from pointer moves only, so wheel-
+   * scrolling the footer out of view and back without touching the mouse can leave the lean up
+   * to six pixels out of date until the pointer next moves. Listening for scroll as well would
+   * double the work for six pixels of a drift nobody is pointing at.
+   */
+  useEffect(() => {
+    if (prefersReducedMotion || !hasHover) return;
+    if (pointer !== "hand") return;
+
+    const pull = pullRef.current;
+    const zone = clapZoneRef.current;
+    if (!pull || !zone) return;
+
+    let queued = 0;
+    let x = 0;
+    let y = 0;
+    let leaning = false;
+
+    const write = (dx: number, dy: number) => {
+      pull.style.setProperty("--hand-pull-x", `${dx}px`);
+      pull.style.setProperty("--hand-pull-y", `${dy}px`);
+    };
+
+    const rest = () => {
+      if (!leaning) return;
+      leaning = false;
+      write(0, 0);
+    };
+
+    const paint = () => {
+      queued = 0;
+      const box = zone.getBoundingClientRect();
+      const toX = x - (box.left + box.width / 2);
+      const toY = y - (box.top + box.height / 2);
+      const distance = Math.hypot(toX, toY);
+      // Nothing to lean towards, and no direction to lean in — the unit vector is 0/0 here.
+      if (distance >= GRAVITY_RADIUS_PX || distance < 0.5) {
+        rest();
+        return;
+      }
+      const t = 1 - distance / GRAVITY_RADIUS_PX;
+      const eased = t * t * (3 - 2 * t);
+      // Capped at the gap itself, so the hand reaches the pointer and never through it.
+      const reach = Math.min(GRAVITY_PULL_PX * eased, distance);
+      leaning = true;
+      write((toX / distance) * reach, (toY / distance) * reach);
+    };
+
+    const onMove = (event: PointerEvent) => {
+      // A touch drag raises `pointermove` too, and there is no cursor there to be attracted to —
+      // asked of the event rather than the device, because a hybrid answers yes to both.
+      if (event.pointerType === "touch") return;
+      // Nobody is looking at the footer, so there is no reason to measure it. This is also what
+      // keeps the cost of the listener at one boolean for the whole of the page above.
+      if (!onScreen.current) return;
+      x = event.clientX;
+      y = event.clientY;
+      if (!queued) queued = requestAnimationFrame(paint);
+    };
+
+    // The pointer leaving the window is not a move away from anything, so nothing else would
+    // let the hand go.
+    const release = () => {
+      if (queued) {
+        cancelAnimationFrame(queued);
+        queued = 0;
+      }
+      leaning = false;
+      write(0, 0);
+    };
+
+    window.addEventListener("pointermove", onMove, { passive: true });
+    document.addEventListener("pointerleave", release);
+
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerleave", release);
+      if (queued) cancelAnimationFrame(queued);
+      pull.style.removeProperty("--hand-pull-x");
+      pull.style.removeProperty("--hand-pull-y");
+    };
+  }, [hasHover, pointer, prefersReducedMotion]);
+
+  /**
+   * The clap, fired when the reader's own pointer arrives over the hand — or, on a touch screen,
+   * when a finger lands on it.
    *
    * Driven by `pointerenter` on a small circle laid over the hand rather than by measuring
    * distance on every pointer move. That is one listener on one element instead of one on the
@@ -297,6 +444,11 @@ const LastUpdated: React.FC<LastUpdatedProps> = ({ date }) => {
    * the pointer rests there, and — the reason it is an element at all — it is what carries the
    * `cursor` that turns the reader's arrow into a hand. A distance check cannot do that: only a
    * real box the pointer is *over* can change what the pointer looks like.
+   *
+   * **One event serves both devices, because `pointerenter` fires on a tap too.** Nothing arrives
+   * from anywhere on a touch screen, so the zone was hidden there for exactly that reason; a tap
+   * on the hand is not a near miss, though, it is the most deliberate way there is of pointing at
+   * it. What the two do not share is the *second* hand — see `hasHover` below.
    */
   useEffect(() => () => clearTimeout(clapTimer.current), []);
 
@@ -314,10 +466,47 @@ const LastUpdated: React.FC<LastUpdatedProps> = ({ date }) => {
     setUserHand({ x: event.clientX - r.left, y: event.clientY - r.top });
   };
 
+  /**
+   * Rewinds the gesture's keyframe animations, so a second press *during* a clap claps again.
+   *
+   * Without it the greeting can only be given once every 560ms: `data-clapping` is already set, so
+   * React has nothing to write, and a CSS animation does not re-run because the attribute that
+   * started it is still there — the hand simply carries on settling and the press is swallowed.
+   * That is invisible on a pointer, which has to leave and re-enter a 40px circle to ask twice,
+   * and it is the *normal* gesture on a touch screen, where tapping something repeatedly is what
+   * people do to a thing that reacts.
+   *
+   * The elements are named by the classes the stylesheet animates rather than found by animation
+   * name, because CSS Modules hashes `@keyframes` names too. `getAnimations()` on each also lists
+   * their *transitions* — `.cursorPointer` carries the click's — and rewinding one of those would
+   * replay a scale nobody asked for, so only the named animations are touched. On a first press
+   * there is nothing running yet and this is a no-op; the state change is what starts it.
+   */
+  const restartClap = () => {
+    const root = cursorRef.current;
+    if (!root) return;
+    const animated = root.querySelectorAll(
+      `.${styles.cursorPointer}, .${styles.cursorSpark}, .${styles.userHandArt}`,
+    );
+    animated.forEach((node) => {
+      node.getAnimations().forEach((animation) => {
+        if ("animationName" in animation) animation.currentTime = 0;
+      });
+    });
+  };
+
+  /**
+   * On touch the reader's hand is left out entirely, and the argument for drawing it is what rules
+   * it out: it exists to *replace* a native cursor, which cannot be animated. A finger is not a
+   * cursor, so there is nothing to stand in for — and a second hand drawn underneath the one
+   * covering it would be a hand nobody could see. So the site's hand claps alone, and the
+   * stylesheet swells it far enough to clear the finger.
+   */
   const startClap = (event: React.PointerEvent<HTMLSpanElement>) => {
     if (prefersReducedMotion) return;
-    trackUserHand(event);
+    if (hasHover) trackUserHand(event);
     setClapping(true);
+    restartClap();
     clearTimeout(clapTimer.current);
     clapTimer.current = setTimeout(() => setClapping(false), CLAP_MS);
   };
@@ -371,21 +560,31 @@ const LastUpdated: React.FC<LastUpdatedProps> = ({ date }) => {
           }
           aria-hidden="true"
         >
-          <FigmaCursor
-            nameClassName={styles.cursorName}
-            arrowLayerClassName={styles.cursorArrowLayer}
-            handLayerClassName={styles.cursorHandLayer}
-            pointerClassName={styles.cursorPointer}
-            sparkClassName={styles.cursorSpark}
-          />
+          {/* The box the gravity lean is written onto — the whole cursor, pill included, and
+              nothing else in here. `.clapZone` and `.userHand` stay outside it: the first is
+              what the lean is measured *from*, and the second stands in for the reader's own
+              pointer and so must sit exactly where that pointer is. */}
+          <span className={styles.cursorPull} ref={pullRef}>
+            <FigmaCursor
+              nameClassName={styles.cursorName}
+              arrowLayerClassName={styles.cursorArrowLayer}
+              handLayerClassName={styles.cursorHandLayer}
+              pointerClassName={styles.cursorPointer}
+              sparkClassName={styles.cursorSpark}
+            />
+          </span>
           {/* Only once the hand is out: before that there is nothing to greet, and a box that
               swallows the pointer over an arrow that is still working would be a trap. */}
           {pointer === "hand" ? (
+            /* The move and leave handlers are only for the reader's own hand — where there is
+               none to draw, tracking a finger across the zone would be a state write per frame
+               with nothing rendering it. The clap itself is the same press on both. */
             <span
+              ref={clapZoneRef}
               className={styles.clapZone}
               onPointerEnter={startClap}
-              onPointerMove={trackUserHand}
-              onPointerLeave={() => setUserHand(null)}
+              onPointerMove={hasHover ? trackUserHand : undefined}
+              onPointerLeave={hasHover ? () => setUserHand(null) : undefined}
             />
           ) : null}
           {userHand ? (

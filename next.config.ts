@@ -1,22 +1,5 @@
 import type { NextConfig } from "next";
-import { execSync } from "child_process";
-
-// Cloudflare Pages' configured production branch is a dashboard setting that
-// has not been read (confirmation is scheduled in Phase 2). This is the one
-// line to change if it turns out not to be "main".
-const PRODUCTION_BRANCH = "main";
-
-function getGitBranch(): string {
-  // Cloudflare Pages uses detached HEAD, so prefer CF_PAGES_BRANCH
-  if (process.env.CF_PAGES_BRANCH) {
-    return process.env.CF_PAGES_BRANCH;
-  }
-  try {
-    return execSync("git rev-parse --abbrev-ref HEAD", { encoding: "utf-8" }).trim();
-  } catch {
-    return "";
-  }
-}
+import { PRODUCTION_BRANCH, getGitBranch, isProductionBranch } from "./scripts/branch.mjs";
 
 // The content Studio (/studio) is a dev-only tool that writes to public/content
 // via route handlers. Two things keep it out of the production build:
@@ -68,6 +51,18 @@ const nextConfig: NextConfig = {
     // preview deploys and local dev alike. Resolved at build time and inlined, so the button's
     // markup is absent from the production export rather than merely hidden by it.
     NEXT_PUBLIC_THEME_SWITCH: String(getGitBranch() !== PRODUCTION_BRANCH),
+    // Whether this build is the real, public site. It gates the two things that must happen on
+    // exactly one deploy and nowhere else: being indexed, and being counted by analytics.
+    //
+    // **This is the same comparison `NEXT_PUBLIC_THEME_SWITCH` above makes, negated, and it is
+    // deliberately a separate name rather than a reuse.** The two answer different questions —
+    // "should this build carry a working tool for checking themes" and "is this build the one
+    // search engines and analytics should see" — and they happen to agree today. Folding them
+    // into one flag would mean that loosening either later silently moves the other, which for
+    // the indexing half is the failure that put this here in the first place. `IS_DEV_BRANCH` in
+    // `lib/site.ts` is a third distinct question again (`=== 'dev'`, marking *the* dev deploy
+    // rather than everything that is not production), and its comment explains why.
+    NEXT_PUBLIC_IS_PRODUCTION: String(isProductionBranch()),
   },
 };
 

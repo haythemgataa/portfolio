@@ -29,6 +29,12 @@ it is now differs in three substantial ways:
 
 Next.js 16 (App Router) · React 19 · TypeScript · CSS Modules · framer-motion · Cloudflare Pages
 
+The full list — libraries, type, marks, infrastructure and design lineage — is in
+[`app/lib/colophon.ts`](app/lib/colophon.ts), which is what the site's own colophon renders. It
+deliberately carries no version numbers (nothing would keep them honest against `package.json`);
+the majors above are the version-bearing copy, and this line and that file are the two places to
+update together.
+
 ## Getting started
 
 ```bash

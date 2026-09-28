@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import "../globals.css";
 import styles from "../layout.module.css";
 import About from "../About";
+import Analytics from "../Analytics";
+import EdgeGlow from "../EdgeGlow";
 import GlowReturnScript, { returnColours } from "../GlowReturnScript";
 import ProfileHeader from "../ProfileHeader";
 import SiteFooter from "../SiteFooter";
@@ -9,10 +11,11 @@ import Tabs from "../Tabs";
 import ThemeScript from "../ThemeScript";
 import ThemeSwitch from "../ThemeSwitch";
 import { switzer } from "../lib/font";
+import { faviconIcons } from "../lib/chromeAsset";
 import { loadProfileData } from "../lib/contentLoader";
 import { hasGalleryItems } from "../lib/galleryLoader";
 import { ogImages } from "../lib/ogImage";
-import { SITE_URL, pageTitle } from "../lib/site";
+import { IS_PRODUCTION_DEPLOY, SITE_URL, pageTitle } from "../lib/site";
 import { THEME_SWITCH_ENABLED } from "../lib/theme";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -31,6 +34,24 @@ export async function generateMetadata(): Promise<Metadata> {
     // the card blocks below are left bare.
     title: pageTitle(cv.profile.displayName),
     description: cv.profile.byline || '',
+    // One favicon per theme, picked by a `media` query on the link rather than swapped by
+    // script — the same reason a heading's `-dark` icon goes through `<picture>`. See
+    // `faviconIcons`, which both this and the 404 read so the pair cannot drift.
+    icons: faviconIcons(),
+    // **Keeps every non-production deploy out of search.** Verified live before this existed:
+    // `dev.haythem.cv` served `User-Agent: * / Allow: /`, no `X-Robots-Tag` and no robots meta,
+    // so the whole preview was crawlable and indexable.
+    //
+    // Declared here rather than per route because metadata is inherited *per field*: `/` and
+    // `/gallery` each override `alternates` and `openGraph` without touching this, so both pick it
+    // up. `global-not-found.tsx` deliberately declares none — Next already injects `noindex` into
+    // that route, and a second, competing tag is a bug its comment records.
+    //
+    // `undefined` on production rather than an explicit `index: true`: a page with nothing to say
+    // about indexing is the normal case, and emitting `all` would be one more tag to keep honest.
+    // `robots.txt` stays permissive on every branch precisely so this tag can be read — see the
+    // note in `app/robots.ts`.
+    robots: IS_PRODUCTION_DEPLOY ? undefined : { index: false, follow: false },
     // The card's image is named here, and it did not used to be. `app/opengraph-image.png` is a
     // file convention, and a convention attaches to the *segment* it sits in — which used to be
     // this layout's own, so declaring `openGraph` here still got the image for free. Splitting the
@@ -101,6 +122,9 @@ export default async function RootLayout({
             study, so it can turn back into the sweep. Inline and blocking for the same reason as
             the theme, and it renders nothing when no study has a colour of its own. */}
         <GlowReturnScript studies={cv.caseStudies.items} />
+        {/* Production only, and a component rather than the tag inline because the 404 bypasses
+            this layout and has to emit the same thing — see Analytics.tsx. */}
+        <Analytics />
       </head>
       <body>
         <div className={styles.page}>
@@ -110,9 +134,7 @@ export default async function RootLayout({
             // and it is not rendered at all while the gallery is empty — in which case they
             // belong at the very top instead of below a bar that is not there.
             style={{
-              '--sticky-top': showGallery
-                ? 'calc(var(--tab-bar-height) + var(--tab-bar-gap-top) + var(--tab-bar-gap-bottom))'
-                : '0px',
+              '--sticky-top': showGallery ? 'var(--tab-bar-stuck-height)' : '0px',
             } as React.CSSProperties}>
             {/* Drawn in CSS, not loaded. Sized against this column rather than the viewport
                 so the glow lands on the content at every browser width, and nested in two
@@ -130,19 +152,22 @@ export default async function RootLayout({
                 ) : null}
               </div>
             </div>
-            {/* The avatar/name/byline block is the *only* thing above the bar, and that is what
-                keeps the bar at the same height on both routes: it is sticky and shared, so
-                whatever sits above it decides where it rests, and anything route-specific up
-                there makes it jump when the tabs are switched.
+            {/* Everything above the bar has to be identical on both routes, and that is the
+                whole constraint: the bar is sticky and shared, so whatever sits above it decides
+                where it rests, and anything route-specific up there makes it jump when the tabs
+                are switched.
 
-                About is below the bar for exactly that reason. It is identical on both routes,
-                so the layout renders it once here rather than each page carrying a copy. What
-                moving it bought is the space *under* the tabs, where content is free to differ
-                per route — the CV opens with a gallery teaser that `/gallery` has no business
-                showing, and the bar no longer moves because of it. */}
+                The signature block and About both satisfy that — the introduction reads the
+                same on `/` and `/gallery` — so they sit together as one opening, which is what
+                the design asks for. The layout renders About rather than each page for the same
+                reason: the text is one fact, not two.
+
+                What must stay *below* the bar is anything that differs per route, and the CV's
+                gallery teaser is the case that proves it: 500px of CV-only content up here
+                moved the bar by exactly that much between the two tabs. */}
             <ProfileHeader profile={cv.profile} />
-            <Tabs showGallery={showGallery} />
             <About about={cv.profile.about} />
+            <Tabs showGallery={showGallery} />
             {children}
             {/* Below the bar, so unlike the header it does not have to be identical per route —
                 it is here rather than in `Profile.tsx` because it closes the *page*, and the
@@ -154,6 +179,11 @@ export default async function RootLayout({
             document — inside the column it would be a child of a stacking context and could end
             up under the tab bar. */}
         {THEME_SWITCH_ENABLED && <ThemeSwitch />}
+        {/* Renders nothing: it writes the cursor's position onto `<html>` for every lit edge on
+            the page to read. Deliberately not in `global-not-found.tsx`, which is a server
+            component with no client JavaScript at all and is worth keeping that way for one
+            effect. */}
+        <EdgeGlow />
       </body>
     </html>
   );

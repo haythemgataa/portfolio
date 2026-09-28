@@ -19,26 +19,63 @@
   padding-bottom: 60px;
 }
 
-/* The date at one end and the location at the other, stacking once the column gets narrow
-   enough that they would otherwise collide. `column-gap` covers the row, `row-gap` the
-   stacked case.
+/* The place and the date at one end, stacked, and the colophon at the other.
 
-   `wrap-reverse`, not `wrap`, so the location comes out *above* the date once they stack.
-   Stacked, the date wants to be last: the cursor animation ends below it, and with the location
-   underneath, the hand would land on top of the location instead of in clear space.
+   **This carried `flex-wrap: wrap-reverse` and no longer does, and the reason it was there has
+   been satisfied rather than dropped.** The two lines used to sit at opposite ends of one row, so
+   the reversal existed to bring the location out *above* the date whenever the column got narrow
+   enough for them to collide — because stacked, the date wants to be last: the cursor animation
+   ends below it, and with the location underneath the hand lands on top of the location instead
+   of in clear space. The location is now above unconditionally, in `.stack`, so that argument is
+   built into the markup and no longer needs the cross axis reversed to express it. Left in place,
+   `wrap-reverse` would put the *colophon button* above the stack the moment this row wrapped,
+   which is the same bug pointed at a different pair.
 
-   Reversing the cross axis rather than reordering under a media query, because the point at
-   which these two collide is a fact about how wide the two strings are — and one of them is a
-   date whose width changes with the month. A breakpoint would be a guess at that; this fires
-   exactly when the wrap actually happens. */
+   **`align-items: last baseline`, which puts the control on the date's line rather than the
+   place's.** Plain `baseline` is the trap here and it is worth naming: a flex item's baseline is
+   its *first* line's, so on a column-flex `.stack` that is the place — the top line — which is the
+   one thing this must not align to. `last baseline` asks for the stack's final line instead, which
+   is the date, and lands the two on one baseline with nothing measured.
+
+   `flex-end` is declared first as the fallback, the same shape as `overflow-x: hidden` before
+   `clip` and every `light-dark()` in globals.css. It is a near miss rather than a different
+   design: the stack's bottom edge is the date's line box, so an engine without `last baseline`
+   puts the button within a pixel of the same place. Measured with the real rule: the button's
+   baseline and the date's are identical.
+
+   `wrap` and a `row-gap` are kept as a floor rather than because anything reaches them: measured
+   at 375px the row's contents come to roughly 200px of a 335px column, so it does not wrap at any
+   width the site supports. It is the date's width that could change that — it grows with the
+   month's name — and a footer that overflowed rather than wrapping would be worse than one that
+   stacks. */
 .row {
   display: flex;
   flex-direction: row;
-  align-items: baseline;
+  align-items: flex-end;
+  align-items: last baseline;
   justify-content: space-between;
   column-gap: 24px;
   row-gap: 4px;
-  flex-wrap: wrap-reverse;
+  flex-wrap: wrap;
+}
+
+/* The two lines of text, in the order the cursor needs them: place, then date, so the date is
+   last and the hand that parks below it has clear space to land in.
+
+   `row-gap: 4px` is the row's own stacked gap, restated — the two used to be the same measurement
+   because `wrap-reverse` produced this stack itself, and they should stay the same because it is
+   one relationship (these two lines, next to each other) whichever box expresses it.
+
+   `min-width: 0` so a long date shrinks the stack rather than pushing the colophon button off the
+   column's right edge; `align-items: flex-start` so `.location`, which is a button and therefore
+   a flex item that would otherwise stretch, stays exactly as wide as its text — the hit area of a
+   reveal should be the words it reveals, not the whole column. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  row-gap: 4px;
+  min-width: 0;
 }
 
 /* `relative` so the cursor can be positioned against the whole line — its first mark is
@@ -66,12 +103,43 @@
   pointer-events: none;
   transition: transform var(--cursor-move, 520ms) cubic-bezier(0.33, 0, 0.16, 1);
   animation: cursorIn 220ms ease both;
+  /* How far the clap swells at its peak, read by `handClap` below. It is a custom property rather
+     than a literal in the keyframe so the touch rule can raise it without a second copy of the
+     two-curve easing that keyframe exists to express — see the `hover: none` block for why a
+     tapped clap has to be so much bigger than a hovered one. Declared once here, and inherited
+     by both hands, so there is one number rather than one per gesture. */
+  --clap-peak: 1.42;
 }
 
 /* The clap scales the hand well past the 96x53 viewBox and throws its sparks above the top
    edge, both of which an SVG clips away by default. */
 .cursor svg {
   overflow: visible;
+}
+
+/* The gravity lean — the hand drifting towards the reader's pointer as it comes near. The
+   component writes the offset as a pair of custom properties on this box and the transform is
+   composed here, so the easing and the composition have one home.
+
+   `display: block` is load-bearing rather than tidy: `transform` does not apply to a
+   non-replaced inline element, so as a plain span this rule would silently do nothing at all.
+   The box is otherwise the svg's own — `.cursor` is absolutely positioned and shrink-to-fit, so
+   wrapping its content in a block of max-content width moves nothing.
+
+   **The transition is restarted on every frame the pointer moves, and that is the mechanism
+   rather than a cost.** Re-easing towards a fresh target each frame is a damped follow: the box
+   covers a fraction of the remaining distance per frame, so the hand trails the pointer by a
+   few frames instead of tracking it rigidly, which is the whole difference between something
+   with mass being pulled and something being driven. It is also what gives the release its
+   settle for free — the component writes zero once and this eases the rest of the way.
+
+   Nothing is written under `prefers-reduced-motion` or on a device with no hovering pointer
+   (`useHasHover` in LastUpdated.tsx gates the listener), so the fallbacks resolve to no offset
+   and this rule is inert rather than needing a query of its own. */
+.cursorPull {
+  display: block;
+  transform: translate(var(--hand-pull-x, 0px), var(--hand-pull-y, 0px));
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* The swap itself: the outgoing pointer scales down and blurs away while the incoming one
@@ -168,7 +236,12 @@
    greeting. A cursor image is stamped by the compositor and cannot be animated, so it could only
    ever be a still hand arriving; hiding the real pointer and drawing `.userHand` in its place is
    what lets the reader's hand clap too. The drawn one covers exactly this circle, so the native
-   pointer returns the instant they leave. */
+   pointer returns the instant they leave. On touch it draws nothing and this declaration is inert
+   — there is no cursor to hide — which is why it is not gated.
+
+   The radius is a variable because it is the one measurement here that is about the *pointer*
+   rather than about the hand: a finger cannot be placed to the pixel, so the `hover: none` block
+   below widens it. */
 .clapZone {
   --clap-radius: 20px;
   position: absolute;
@@ -202,11 +275,44 @@
   animation: handClap 560ms linear;
 }
 
-/* Nothing is travelling toward anything on a touch screen, and `pointerenter` there fires on a
-   tap — which would clap for someone who never approached. */
+/* On a touch screen the greeting is a *press* rather than an arrival, and both halves of it
+   change.
+
+   **The reader's hand is not drawn at all**, because there is no cursor to stand in for: the whole
+   reason `.userHand` exists is that a native cursor image cannot be animated, and a finger is not
+   a cursor. `useHasHover` in LastUpdated.tsx is the gate, and it is the JavaScript half of *this*
+   query on purpose — one mechanism, so the markup and the stylesheet cannot come to disagree
+   about which device they are on. So a tap claps the site's hand alone.
+   (This block used to hide `.clapZone` outright, on the argument that `pointerenter` fires on a
+   tap and would clap for someone who never approached. That is exactly right about *arrival* and
+   is the wrong conclusion: a tap on the hand is not a near miss, it is the most deliberate way
+   anyone can point at it.)
+
+   **The target grows to 48px**, because the 40px circle was measured against a pointer that can
+   be placed to the pixel. It stays centred on the hand, so its top edge reaches 6px into the
+   "Last updated" line above — which costs nothing, since there is nothing interactive up there
+   and the hand hangs in `.footer`'s 60px of reserved padding below.
+
+   **And the clap swells much further**, which is the half that is not merely a bigger hit area:
+   the finger making the gesture is also sitting on top of it. `handClap` pivots at the wrist, so
+   the peak scale is what decides how far the fingers rise *out* from under that finger, and the
+   pivot is what makes rising the only thing that happens — measured across the animation, the
+   hand's top edge climbs 11.6px at the hovered 1.42 and 42.8px at 2.6, while its bottom moves
+   under 2px either way. A fingertip's contact patch is around 40px across and hides roughly that
+   much again above itself, so 12px of travel is entirely under the finger and 43px clears it with
+   room to read. The name pill does not move at all, so the gesture still reads as this hand rather
+   than as something inflating in place.
+
+   (Note the arithmetic is against the *rendered* box, which is the hand plus its drop shadow and
+   a pivot a little above the lowest ink — not the bare 19px artwork, which would predict 30px and
+   be wrong by a third. Remeasure rather than scaling the figure if either changes.) */
 @media (hover: none) {
+  .cursor {
+    --clap-peak: 2.6;
+  }
+
   .clapZone {
-    display: none;
+    --clap-radius: 24px;
   }
 }
 
@@ -241,7 +347,7 @@
     animation-timing-function: cubic-bezier(0.05, 0.85, 0.15, 1);
   }
   20% {
-    transform: scale(1.42);
+    transform: scale(var(--clap-peak));
     animation-timing-function: cubic-bezier(0.36, 0, 0.18, 1);
   }
   100% {
@@ -315,15 +421,126 @@
 
 /* The place reads at full contrast and the offset sits back, which is the same label/value
    split running the other way across the row: "Last updated:" is quiet and its date is not.
-   So the two ends mirror each other rather than each inventing a weighting. */
+   So the two ends mirror each other rather than each inventing a weighting.
+
+   **It is a `<button>` now, reset to inherit the line it used to be.** The `{(GMT+1)}` run swaps
+   for the actual clock on hover, focus or a press, and hover alone would have made that invisible
+   on every phone and to every keyboard — the same argument that makes the contact row's address
+   pill a button rather than a link. So the element changed and the appearance deliberately did
+   not: no fill, no border, no padding, and `font: inherit` because a `<button>` inherits neither
+   the family nor the size (the trap `.tab` hit, where the Studio's `<button>` twin fell back to
+   Arial while the site's `<a>` stayed Switzer). `color: inherit` would take the UA's blue, so the
+   token is declared outright.
+
+   The one thing it does gain is a focus ring, which is the price of being reachable. */
 .location {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
   color: var(--foreground-primary);
+  cursor: pointer;
+}
+
+.location:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
 /* A `{...}` run — see `splitMuted` in lib/contentTypes.ts. Same grey as `.updated`, so the
-   offset and the label it faces sit at one level. */
+   offset and the label it faces sit at one level.
+
+   **Monospaced, which is what makes "nothing moves" a guarantee rather than an observation.**
+   This is the run the clock replaces, and it is replaced by way of a scramble that cycles
+   arbitrary glyphs through every position on the way (see `scrambleText.ts`). With a proportional
+   face the box would be a different width for `(GMT+1)`, for `(17:54)`, and for every frame of
+   noise in between — the string is the same seven characters throughout, so one advance per glyph
+   makes all three identical by construction.
+
+   **It is not here because Switzer lacks tabular figures. Switzer's figures are already tabular,
+   and the `tabular-nums` this replaced was a no-op.** Measured in the browser with the real face
+   loaded: all ten digits are 8.0703px at 14px, and neither `font-variant-numeric: tabular-nums`
+   nor `font-feature-settings: 'tnum' 1` moves a single advance — there is no proportional figure
+   set to switch away from. So monospacing is not an upgrade to that declaration; it answers a
+   requirement tabular figures cannot reach, because **this swap trades letters for digits, not
+   digits for digits.** In Switzer `(GMT+1)` is 55.336px against `(17:54)`'s 44.133px — the 11.2px
+   the run used to narrow by — and the scramble is worse still: its pool of A–Z plus 0–9 has **24
+   distinct widths spanning 11.368px** in Switzer, from `I` at 3.398px to `W` at 14.766px, so every
+   frame of every position would be its own width. In the mono face those 36 characters have one
+   width and both strings measure 54.789px.
+
+   A system stack, so it costs no request and no `@font-face` — the site self-hosts exactly one
+   face and this is not worth a second. `monospace` last is the generic that guarantees *some*
+   fixed-pitch face wherever the named ones are absent, which is what the guarantee above rests on.
+
+   The size is stepped down from the 14px it inherits, and the step is measured rather than
+   eyeballed: a mono face carries a large cap for its nominal size, so at a matched 14px this one's
+   cap comes to 10.39px against the place's 10.08px — *larger* than the primary text it is an aside
+   to, which is the wrong way round. At 13px it is 9.65px, 96% of the place, and the x-heights land
+   at the same ratio. The baseline is shared exactly and the line box is untouched at 22.4px, so
+   the step costs the row nothing. */
 .locationMuted {
   color: var(--foreground-tertiary);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+}
+
+/* The colophon control, at the row's other end.
+
+   **A quiet text button, not a pill**, and that is the same argument `.detailsToggle` makes in
+   `Profile.module.css` and the gallery's Clear repeats: a filled `--background-muted` pill here
+   would be the loudest thing in the footer, competing with the two lines of text it sits beside
+   for the whole length of the page's ending. It resolves to nothing at rest and to
+   `--foreground-primary` under the pointer, which is enough to read as pressable and no more.
+
+   Set at `--type-size` rather than `.detailsToggle`'s `--secondary-type-size`, because that
+   control sits in a sticky header full of 12px labels and this one sits beside 14px text — the
+   register it has to match is the footer's, not the CV header's.
+
+   The declarations are duplicated by hand rather than shared: a CSS module cannot hand a class to
+   another module, so this is the same trade `.srOnly` already makes in four files here. If the
+   CV's toggle changes, this has to follow. */
+.colophon {
+  /* No `align-self`. It carried `flex-start` while the button sat on the place's line, and that
+     would now silently win over `.row`'s `last baseline` — the row is the one place that decides
+     which line this sits on. */
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  /* `font: inherit` first, then the size — a `<button>` inherits neither the family nor the
+     weight, the trap `.tab` hit where the site's `<a>` stayed Switzer and a `<button>` twin fell
+     back to Arial. */
+  font: inherit;
+  font-size: var(--type-size);
+  line-height: var(--line-height);
+  white-space: nowrap;
+  color: var(--foreground-tertiary);
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+/* Gated, never the rest state — on touch `:hover` sticks after a tap, which would leave the
+   control lit behind the dialog it just opened. The same split every hover on this site takes. */
+@media (hover: hover) {
+  .colophon:hover {
+    color: var(--foreground-primary);
+  }
+}
+
+.colophon:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .colophon {
+    transition: none;
+  }
 }
 
 /* Not bold — the emphasis is a step up in contrast, matching how the `.year` gutter and the
@@ -465,10 +682,16 @@
   white-space: nowrap;
 }
 
-/* The CV indents its bodies past the section title below 480px; the footer follows so its left
-   edge stays on the same line as the content above it. */
-@media (max-width: 480px) {
-  .footer {
-    margin-left: 16px;
-  }
-}
+/* No narrow-viewport indent, and the absence is deliberate.
+
+   This carried `margin-left: 16px` below 480px, to follow the indent `.experiences` and
+   `.contacts` take past the section title. That matched the wrong thing. The footer is not a CV
+   item — it is page chrome closing both routes, like the tab bar and About, and those sit on the
+   column's own edge at every width. Measured at 375px before the change: the column, the avatar,
+   About, the tab bar, every section title and the gallery's list all at x = 24, and the footer
+   alone at x = 40 — so it lined up with the CV's item bodies and with nothing at all on
+   `/gallery`, where the list it follows is at the column edge.
+
+   Only the left edge ever moved: the row is `justify-content: space-between` against the column's
+   right edge, so the location end was already flush and it was the "Last updated" end that read
+   as pushed in. */

@@ -5,8 +5,13 @@
   display: flex;
   flex-direction: column;
   gap: 60px;
-  /* Matches the CV's first-section spacing below the tab bar. */
-  margin-top: 36px;
+  /* Nothing: the air below the tab bar is `--tab-bar-gap-bottom` now, and it is padding on the
+     bar's sticky wrapper rather than a margin, so anything here would *add* to it instead of
+     collapsing into it — and the CV's teaser, which declares none, would then start closer to
+     the bar than this list does. It used to be 36px and it used to be invisible, shadowed by
+     About's larger `margin-bottom` collapsing against it while About still rendered below the
+     bar. Removing it is what keeps the two routes starting at the same height. */
+  margin-top: 0;
   /* And its *last* section's trailing padding, so the footer below lands the same distance from
      the content on both routes. Without it the gallery's footer sat tight against the final
      caption while the CV's had 60px of section padding above it. */

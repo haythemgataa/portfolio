@@ -432,10 +432,14 @@
    there is nothing to reset; and the two classes are single-class selectors in *different*
    modules, so which won would have come down to import order, which is not a thing to leave a
    visible difference resting on. */
+/* `border-radius: inherit`, never a literal. The well was a disc and is now a 6px-rounded
+   square; a second copy of that shape here is a copy that drifts, and it did — the canvas kept
+   drawing a circle for a press target and a focus ring the site rounds as a square. Inheriting
+   takes whatever `.profilePhoto` is wearing, on both boxes. */
 .photoButton {
   position: relative;
   padding: 0;
-  border-radius: 50%;
+  border-radius: inherit;
   cursor: pointer;
 }
 
@@ -443,7 +447,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  border-radius: 50%;
+  border-radius: inherit;
   box-shadow: inset 0 0 0 2px var(--blue);
   opacity: 0;
   transition: opacity 120ms ease;

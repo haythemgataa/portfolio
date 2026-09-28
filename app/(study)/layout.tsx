@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import "../globals.css";
 import styles from "../layout.module.css";
+import Analytics from "../Analytics";
+import EdgeGlow from "../EdgeGlow";
 import StickyFade from "../StickyFade";
 import ThemeScript from "../ThemeScript";
 import ThemeSwitch from "../ThemeSwitch";
 import { switzer } from "../lib/font";
-import { SITE_URL } from "../lib/site";
+import { faviconIcons } from "../lib/chromeAsset";
+import { IS_PRODUCTION_DEPLOY, SITE_URL } from "../lib/site";
 import { THEME_SWITCH_ENABLED } from "../lib/theme";
 
 export const metadata: Metadata = {
@@ -15,6 +18,13 @@ export const metadata: Metadata = {
   // — the same trap `global-not-found.tsx` documents. No `alternates.canonical` and no `title`:
   // both belong to the individual study, and a title here would be handed to every one of them.
   metadataBase: new URL(SITE_URL),
+  // The other two fields the site's root layout sets for every route, restated for the same
+  // reason: nothing is inherited across root layouts. Without `icons` a study has no favicon at
+  // all, and without `robots` the dev deploy's studies are the one indexable page on a host whose
+  // every other page says `noindex`. Both read the same helpers `(site)/layout.tsx` does, so the
+  // two shells cannot disagree. The study page declares neither, so it inherits both per field.
+  icons: faviconIcons(),
+  robots: IS_PRODUCTION_DEPLOY ? undefined : { index: false, follow: false },
 };
 
 /**
@@ -38,6 +48,10 @@ export const metadata: Metadata = {
  *   `@font-face` and an extra stylesheet link onto *every page of the site*.
  * - **`globals.css`**, which is where the tokens, the palette and `p { text-wrap: pretty }` live.
  * - **the pre-paint theme script**, or this would be the one route that ignores a forced theme.
+ * - **the analytics tag**, which is production-only by itself, and **the lit-edge driver**, so the
+ *   theme switch's hairline lights here as it does on the CV. Unlike the 404, this route already
+ *   ships client JavaScript (the lightbox), so the driver costs it no boundary it did not have.
+ * - **the favicons and the robots meta**, in `metadata` above.
  * - **the glow and the dot texture**, which are `layout.module.css`'s own elements — what makes
  *   this read as this site rather than as a detached document, at the cost of no request. The
  *   glow is drawn by the page rather than here, because it takes the study's colour; see the
@@ -72,6 +86,7 @@ export default function CaseStudyLayout({
     <html lang="en" className={switzer.variable} suppressHydrationWarning={THEME_SWITCH_ENABLED}>
       <head>
         <ThemeScript />
+        <Analytics />
       </head>
       <body>
         <div className={styles.page}>
@@ -97,6 +112,7 @@ export default function CaseStudyLayout({
             document — inside the column it would be a child of a stacking context. Present so
             both themes can be checked on a case study too; it renders off production only. */}
         {THEME_SWITCH_ENABLED && <ThemeSwitch />}
+        <EdgeGlow />
       </body>
     </html>
   );

@@ -5,6 +5,7 @@
    It wears the same surface and hairline as every other raised control on the page, so it reads
    as belonging to the site even though it ships on no production build. */
 .switch {
+  /* Already its own containing block, so the lit edge's ring needs nothing added here. */
   position: fixed;
   z-index: 30;
   right: 16px;

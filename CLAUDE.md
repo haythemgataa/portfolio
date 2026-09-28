@@ -2419,6 +2419,13 @@ makes it read as this site rather than as a detached page, at the cost of no req
   `line-height: 1.2` — transcribed rather than shared, because a CSS module cannot export a
   selector. The same trade `.srOnly` and the gallery's Clear button make: if that one changes, this
   follows by hand.
+- **The subtitle sits under the title, beside the badge**, the two as one `.titleText` block
+  centred on it, which is how the CV's item icon row and the folder card both lay a mark beside two
+  lines. The block is 46.4px (the title's 24 and the subtitle's 22.4) against the 40px badge, the
+  same proportion as the CV's 40px icon beside 44.8px, so the badge anchors the pair without setting
+  its height. Measured: the badge's centre is 0.01px from the block's. There is no gap between the
+  two lines, because their half-leading already separates them, as the CV's heading and subheading
+  are separated.
 - **The mark is a white mask over the brand colour, and the tile and the mark have to be two
   boxes.** A `mask` clips the element's *own* background, so putting both on one element gives a
   mark cut out of the colour floating on the page — the inverse of what is wanted. The tile is

@@ -67,14 +67,25 @@
   font-weight: var(--weight-emphasis);
   letter-spacing: -0.04em;
   line-height: 1.2;
-  /* The growing child of a flex row needs a floor of its own or a long title refuses to wrap —
-     the same `min-width: 0` `.experienceContent` and the folder card's `.text` carry. */
+}
+
+/* The title and the subtitle as one block beside the badge, centred on it by `.titleRow`: the
+   CV's item icon row (`.itemHeader`) and the folder card both lay a mark beside two lines this
+   way. The two lines come to 46.4px (the title's 24 and the subtitle's 22.4) against a 40px
+   badge, the same proportion as the CV's 40px icon beside its 44.8px pair, so the badge anchors
+   the block without setting its height.
+
+   The growing child of a flex row needs a floor of its own or a long title refuses to wrap: the
+   same `min-width: 0` `.itemHeading` and the folder card's `.text` carry. */
+.titleText {
+  flex: 1 1 auto;
   min-width: 0;
 }
 
-/* The study's own line, below the title where the byline sits below the name. */
+/* The study's own line, directly under the title with no gap of its own. The two line boxes'
+   half-leading already separates them (2px under the title, 4.2px over the subtitle), which is
+   how the CV's heading and subheading sit, and how the card's two lines sit too. */
 .subtitle {
-  margin-top: 6px;
   color: var(--foreground-secondary);
 }
 

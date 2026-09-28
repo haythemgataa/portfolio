@@ -77,12 +77,16 @@ const CaseStudy: React.FC<CaseStudyProps> = ({ study, doc, images }) => (
             } as React.CSSProperties}
           />
         ) : null}
-        {/* The page's only `h1`. `ProfileHeader`'s is not rendered on this route, so there is
-            nothing here for it to compete with. */}
-        <h1 className={styles.title}>{study.title}</h1>
+        {/* The title and the subtitle as one block beside the mark: the arrangement the CV's
+            item icon and the folder card both use, so the card the reader pressed and the page
+            it opens name the study the same way. */}
+        <div className={styles.titleText}>
+          {/* The page's only `h1`. `ProfileHeader`'s is not rendered on this route, so there is
+              nothing here for it to compete with. */}
+          <h1 className={styles.title}>{study.title}</h1>
+          {study.subtitle ? <p className={styles.subtitle}>{study.subtitle}</p> : null}
+        </div>
       </div>
-
-      {study.subtitle ? <p className={styles.subtitle}>{study.subtitle}</p> : null}
     </header>
 
     {/* Anything between the `h1` and the first `h2`, which is usually nothing. It is also what

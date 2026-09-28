@@ -30,6 +30,9 @@ export const OG_IMAGE = '/opengraph-image.png';
 /** The artwork's filename inside `app/`, so the served path and the file cannot disagree. */
 export const OG_IMAGE_FILE = 'opengraph-image.png';
 
+/** Its alt text, in a sibling file. Must not end in a newline — see `ogImages()`. */
+export const OG_IMAGE_ALT_FILE = 'opengraph-image.alt.txt';
+
 /**
  * Whether this build is the dev deploy.
  *

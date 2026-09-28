@@ -205,11 +205,6 @@
      and matching them would make the grid half again as strong. */
   --dot-color: rgba(0, 0, 0, 0.06);
   --dot-color: light-dark(rgba(0, 0, 0, 0.06), rgba(255, 255, 255, 0.07));
-  /* The top-of-page glow's hue sweep and the share of its box the colour spans, up here
-     because two things draw with them: the glow itself (`.topGradientBand`) and its
-     reflection on the selected tab's black pill. Same sweep at the same scale in both, so
-     the reflection samples the hue that is actually overhead — declared once so they cannot
-     drift. Lowering the fraction widens the glow; see `.topGradient`. */
   /* The cursor glow on the page's hairlines — `EdgeGlow.tsx` and `EdgeGlow.module.css`. Named
      apart from the `--glow-*` pair below on purpose: those are the wash at the top of the page
      and its reflection on the tab pill, and the two effects share nothing but a word.
@@ -244,16 +239,33 @@
   --edge-glow-ink: color-mix(in srgb, var(--overlay-ink) 16%, transparent);
   --edge-glow-ink-fade: rgb(from var(--overlay-ink) r g b / 0);
 
+  /* The top-of-page glow's hue sweep and the share of its box the colour spans, up here
+     because two things draw with them: the glow itself (`.topGradientBand`) and its
+     reflection on the selected tab's black pill. Same sweep at the same scale in both, so
+     the reflection samples the hue that is actually overhead — declared once so they cannot
+     drift. Lowering the fraction widens the glow; see `.topGradient`.
+
+     The stops are named one by one because a third thing reads them individually: a case
+     study's glow starts as this sweep and turns into the study's colour, and it does that by
+     mixing each stop into its brand counterpart (`.topGradientBrand`). A gradient cannot be
+     taken apart again once built, so the colours have to exist on their own. */
   --glow-fraction: 0.43;
+  --glow-stop-1: rgb(247, 179,  74);
+  --glow-stop-2: rgb(250, 177, 108);
+  --glow-stop-3: rgb(228, 151, 149);
+  --glow-stop-4: rgb(164, 146, 189);
+  --glow-stop-5: rgb( 90, 167, 225);
+  --glow-stop-6: rgb( 52, 181, 240);
+  --glow-stop-7: rgb( 39, 207, 255);
   --glow-sweep: linear-gradient(
     90deg,
-    rgb(247, 179,  74) 25%,
-    rgb(250, 177, 108) 33%,
-    rgb(228, 151, 149) 41.5%,
-    rgb(164, 146, 189) 49.5%,
-    rgb( 90, 167, 225) 58.5%,
-    rgb( 52, 181, 240) 66.5%,
-    rgb( 39, 207, 255) 75%
+    var(--glow-stop-1) 25%,
+    var(--glow-stop-2) 33%,
+    var(--glow-stop-3) 41.5%,
+    var(--glow-stop-4) 49.5%,
+    var(--glow-stop-5) 58.5%,
+    var(--glow-stop-6) 66.5%,
+    var(--glow-stop-7) 75%
   );
   /* The second fill on a section title's glyphs — the mark's orange laid over the heading's ink
      and gone within a couple of characters. Drawn by `.sectionHeader:has(.sectionIcon) h2`, which
@@ -377,6 +389,18 @@
      this file, next to each other, rather than the override sitting in `Profile.module.css`'s
      mobile block — the same arrangement the gutter and the indent above take. */
   --section-title-gap: 8px;
+
+  /* The gap between a section's title and the first thing in it, on every surface that has one:
+     the CV's rows and contact pills, the case study cards, a case study's section body, and the
+     gallery's list under its filter bar. On top of this sits the header's own bottom padding
+     (half a line, 11.2px), which is load-bearing for the 39.59375px header and so is not the knob.
+
+     **12px, down from 24.** 24 was every CV section's, and it left 35.2px between a title and its
+     content: loose enough that the title read as a divider above the rows rather than as their
+     label. The gallery's filter bar was already at 12, for its own reasons, so the smaller figure
+     is also the one that makes the two routes agree. It was four copies of 24 and one of 12; one
+     token means they cannot come apart again. */
+  --section-content-gap: 12px;
 }
 
 /* The narrow-viewport values. 20px of gutter with a 20px indent inside it, against 24 and 16 —

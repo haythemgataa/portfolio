@@ -8,6 +8,8 @@ export const POOL_ROOT = join(process.cwd(), 'public', 'media');
 export const CV_PATH = join(CONTENT_ROOT, 'cv.json');
 export const MEDIA_PATH = join(CONTENT_ROOT, 'media.json');
 export const GALLERY_PATH = join(CONTENT_ROOT, 'gallery.json');
+/** Where a case study's markdown lives. Read-only to the Studio — see `readCaseStudyImages`. */
+export const CASE_STUDIES_ROOT = join(CONTENT_ROOT, 'case-studies');
 
 /** A message safe to surface to the Studio UI. */
 export class StudioError extends Error {

@@ -1,0 +1,195 @@
+/* The title block. `padding-top` matches `.profileSection:first-of-type`'s, so the first thing on
+   a case study sits where the first section title sits on the CV. */
+.head {
+  padding-top: 16px;
+}
+
+/* The way out, styled as the CV's Show/Hide Details control — the site's established quiet text
+   button, and the right register for this: it is a way back rather than the subject of the page,
+   and a filled pill above an `h1` would compete with it.
+
+   The declarations are duplicated from `.detailsToggle` rather than shared, the same trade
+   `.srOnly` and the gallery's Clear button make: a CSS module cannot export a selector, so if that
+   control changes, this has to follow by hand. */
+.back {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 0;
+  border-radius: 4px;
+  color: var(--foreground-tertiary);
+  font-size: var(--secondary-type-size);
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 150ms ease;
+}
+
+/* Not gated on `hover: hover`. This is a text link with no fill to leave stuck on a tap — the
+   reason `.contactPill` and `.card` gate theirs — so there is nothing here for touch to hold. */
+.back:hover {
+  color: var(--foreground-primary);
+}
+
+.back:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+/* **The arrow is `ArrowRight12` mirrored, not a second path.** One `d` string for both directions,
+   so a redraw cannot leave the two disagreeing — the same reason `handPaths.ts` exists. Mirroring
+   in CSS is also what `Lightbox.module.css` does for its previous chevron.
+
+   The mirror is on the inner `svg` rather than on this span, so the span's `margin-right` is not
+   flipped along with it. */
+.backArrow {
+  display: inline-flex;
+  margin-right: 4px;
+}
+
+.backArrow svg {
+  transform: scaleX(-1);
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  column-gap: 12px;
+  margin-top: 12px;
+}
+
+/* **The title takes the profile name's exact settings**, transcribed from `.profileHeader h1` in
+   `ProfileHeader.module.css` rather than shared, because a CSS module cannot export a selector.
+   The two are the same kind of thing — the name of the document you are looking at — so if that
+   one changes, this follows by hand. `line-height: 1.2` is doing real work here as well as there:
+   it is what lets the badge beside it set the row's height rather than the text's leading. */
+.title {
+  font-size: 20px;
+  font-weight: var(--weight-emphasis);
+  letter-spacing: -0.04em;
+  line-height: 1.2;
+}
+
+/* The title and the subtitle as one block beside the badge, centred on it by `.titleRow`: the
+   CV's item icon row (`.itemHeader`) and the folder card both lay a mark beside two lines this
+   way. The two lines come to 46.4px (the title's 24 and the subtitle's 22.4) against a 40px
+   badge, the same proportion as the CV's 40px icon beside its 44.8px pair, so the badge anchors
+   the block without setting its height.
+
+   The growing child of a flex row needs a floor of its own or a long title refuses to wrap: the
+   same `min-width: 0` `.itemHeading` and the folder card's `.text` carry. */
+.titleText {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* The study's own line, directly under the title with no gap of its own. The two line boxes'
+   half-leading already separates them (2px under the title, 4.2px over the subtitle), which is
+   how the CV's heading and subheading sit, and how the card's two lines sit too. */
+.subtitle {
+  color: var(--foreground-secondary);
+}
+
+/* The mark, on a tile of the study's own colour.
+
+   **It is a white mask over the brand colour, not the logo file as drawn**, and that is one
+   decision rather than two. It is how the folder's front flap already paints it, so the card the
+   reader pressed and the page they land on show the same object; and because the mark is *painted*
+   rather than displayed, it needs no `-dark` sibling — a logo shown in its own colours on the
+   page's ground would need one file per theme, or a filter. See `CaseStudyFolder.tsx` for why a
+   mask is the only way to recolour an external SVG at all.
+
+   **The tile and the mark have to be two boxes.** A `mask` clips the element's own background, so
+   putting both on `.badge` gives a mark cut out of the brand colour floating on the page — the
+   inverse of what is wanted, and it renders as a small orange glyph with no tile at all. The tile
+   is this element and the mark is its `::before`. A pseudo-element rather than a real span because
+   the badge is `aria-hidden` and childless either way, so there is nothing for the extra element
+   to carry.
+
+   40px against a 20px title: the avatar's 56px is the site's own header and would outweigh a
+   document title. The radius is the thumbnail's 10px, so a tile and a print read as the same
+   family of object. */
+.badge {
+  position: relative;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background-color: var(--badge-color);
+}
+
+/* `-webkit-` prefixes because Safari carried `mask-*` behind them for a long time and they cost
+   nothing. 56% of the tile is the app-icon proportion — the mark sits in its square rather than
+   filling it. */
+.badge::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: #fff;
+  -webkit-mask-image: var(--logo-url);
+  mask-image: var(--logo-url);
+  -webkit-mask-size: 56%;
+  mask-size: 56%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+/* Section bodies and the intro take the CV description's own paragraph rhythm — half a line
+   between paragraphs — rather than the browser's default margins, which `globals.css` does not
+   reset. Restated from the same two tokens `.description` derives it from, not from its resolved
+   pixels. */
+.intro,
+.body {
+  display: flex;
+  flex-direction: column;
+  row-gap: calc((var(--type-size) * var(--line-height)) / 2);
+  color: var(--foreground-secondary);
+}
+
+/* The CV's title-to-content gap, so a study's sections sit under their titles exactly as the
+   CV's do. `.intro` below is not under a section title, so it keeps its own. */
+.body {
+  margin-top: var(--section-content-gap);
+}
+
+.intro {
+  margin-top: 24px;
+}
+
+/* Lists inside a section body. `padding-left` rather than a margin so the markers sit inside the
+   column, and `text-wrap: pretty` by hand because a *tight* markdown list arrives as bare `<li>`
+   text where a loose one arrives wrapped in a `<p>` — the rule in `globals.css` only catches the
+   second, and which one an author gets follows from a blank line they cannot see. The same pair
+   `.description ul li` documents. */
+.body ul,
+.intro ul,
+.body ol,
+.intro ol {
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  row-gap: calc((var(--type-size) * var(--line-height)) / 2);
+}
+
+.body li,
+.intro li {
+  text-wrap: pretty;
+}
+
+/* Bold runs inside a body come forward to the page's own ink. Body copy here is
+   `--foreground-secondary`, so an emphasised phrase left at that weight alone barely reads as
+   emphasis — the same reason the palette reserves primary for a page's landmarks. */
+.body strong,
+.intro strong {
+  color: var(--foreground-primary);
+  font-weight: var(--weight-emphasis);
+}
+
+/* Prose links take the CV description's treatment: the page's blue, underlined with a rule derived
+   from the text rather than a fixed grey — see the note on `.description a` in Profile.module.css. */
+.body a,
+.intro a {
+  color: var(--blue);
+  text-decoration-color: color-mix(in srgb, currentColor 22%, transparent);
+}

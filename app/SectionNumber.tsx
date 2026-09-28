@@ -21,9 +21,18 @@ import styles from "./SectionNumber.module.css";
  * It does *not* keep the font's preload off `/gallery`, which was the other half of the reason
  * for putting it here and turned out not to hold: Next merges the two routes' client CSS into one
  * chunk and emits the preload from the chunk. See the note on `bellina` in `lib/font.ts`.
+ *
+ * `color` replaces the numeral's orange, which is Figma's and stays the default. A case study
+ * passes its brand colour, so its numbering is drawn in the same colour as its badge and its glow.
+ * It reaches the stylesheet as `--section-number-color`, and every stop of the band is derived from
+ * that one value, so a single colour is all a caller supplies.
  */
-const SectionNumber: React.FC<{ index: number }> = ({ index }) => (
-  <span aria-hidden="true" className={`${styles.number} ${bellina.variable}`}>
+const SectionNumber: React.FC<{ index: number, color?: string }> = ({ index, color }) => (
+  <span
+    aria-hidden="true"
+    className={`${styles.number} ${bellina.variable}`}
+    style={color ? ({ "--section-number-color": color } as React.CSSProperties) : undefined}
+  >
     {String(index + 1).padStart(2, "0")}
   </span>
 );

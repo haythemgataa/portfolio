@@ -6,6 +6,7 @@ import About from '../../About.module.css';
 import LastUpdated from '../../LastUpdated';
 import RichText from '../../RichText';
 import Signature from '../../Signature';
+import StickyFade from '../../StickyFade';
 import footer from '../../SiteFooter.module.css';
 import header from '../../ProfileHeader.module.css';
 import layout from '../../layout.module.css';
@@ -69,8 +70,10 @@ const CanvasTabs: React.FC = () => {
     return () => observer.disconnect();
   }, []);
 
+  // The labels are the site's (`Tabs.tsx`), which renamed "CV" to "Home" once both tabs were
+  // named as places rather than one as a document. The keys are internal and stay as they were.
   const entries = [
-    { key: 'cv' as const, label: 'CV' },
+    { key: 'cv' as const, label: 'Home' },
     { key: 'gallery' as const, label: 'Gallery' },
   ];
   const activeIndex = entries.findIndex((entry) => entry.key === tab);
@@ -86,7 +89,9 @@ const CanvasTabs: React.FC = () => {
       <div className={tabs.sticky} data-stuck={isStuck}>
         <nav
           className={tabs.tabs}
-          aria-label="Canvas"
+          // The site's name for the same bar. It was "Canvas", which named the tool rather than
+          // what the bar switches between.
+          aria-label="Pages"
           style={
             {
               '--tab-count': entries.length,
@@ -130,7 +135,10 @@ const CanvasTabs: React.FC = () => {
           )}
         </nav>
       </div>
-      <div className={tabs.fade} data-stuck={isStuck} aria-hidden="true" />
+      {/* The site's own fade, handed this bar's stuck state as `Tabs.tsx` hands it the site's.
+          It was `tabs.fade`, which stopped existing when the fade moved out of Tabs.module.css
+          into `StickyFade`, so the canvas had drawn no fade under a pinned bar since. */}
+      <StickyFade stuck={isStuck} />
       {/* After the fade, not before it: the fade pins at `--sticky-top` and a spacer between the
           two would delay that pin. Same order as `Tabs.tsx`. */}
       <div className={tabs.airBottom} aria-hidden="true" />

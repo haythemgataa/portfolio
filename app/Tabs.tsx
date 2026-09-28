@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import StickyFade from "./StickyFade";
 import styles from "./Tabs.module.css";
 import glow from "./EdgeGlow.module.css";
 
@@ -188,9 +189,12 @@ const Tabs: React.FC<TabsProps> = ({ showGallery = true }) => {
           )}
         </nav>
       </div>
-      {/* Sibling rather than the bar's own pseudo-element, so sticky section headers can
-          paint over it — see the comment on `.fade` in Tabs.module.css. */}
-      <div className={styles.fade} data-stuck={isStuck} aria-hidden="true" />
+      {/* A sibling of the bar rather than its `::after`, and that is load-bearing: the CV's
+          sticky section headers park inside this band and have to paint over it, which a
+          pseudo-element could not allow because the bar's `z-index: 20` makes it a stacking
+          context. The bar's own stuck state is passed in rather than observed again — see
+          `StickyFade`. */}
+      <StickyFade stuck={isStuck} />
       {/* The other half of the resting air, and it has to come after the fade: the fade pins at
           `--sticky-top` and its flow position is whatever follows the wrapper, so a spacer
           between them would delay its pin and expose the band's hard edge. */}

@@ -11,6 +11,7 @@ import {
   hasPlatformIcon,
 } from "./ContactIcon";
 import { groupContactRows } from "./lib/contentTypes";
+import CaseStudies from "./CaseStudies";
 import GalleryPreview from "./GalleryPreview";
 import SectionIcon from "./SectionIcon";
 import styles from "./Profile.module.css";
@@ -67,6 +68,8 @@ const Profile: React.FC<ProfileProps> = ({
   const [showDetails, setShowDetails] = useState(false);
   const toggleDetails = () => setShowDetails(open => !open);
 
+  const hasCaseStudies = cv.caseStudies.items.length > 0;
+
   return (
     <>
       {/* Opens the CV, directly under the shared About the layout renders above it. It lives
@@ -74,6 +77,17 @@ const Profile: React.FC<ProfileProps> = ({
           told which route it is rendering, so anything conditional up there needs a pathname
           test, whereas down here being on the CV *is* the condition. */}
       <GalleryPreview items={cv.profile.galleryPreview} />
+
+      {hasCaseStudies ?
+        <section className={styles.profileSection}>
+          {/* Pinned first rather than living in `sections`, so like contact it has no `key` of
+              its own in the file — hence the literal, which is the key `SECTION_MARKS` already
+              draws a mark for. The `<section>` and the header stay here, exactly as contact's do,
+              which keeps the sticky-title geometry every section depends on in one file. */}
+          <SectionHeader label={cv.caseStudies.label} iconKey="caseStudies"/>
+          <CaseStudies items={cv.caseStudies.items}/>
+        </section>
+      : null}
 
       {cv.sections.map((section, sectionIndex) => (
         <Section
@@ -83,6 +97,9 @@ const Profile: React.FC<ProfileProps> = ({
           onToggleDetails={toggleDetails}
           // Only the first item of the first section is on screen when the page loads, so it
           // is the only thumbnail row whose images should skip the browser's viewport logic.
+          // The case studies block sits above it and pushes it down, but it carries no
+          // `Attachments` row of its own — its covers are their own small eager request — so the
+          // first row here is still the first one a reader meets.
           // The decision has to be made here: a row renders per item, so from inside one an
           // index says nothing about where it sits in the document — testing that index was
           // what put the first few thumbnails of *every* section into the initial fetch.

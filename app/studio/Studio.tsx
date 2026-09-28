@@ -30,6 +30,8 @@ type StudioProps = {
   initialGallery?: GalleryFile;
   initialHash?: string;
   initialOrphans?: Orphans;
+  /** Pool filenames embedded in case study markdown — see `cvUses`. */
+  initialCaseStudyImages?: string[];
   loadError?: string;
 };
 
@@ -54,6 +56,7 @@ export default function Studio({
   initialGallery = { items: [] },
   initialHash = '',
   initialOrphans = NO_ORPHANS,
+  initialCaseStudyImages = [],
   loadError,
 }: StudioProps) {
   const [cv, setCv] = useState<CvFile | null>(initialCv ?? null);
@@ -61,6 +64,9 @@ export default function Studio({
   const [assets, setAssets] = useState<Record<string, MediaAsset>>(initialAssets);
   const [gallery, setGallery] = useState<GalleryFile>(initialGallery);
   const [orphans, setOrphans] = useState<Orphans>(initialOrphans);
+  // Not derivable in the browser: these references live in `content/case-studies/*.md`, which the
+  // client never reads. The server sends them with every tree read for `cvUses` to count.
+  const [caseStudyImages, setCaseStudyImages] = useState<string[]>(initialCaseStudyImages);
   const [tab, setTab] = useState<CanvasTab>('cv');
   const [selection, setSelection] = useState<Selection>({ kind: 'none' });
   /** Pooled asset shown in the inspector's asset panel. Independent of `selection`. */
@@ -113,6 +119,7 @@ export default function Studio({
     setGallery(json.gallery ?? { items: [] });
     hashRef.current = json.hash;
     setOrphans(json.orphans ?? NO_ORPHANS);
+    setCaseStudyImages(json.caseStudyImages ?? []);
     return json.cv as CvFile;
   }, []);
 
@@ -508,6 +515,16 @@ export default function Studio({
     if (cv?.profile?.photo) used.add(cv.profile.photo);
     // Counted for the same reason the server counts it — see `collectReferences`.
     for (const f of cv?.profile?.galleryPreview ?? []) used.add(f);
+    // A case study card's folder mark and its peeking cover. Counted for the same reason the
+    // server counts them — see `collectReferences`.
+    for (const study of cv?.caseStudies?.items ?? []) {
+      if (study.logo) used.add(study.logo);
+      if (study.cover) used.add(study.cover);
+    }
+    // Images embedded in a case study's prose. The only kind of reference this mirror cannot
+    // derive from the document, because it lives in markdown on disk — hence the server sending
+    // it. Missing it here would have the UI offer to delete a picture a published page is showing.
+    for (const f of caseStudyImages) used.add(f);
     for (const s of cv?.sections ?? []) {
       for (const i of s.items ?? []) {
         for (const f of i.media ?? []) used.add(f);
@@ -534,8 +551,9 @@ export default function Studio({
     }
     return used;
     // `assets` matters as well as `cv`: whether a `-dark` sibling counts depends on it being in
-    // the registry, so uploading one has to recompute this set.
-  }, [cv, assets]);
+    // the registry, so uploading one has to recompute this set. `caseStudyImages` matters because
+    // editing a study's markdown changes it without touching any of the three JSON files.
+  }, [cv, assets, caseStudyImages]);
 
   const deleteGalleryEntry = useCallback(
     (entry: GalleryEntry) => {

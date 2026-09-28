@@ -1,28 +1,9 @@
-import { promises as fs } from "fs";
-import { join } from "path";
 import type { Metadata } from "next";
-import Gallery from "../Gallery";
-import { loadGalleryItems } from "../lib/galleryLoader";
-import { loadProfileData } from "../lib/contentLoader";
-import { OG_IMAGE, OG_IMAGE_FILE, pageTitle } from "../lib/site";
-
-/**
- * Whether the card artwork is actually there.
- *
- * The root layout gets its `og:image` from the file convention, which simply emits nothing when
- * the file is absent. Naming the path by hand here has no such safety: without this check, a
- * build with no artwork would still advertise `/opengraph-image.png` and every scraper that
- * followed it would get a 404. The same shape as `hasGalleryItems()` gating the sitemap — ask
- * whether the thing exists before pointing at it.
- */
-async function ogImages(): Promise<string[]> {
-  try {
-    await fs.access(join(process.cwd(), 'app', OG_IMAGE_FILE));
-    return [OG_IMAGE];
-  } catch {
-    return [];
-  }
-}
+import Gallery from "../../Gallery";
+import { loadGalleryItems } from "../../lib/galleryLoader";
+import { loadProfileData } from "../../lib/contentLoader";
+import { ogImages } from "../../lib/ogImage";
+import { pageTitle } from "../../lib/site";
 
 export async function generateMetadata(): Promise<Metadata> {
   const cv = await loadProfileData();

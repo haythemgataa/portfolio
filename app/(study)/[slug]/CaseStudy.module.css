@@ -136,8 +136,10 @@
   color: var(--foreground-secondary);
 }
 
+/* The CV's title-to-content gap, so a study's sections sit under their titles exactly as the
+   CV's do. `.intro` below is not under a section title, so it keeps its own. */
 .body {
-  margin-top: 24px;
+  margin-top: var(--section-content-gap);
 }
 
 .intro {

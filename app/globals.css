@@ -389,6 +389,18 @@
      this file, next to each other, rather than the override sitting in `Profile.module.css`'s
      mobile block — the same arrangement the gutter and the indent above take. */
   --section-title-gap: 8px;
+
+  /* The gap between a section's title and the first thing in it, on every surface that has one:
+     the CV's rows and contact pills, the case study cards, a case study's section body, and the
+     gallery's list under its filter bar. On top of this sits the header's own bottom padding
+     (half a line, 11.2px), which is load-bearing for the 39.59375px header and so is not the knob.
+
+     **12px, down from 24.** 24 was every CV section's, and it left 35.2px between a title and its
+     content: loose enough that the title read as a divider above the rows rather than as their
+     label. The gallery's filter bar was already at 12, for its own reasons, so the smaller figure
+     is also the one that makes the two routes agree. It was four copies of 24 and one of 12; one
+     token means they cannot come apart again. */
+  --section-content-gap: 12px;
 }
 
 /* The narrow-viewport values. 20px of gutter with a 20px indent inside it, against 24 and 16 —

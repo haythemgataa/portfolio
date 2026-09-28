@@ -1,10 +1,10 @@
-/* The list. `margin-top` matches `.experiences` so the first card sits where a timeline
+/* The list. `margin-top` is `.experiences`' token, so the first card sits where a timeline
    section's first row would, under a header of identical height. */
 .list {
   display: flex;
   flex-direction: column;
   row-gap: 12px;
-  margin-top: 24px;
+  margin-top: var(--section-content-gap);
 }
 
 /* The card borrows `.contactPill`'s token set outright rather than approximating it — the muted

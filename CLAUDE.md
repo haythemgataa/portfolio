@@ -1792,6 +1792,13 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
   **no background** — the fade hanging off the tab bar already covers that band, so an opaque
   strip did the work twice and cut the fade off flat where the two met. Content is therefore
   faintly visible behind a pinned title; the fade's height in `Tabs.module.css` is the knob.
+- **A title sits `--section-content-gap` (12px) above its content, on every surface.** The CV's
+  rows and contact pills, the case study cards, a case study's section body and the gallery's list
+  under its filter bar all read the one token from `globals.css`. On top of it is the header's own
+  11.2px bottom padding, which is load-bearing for the 39.59375px header, so the token is the knob.
+  It was 24px on the CV (35.2px in all, loose enough that a title read as a divider above its rows)
+  and already 12 on the gallery. Coming down to 12 made the routes agree, and four copies of 24 plus
+  one of 12 became one token.
 - **Details are shown by default and collapse page-wide.** The Show/Hide Details control is
   repeated in every section's sticky header, but there is one piece of state in `Profile`, so
   any one of them collapses all of them. "Details" means `item.description` and nothing else

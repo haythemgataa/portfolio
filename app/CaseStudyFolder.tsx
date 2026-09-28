@@ -60,17 +60,29 @@ const FRONT_FLAP_D =
  * edges, and a sheet cut off by a straight vertical line reads as a slice of something rather than
  * as a page. Only the bottom is hidden, and the front flap does that by being painted after it.
  *
- * So the geometry has to keep itself inside the folder. It starts at x = 22.5 because the back
- * flap's tab occupies everything to the left of x ≈ 21.3 and the sheet is painted *over* the back
- * flap: any further left and the paper would cross the tab and read as sitting in front of the
- * folder. It ends at 43.5, inside the back flap's right edge at 45.5. Tilted and lifted, the
- * corners reach x 21.8 → 42.8 and y 1.3 at the very top, all of it still within the artwork's box.
+ * So the geometry has to keep itself inside the folder. **It starts at x = 16, where the back
+ * flap's tab stops being flat**: the tab's top runs level from x 6 to 15 and then slopes down to
+ * the flap's main edge at 21.3. Standing just right of the level part, the paper hides the slope
+ * and leaves the tab's outline whole, so the folder still reads as a folder. Further left and the
+ * paper covers the tab itself. Tilted, its corners reach x 15.4 → 43.6, and its left edge crosses
+ * the tab's top at 15.7. The right edge stays inside the back flap's rounded corner, and the back
+ * flap ends at 45.5.
  *
- * The height is 15 rather than the full mouth-to-floor, and that is about the picture rather than
- * the paper: the visible band is only ~8.4 units tall, and `slice` crops whatever it is given to
- * cover, so a taller box would zoom a 16:9 cover much harder for no visible gain.
+ * **It rises above the artwork's box, which is the point of the numbers.** It was 21 x 15 starting
+ * at y 3.5, below the tab, and since the front flap covers everything under y 11.87, only ~8.4
+ * units of it ever showed: 17 x 7px of picture at 40px, which read as a strip rather than as a
+ * page. From y = -3 the visible band is ~15 units of a 27-wide sheet, about 2.3 times the picture,
+ * and the tilt takes the outer corner to y -3.9, 3.3px above the box. That overhang needs
+ * `overflow: visible` on the `<svg>` (see `.folderArt`), and the card has room for it: the folder
+ * sits in a 42px content box with 10px of padding above.
+ *
+ * The height is 19, and it is set by the hover rather than by the picture. The tilt lifts the
+ * lower-right corner to y 15.0, and the hover raises the whole sheet 1.5px, which is 1.8 units at
+ * this size, so the corner reaches 13.2 at the top of the lift. The front flap starts at 11.87.
+ * Any shorter and the paper's bottom edge would show above the flap mid-hover. `slice` then crops
+ * a 16:9 cover by about 2.9 units a side, and the visible band shows its top three quarters.
  */
-const SHEET = { x: 22.5, y: 3.5, width: 21, height: 15, radius: 1 };
+const SHEET = { x: 16, y: -3, width: 27, height: 19, radius: 1 };
 
 /** Degrees. Negative is counter-clockwise in SVG's y-down space, so the sheet's outer corner rises. */
 const SHEET_TILT = -4;

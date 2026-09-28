@@ -1558,23 +1558,31 @@ quiet failure worth guarding.
   17.9 x 16.78px at `FOLDER_SIZE` 48 — 16.78/17.28 = 0.971, which is `cos(14°)` to three places, so
   the foreshortening is doing what it says.
 
-Five things about the geometry, all of which read as arbitrary until they are broken:
+Six things about the geometry, all of which read as arbitrary until they are broken:
 
 - **Nothing clips the sheet's left or right edge, and that is the point.** Those are the paper's
   own edges; a sheet cut off by a straight vertical line reads as a slice of something rather than
   as a page. The first attempt clipped it to a "slot" rect and the cut was the most visible thing
   on the card. Only the bottom is hidden, and the **front flap does that by being painted after
   it** — there is no clip involved at all.
-- **So the sheet's own numbers have to keep it inside the folder.** It starts at x = 22.5 because
-  the back flap's tab occupies everything left of x ≈ 21.3 and the sheet paints *over* the back
-  flap: any further left and the paper crosses the tab and reads as sitting in front of the folder.
-  Tilted 4° and lifted, its corners reach x 21.8 → 42.8 against a back flap that ends at 45.5.
+- **So the sheet's own numbers have to keep it inside the folder.** It starts at x = 16, just past
+  where the back flap's tab stops being level (x 15). The paper hides the tab's slope and leaves its
+  outline whole; any further left and it covers the tab, and the folder stops reading as a folder.
+  Tilted 4°, its corners reach x 15.4 → 43.6 against a back flap that ends at 45.5.
+- **The sheet stands up out of the artwork's box**, from y = −3 to −3.9 at the tilted corner,
+  which is 3.3px above the folder at 40px. It used to start at y 3.5, below the tab, which left
+  ~8.4 units visible above the front flap: 17 x 7px of picture. The visible band is now ~15 units of
+  a 27-wide sheet, about 2.3 times the area. It needs `overflow: visible` on `.folderArt`, since an
+  inline `<svg>` clips to its viewport by default, and the card's 10px of padding above the folder
+  is the room it stands in.
 - **The one clip that remains is load-bearing.** `preserveAspectRatio="… slice"` scales the picture
   to *cover* its box and lets the overflow paint, so without a rounded-rect clip on the `<image>`
   the cover spills past the paper on whichever axis it was cropped.
-- **The sheet is 15 units tall, not the full mouth-to-floor.** That is about the picture, not the
-  paper: only ~8.4 units of it are ever visible, and a taller box makes `slice` zoom a 16:9 cover
-  much harder for nothing.
+- **The sheet is 19 units tall, and the hover sets that, not the picture.** The tilt raises the
+  lower-right corner to y 15.0 and the hover lifts the sheet 1.5px (1.8 units), so at the top of the
+  lift the corner is at 13.2 against a front flap that starts at 11.87. Any shorter and the paper's
+  bottom edge shows above the flap mid-hover. Beyond that, taller only makes `slice` zoom the cover
+  harder for nothing.
 - **The tilt and the hover lift cannot share a `transform`.** The tilt is an SVG attribute on an
   inner `<g>`, the lift a CSS `transform` on an outer one — the `.pillWindow` / `.pillTravel` split
   in `Tabs.module.css`. One property, and a hover rule would silently discard the rotation.

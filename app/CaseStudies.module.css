@@ -81,10 +81,15 @@
   height: var(--folder-size);
 }
 
+/* `overflow: visible` because the sheet stands up out of the folder past the artwork's own box —
+   see `SHEET` in `CaseStudyFolder.tsx`. An inline `<svg>` clips to its viewport by default (the UA
+   sheet's `svg:not(:root) { overflow: hidden }`), which would cut the paper off flat along the top
+   edge: the straight-line slice the geometry exists to avoid. */
 .folderArt {
   display: block;
   width: 100%;
   height: 100%;
+  overflow: visible;
 }
 
 /* The mark on the front flap.

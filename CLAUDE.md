@@ -2266,38 +2266,32 @@ quiet failure worth guarding.
   17.9 x 16.78px at `FOLDER_SIZE` 48 — 16.78/17.28 = 0.971, which is `cos(14°)` to three places, so
   the foreshortening is doing what it says.
 
-Six things about the geometry, all of which read as arbitrary until they are broken:
+**The sheet is a page standing straight inside the folder, showing only as a band between the
+flaps.** Its top is at y 9, below the back flap's own top edge (7.5), so the paper never rises out
+of the folder; the front flap covers everything from 11.87 down, which leaves a ~2.9-unit band,
+about 2.4px at 40px. It is 37.5 wide (x 5.25 → 42.75), about 2 units inside the back flap on each
+side. The numbers were measured off a reference render. Four things about it:
 
+- **It is deliberately a hint of a page, not a preview of one.** It began as a tilted sheet that
+  stood up out of the folder and lifted on hover, and it was made wider twice trying to make the
+  picture legible at 40px. At that size it never really was, and the tilt, an overhang past the
+  artwork's box (which needed `overflow: visible` on the `<svg>`), the hover lift and the clearance
+  arithmetic between them all existed to serve that legibility. They went together. The card's
+  hover is its fill again, as the contact pills' is.
 - **Nothing clips the sheet's left or right edge, and that is the point.** Those are the paper's
   own edges; a sheet cut off by a straight vertical line reads as a slice of something rather than
   as a page. The first attempt clipped it to a "slot" rect and the cut was the most visible thing
   on the card. Only the bottom is hidden, and the **front flap does that by being painted after
-  it** — there is no clip involved at all.
-- **So the sheet's own numbers have to keep it inside the folder.** It starts at x = 16, just past
-  where the back flap's tab stops being level (x 15). The paper hides the tab's slope and leaves its
-  outline whole; any further left and it covers the tab, and the folder stops reading as a folder.
-  Tilted 4°, its corners reach x 15.4 → 43.6 against a back flap that ends at 45.5.
-- **The sheet stands up out of the artwork's box**, from y = −3 to −3.9 at the tilted corner,
-  which is 3.3px above the folder at 40px. It used to start at y 3.5, below the tab, which left
-  ~8.4 units visible above the front flap: 17 x 7px of picture. The visible band is now ~15 units of
-  a 27-wide sheet, about 2.3 times the area. It needs `overflow: visible` on `.folderArt`, since an
-  inline `<svg>` clips to its viewport by default, and the card's 10px of padding above the folder
-  is the room it stands in.
-- **The one clip that remains is load-bearing.** `preserveAspectRatio="… slice"` scales the picture
-  to *cover* its box and lets the overflow paint, so without a rounded-rect clip on the `<image>`
-  the cover spills past the paper on whichever axis it was cropped.
-- **The sheet is 19 units tall, and the hover sets that, not the picture.** The tilt raises the
-  lower-right corner to y 15.0 and the hover lifts the sheet 1.5px (1.8 units), so at the top of the
-  lift the corner is at 13.2 against a front flap that starts at 11.87. Any shorter and the paper's
-  bottom edge shows above the flap mid-hover. Beyond that, taller only makes `slice` zoom the cover
-  harder for nothing.
-- **The tilt and the hover lift cannot share a `transform`.** The tilt is an SVG attribute on an
-  inner `<g>`, the lift a CSS `transform` on an outer one — the `.pillWindow` / `.pillTravel` split
-  in `Tabs.module.css`. One property, and a hover rule would silently discard the rotation.
-  `transform-box: fill-box` is required on the lifting group or an SVG element resolves the
-  translate against the viewport; verified at exactly 1.5px, and note that reading the rect back
-  immediately reports **0** unless the transition is killed first — the frame-clock trap the
-  lightbox's notes already document.
+  it**.
+- **The sheet takes the cover's own proportions, so it has no fixed height.** The band then shows
+  the top of the picture in dev and production alike. A fixed box with `fit: cover` would not:
+  Cloudflare centres its crop while the SVG anchors to the top edge, so production would show the
+  middle of the picture where dev showed its top. The request is therefore width-only, which comes
+  back as the whole cover scaled to the sheet. `MIN_SHEET_HEIGHT` keeps the bottom behind the front
+  flap for a panorama wide enough to come out shorter.
+- **The one clip left rounds the picture to the paper's corners.** `slice` only matters for such a
+  panorama, where the box is taller than the picture and the clip also trims the sides it scales
+  past.
 
 **The colour and the shading are literals, not tokens.** The orange is a fact about DeepPCB the way
 `FigmaCursor.tsx`'s `#fb4107` is a fact about Figma, and the source artwork's black-10% pass and

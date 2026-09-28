@@ -54,38 +54,40 @@ const FRONT_FLAP_D =
   "44.8668H5.52031C3.95006 44.8668 2.63891 43.6837 2.49674 42.1384L0.0127156 15.1384Z";
 
 /**
- * The sheet, in viewBox units.
+ * The sheet, in viewBox units: a page standing straight inside the folder, showing only as a band
+ * between the back flap's edge and the front flap.
  *
- * **Nothing clips its left or right edge, and that is the point** — those are the paper's own
- * edges, and a sheet cut off by a straight vertical line reads as a slice of something rather than
- * as a page. Only the bottom is hidden, and the front flap does that by being painted after it.
+ * **Its top is at y 9, below the back flap's own top edge at 7.5**, so the paper never rises out
+ * of the folder. A strip of back flap shows above it, and the front flap covers everything from
+ * 11.87 down, so what is visible is a ~2.9-unit band, about 2.4px at 40px. That is deliberately a
+ * hint of a page rather than a preview of one. The width is the back flap's less about 2 units a
+ * side (back flap x 3 → 45.5, and its right corner is curving back in at this height), measured
+ * off the reference artwork.
  *
- * So the geometry has to keep itself inside the folder. **It starts at x = 16, where the back
- * flap's tab stops being flat**: the tab's top runs level from x 6 to 15 and then slopes down to
- * the flap's main edge at 21.3. Standing just right of the level part, the paper hides the slope
- * and leaves the tab's outline whole, so the folder still reads as a folder. Further left and the
- * paper covers the tab itself. Tilted, its corners reach x 15.4 → 43.6, and its left edge crosses
- * the tab's top at 15.7. The right edge stays inside the back flap's rounded corner, and the back
- * flap ends at 45.5.
+ * It replaced a tilted sheet that stood up out of the folder and lifted on hover, which grew
+ * wider twice trying to make the picture legible at 40px. At that size it never really was, and
+ * the tilt, the overhang past the artwork's box and the hover all existed to serve it. None of
+ * them are needed for a page that only peeks, so all three are gone: no `overflow: visible`, no
+ * two-group transform split, no clearance arithmetic against the lift.
  *
- * **It rises above the artwork's box, which is the point of the numbers.** It was 21 x 15 starting
- * at y 3.5, below the tab, and since the front flap covers everything under y 11.87, only ~8.4
- * units of it ever showed: 17 x 7px of picture at 40px, which read as a strip rather than as a
- * page. From y = -3 the visible band is ~15 units of a 27-wide sheet, about 2.3 times the picture,
- * and the tilt takes the outer corner to y -3.9, 3.3px above the box. That overhang needs
- * `overflow: visible` on the `<svg>` (see `.folderArt`), and the card has room for it: the folder
- * sits in a 42px content box with 10px of padding above.
- *
- * The height is 19, and it is set by the hover rather than by the picture. The tilt lifts the
- * lower-right corner to y 15.0, and the hover raises the whole sheet 1.5px, which is 1.8 units at
- * this size, so the corner reaches 13.2 at the top of the lift. The front flap starts at 11.87.
- * Any shorter and the paper's bottom edge would show above the flap mid-hover. `slice` then crops
- * a 16:9 cover by about 2.9 units a side, and the visible band shows its top three quarters.
+ * **There is no height here: the sheet takes the cover's own proportions** (see `sheetHeight`), so
+ * the band shows the top of the picture in dev and production alike. The alternative was a fixed
+ * box with `fit: cover`, and that crops differently in the two: Cloudflare centres its crop while
+ * the SVG anchors to the top edge, so production would show the middle of the picture where dev
+ * showed its top.
  */
-const SHEET = { x: 16, y: -3, width: 27, height: 19, radius: 1 };
+const SHEET = { x: 5.25, y: 9, width: 37.5, radius: 0.75 };
 
-/** Degrees. Negative is counter-clockwise in SVG's y-down space, so the sheet's outer corner rises. */
-const SHEET_TILT = -4;
+/**
+ * The shortest the sheet may be, so its bottom edge always ends behind the front flap (at 11.87)
+ * with a margin. Only a very wide panorama would ever come out shorter than this.
+ */
+const MIN_SHEET_HEIGHT = 4;
+
+/** The sheet's height for a cover of the given size: the cover's own ratio, never less than the floor. */
+function sheetHeight(cover: { width: number, height: number }): number {
+  return Math.max((SHEET.width * cover.height) / cover.width, MIN_SHEET_HEIGHT);
+}
 
 type CaseStudyFolderProps = {
   study: ResolvedCaseStudy,
@@ -107,10 +109,7 @@ const CaseStudyFolder: React.FC<CaseStudyFolderProps> = ({ study }) => {
   const backShading = `folder-back-shade-${uid}`;
   const sheetClip = `folder-sheet-${uid}`;
 
-  const sheetCentre = {
-    x: SHEET.x + SHEET.width / 2,
-    y: SHEET.y + SHEET.height / 2,
-  };
+  const height = study.cover ? sheetHeight(study.cover) : 0;
 
   return (
     <span
@@ -141,15 +140,15 @@ const CaseStudyFolder: React.FC<CaseStudyFolderProps> = ({ study }) => {
             <stop offset="0.4" stopOpacity="0" />
             <stop offset="1" stopOpacity="0.6" />
           </linearGradient>
-          {/* The only clip in the folder, and it is load-bearing: `preserveAspectRatio="… slice"`
-              scales the picture to *cover* its box and lets the overflow paint, so without this
-              the cover would spill past the paper on whichever axis it was cropped. */}
+          {/* Rounds the picture's corners to the paper's. The box is the cover's own shape, so
+              nothing is cropped; `slice` only comes into play for a panorama short enough to hit
+              `MIN_SHEET_HEIGHT`, and then this also trims the sides it scales past. */}
           <clipPath id={sheetClip}>
             <rect
               x={SHEET.x}
               y={SHEET.y}
               width={SHEET.width}
-              height={SHEET.height}
+              height={height}
               rx={SHEET.radius}
             />
           </clipPath>
@@ -160,39 +159,32 @@ const CaseStudyFolder: React.FC<CaseStudyFolderProps> = ({ study }) => {
         <path d={BACK_FLAP_D} fill="black" fillOpacity="0.1" />
         <path d={BACK_FLAP_D} fill={`url(#${backShading})`} fillOpacity="0.2" />
 
-        {/* Two groups, each with exactly one job — the discipline `Tabs.module.css` uses for the
-            travelling pill. The tilt cannot share a `transform` with the lift: CSS replaces the
-            whole property, so a hover rule on the same element would silently drop the rotation. */}
+        {/* The sheet sits between the flaps: painted after the back flap, before the front one,
+            which covers all of it but the band at the top. */}
         {study.cover ? (
-          <g className={styles.sheet}>
-            <g transform={`rotate(${SHEET_TILT} ${sheetCentre.x} ${sheetCentre.y})`}>
-              {/* The paper under the picture, so a cover with transparency still reads as a sheet
-                  rather than as a hole in the folder. */}
-              <rect
-                x={SHEET.x}
-                y={SHEET.y}
-                width={SHEET.width}
-                height={SHEET.height}
-                rx={SHEET.radius}
-                fill="#fff"
-              />
-              <image
-                clipPath={`url(#${sheetClip})`}
-                href={cloudflareImageUrl(study.cover.url, {
-                  width: SHEET.width * UNIT,
-                  height: SHEET.height * UNIT,
-                  fit: "cover",
-                })}
-                x={SHEET.x}
-                y={SHEET.y}
-                width={SHEET.width}
-                height={SHEET.height}
-                // The top of the picture is the part that shows, so anchor there and crop the
-                // rest — `slice` is `object-fit: cover`, `xMidYMin` is its top edge.
-                preserveAspectRatio="xMidYMin slice"
-              />
-            </g>
-          </g>
+          <>
+            {/* The paper under the picture, so a cover with transparency still reads as a sheet
+                rather than as a hole in the folder. */}
+            <rect
+              x={SHEET.x}
+              y={SHEET.y}
+              width={SHEET.width}
+              height={height}
+              rx={SHEET.radius}
+              fill="#fff"
+            />
+            <image
+              clipPath={`url(#${sheetClip})`}
+              // Width only: the request comes back as the whole cover scaled to the sheet, never
+              // cropped, which is what keeps production showing the same top edge as dev.
+              href={cloudflareImageUrl(study.cover.url, { width: SHEET.width * UNIT })}
+              x={SHEET.x}
+              y={SHEET.y}
+              width={SHEET.width}
+              height={height}
+              preserveAspectRatio="xMidYMin slice"
+            />
+          </>
         ) : null}
 
         {/* Front flap last, so it covers the sheet's lower edge whatever the sheet is doing. */}

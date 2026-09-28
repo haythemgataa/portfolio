@@ -1642,6 +1642,46 @@ above it would frame it as a subsection of the CV rather than as the thing you n
 it does keep is the glow and the dot texture, imported from `layout.module.css`, which is what
 makes it read as this site rather than as a detached page, at the cost of no request.
 
+- **The glow takes the study's colour, and the page draws it, not the layout.** A layout sits
+  above `[slug]` and is never told which study it wraps, so `CaseStudy.tsx` renders the glow and
+  writes `study.color` onto it as `--glow-brand`. `.topGradientBrand` derives seven stops from
+  that one hex, walked lighter and a touch yellower to the left and darker and redder to the
+  right, in OKLCH so one `--lift` reads the same on any colour. A study with no valid colour (the
+  fallback is the page's ink) keeps the site's own sweep rather than a grey glow.
+- **On load it turns from the site's sweep into the brand's, 1.4s after a 150ms hold.** It is a
+  load animation because opening a study crosses root layouts, which is a full page load, so no
+  element survives to transition. It reads as one glow changing because frame 0 is the CV's glow
+  in exactly the CV's place. Three things about it:
+  - **Each stop is `color-mix(in oklch, …)` of its sweep colour and its brand colour**, driven by
+    one registered `--glow-arrival` percentage. A cross-fade (the brand layer's `opacity`) was the
+    first version, and at the midpoint the right half of the glow went grey: sRGB blending of the
+    sweep's cyan with the brand's red-orange, which are nearly complementary. In OKLCH the hue
+    moves instead, the cool stops turning through violet and pink into the orange.
+  - **The sweep's stops are therefore tokens** (`--glow-stop-1…7` in globals.css), since a built
+    gradient cannot be taken apart. The gradient is `in srgb` so frame 0 matches the sweep between
+    stops too: mixed stops are OKLCH colours, which would otherwise switch interpolation to OKLab.
+  - **It also plays on a direct visit and a reload**, where it reads as the site's glow taking on
+    the study's colour. That is a choice: the return trip below is gated, and this could be gated
+    the same way. Under reduced motion the brand colour is simply there, and where relative colour
+    syntax is unsupported the layer paints nothing and the site's sweep shows through.
+- **Leaving a study for the CV runs it backwards**, brand colour into the sweep. The CV's layout
+  always renders the same layer (`.topGradientReturn`), which paints nothing while `--glow-brand` is
+  unset, rests at 0% (the sweep, so after running it is identical to what it covers), and holds its
+  animation paused behind `--glow-return`. `GlowReturnScript.tsx` runs in `<head>` before the first
+  paint and, when this load came from a study, appends a `<style>` defining both on `:root`. Three
+  things:
+  - **It decides from `document.referrer`**, which a same-origin navigation carries in full under the
+    site's `strict-origin-when-cross-origin`. So the study page needs no click handler, and the
+    return covers every way of leaving a study for the CV: the Back link, a prose link, a new tab.
+  - **Only a `navigate` load counts.** A reload keeps its original referrer and would replay the
+    return every time. A back/forward-cache restore runs no script at all and comes back as the page
+    was left, which was the sweep, so the browser's own Back button does not animate.
+  - **A `<style>` element, never an attribute on `<html>`.** React 19 skips unexpected tags in
+    `<head>` while hydrating but reports an attribute it did not render, which is why `ThemeScript`
+    needs `suppressHydrationWarning` and this does not. Verified: a study → Back → Gallery → CV round
+    trip logs no hydration warning. The one "script tag while rendering" error seen in dev came from
+    Fast Refresh re-rendering the layout on the client, and `ThemeScript` does the same thing.
+
 - **`--sticky-top` is `0px` here.** The section titles are the CV's, sticky at that offset, but
   there is no tab bar above them to clear — so they park at the top. The root layout makes exactly
   the same substitution when the gallery is empty and the bar is not rendered.

@@ -3,9 +3,11 @@ import ArrowRight12 from "../../ArrowRight12";
 import { ProseImageViewer } from "../../ProseImage";
 import RichText from "../../RichText";
 import SectionNumber from "../../SectionNumber";
+import layout from "../../layout.module.css";
 import profile from "../../Profile.module.css";
 import styles from "./CaseStudy.module.css";
 import type { CaseStudyDoc } from "../../lib/caseStudyDoc";
+import { FALLBACK_FOLDER_COLOR } from "../../lib/resolveContent";
 import type { ResolvedCaseStudy, ResolvedMedia } from "../../lib/contentTypes";
 
 /**
@@ -33,6 +35,22 @@ const CaseStudy: React.FC<CaseStudyProps> = ({ study, doc, images }) => (
   /* The viewer is a client boundary wrapping server-rendered children — the supported shape, and
      what keeps `RichText` and this component on the server. See `ProseImage.tsx`. */
   <ProseImageViewer>
+    {/* The page glow, in the study's colour, fading in from the site's own on load. It is here
+        rather than in `(study)/layout.tsx` because a layout is not told which study it wraps.
+        The brand layer is skipped for a study with no valid colour of its own: the fallback is the
+        page's ink, and a glow in the ink would be a grey smudge where the site's sweep is the
+        better default. See `.topGradientBrand`. */}
+    <div className={layout.topGradient} aria-hidden="true">
+      <div className={layout.topGradientBand}>
+        {study.color !== FALLBACK_FOLDER_COLOR ? (
+          <div
+            className={`${layout.topGradientBrand} ${layout.topGradientArrive}`}
+            style={{ '--glow-brand': study.color } as React.CSSProperties}
+          />
+        ) : null}
+      </div>
+    </div>
+
     <header className={styles.head}>
       {/* Above the title, which is where a way out belongs: it is the first thing in the reading
           order and the first thing Tab reaches, so it is answerable before the document starts.

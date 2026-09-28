@@ -145,17 +145,29 @@
      because two things draw with them: the glow itself (`.topGradientBand`) and its
      reflection on the selected tab's black pill. Same sweep at the same scale in both, so
      the reflection samples the hue that is actually overhead — declared once so they cannot
-     drift. Lowering the fraction widens the glow; see `.topGradient`. */
+     drift. Lowering the fraction widens the glow; see `.topGradient`.
+
+     The stops are named one by one because a third thing reads them individually: a case
+     study's glow starts as this sweep and turns into the study's colour, and it does that by
+     mixing each stop into its brand counterpart (`.topGradientBrand`). A gradient cannot be
+     taken apart again once built, so the colours have to exist on their own. */
   --glow-fraction: 0.43;
+  --glow-stop-1: rgb(247, 179,  74);
+  --glow-stop-2: rgb(250, 177, 108);
+  --glow-stop-3: rgb(228, 151, 149);
+  --glow-stop-4: rgb(164, 146, 189);
+  --glow-stop-5: rgb( 90, 167, 225);
+  --glow-stop-6: rgb( 52, 181, 240);
+  --glow-stop-7: rgb( 39, 207, 255);
   --glow-sweep: linear-gradient(
     90deg,
-    rgb(247, 179,  74) 25%,
-    rgb(250, 177, 108) 33%,
-    rgb(228, 151, 149) 41.5%,
-    rgb(164, 146, 189) 49.5%,
-    rgb( 90, 167, 225) 58.5%,
-    rgb( 52, 181, 240) 66.5%,
-    rgb( 39, 207, 255) 75%
+    var(--glow-stop-1) 25%,
+    var(--glow-stop-2) 33%,
+    var(--glow-stop-3) 41.5%,
+    var(--glow-stop-4) 49.5%,
+    var(--glow-stop-5) 58.5%,
+    var(--glow-stop-6) 66.5%,
+    var(--glow-stop-7) 75%
   );
   /* Overridden per route in layout.tsx: 0 when the tab bar is not rendered at all. */
   --sticky-top: calc(var(--tab-bar-height) + var(--tab-bar-gap-top) + var(--tab-bar-gap-bottom));

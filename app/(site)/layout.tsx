@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "../globals.css";
 import styles from "../layout.module.css";
 import About from "../About";
+import GlowReturnScript, { returnColours } from "../GlowReturnScript";
 import ProfileHeader from "../ProfileHeader";
 import SiteFooter from "../SiteFooter";
 import Tabs from "../Tabs";
@@ -70,6 +71,7 @@ export default async function RootLayout({
     loadProfileData(),
     hasGalleryItems(),
   ]);
+  const hasReturn = Object.keys(returnColours(cv.caseStudies.items)).length > 0;
 
   /* The theme script below writes `data-theme` onto `<html>` before React hydrates, which is the
      entire point of it being inline and blocking — and it is also, unavoidably, a hydration
@@ -95,6 +97,10 @@ export default async function RootLayout({
             rather than a literal here because `global-not-found.tsx` bypasses this layout and has
             to emit the same script itself, and two copies of one string is one copy too many. */}
         <ThemeScript />
+        {/* Hands the CV's glow a study's colour when the reader has just come back from that
+            study, so it can turn back into the sweep. Inline and blocking for the same reason as
+            the theme, and it renders nothing when no study has a colour of its own. */}
+        <GlowReturnScript studies={cv.caseStudies.items} />
       </head>
       <body>
         <div className={styles.page}>
@@ -115,7 +121,14 @@ export default async function RootLayout({
             {/* Page grain, under the glow. See `.dotTexture` in layout.module.css. */}
             <div className={styles.dotTexture} aria-hidden="true" />
             <div className={styles.topGradient} aria-hidden="true">
-              <div className={styles.topGradientBand} />
+              <div className={styles.topGradientBand}>
+                {/* The way back from a case study: paints nothing unless `GlowReturnScript` has
+                    defined a study's colour, and then turns that colour back into the sweep.
+                    Rendered only when there is a study it could return from. */}
+                {hasReturn ? (
+                  <div className={`${styles.topGradientBrand} ${styles.topGradientReturn}`} />
+                ) : null}
+              </div>
             </div>
             {/* The avatar/name/byline block is the *only* thing above the bar, and that is what
                 keeps the bar at the same height on both routes: it is sticky and shared, so

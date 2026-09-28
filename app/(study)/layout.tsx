@@ -39,7 +39,9 @@ export const metadata: Metadata = {
  * - **`globals.css`**, which is where the tokens, the palette and `p { text-wrap: pretty }` live.
  * - **the pre-paint theme script**, or this would be the one route that ignores a forced theme.
  * - **the glow and the dot texture**, which are `layout.module.css`'s own elements — what makes
- *   this read as this site rather than as a detached document, at the cost of no request.
+ *   this read as this site rather than as a detached document, at the cost of no request. The
+ *   glow is drawn by the page rather than here, because it takes the study's colour; see the
+ *   note beside the dot texture below.
  *
  * What it deliberately does *not* render is `ProfileHeader`, `Tabs`, `About` and `SiteFooter`.
  * That is the point of the file, not an omission: a case study is a document, and the CV's own
@@ -77,13 +79,12 @@ export default function CaseStudyLayout({
             className={styles.column}
             style={{ '--sticky-top': '0px' } as React.CSSProperties}
           >
-            {/* Grain then glow, the order the root layout uses. Both carry their own z-index, so
-                nothing depends on it — but keeping the order identical means one less difference
-                to reason about between the two shells. */}
+            {/* The grain only. **The glow is rendered by the page**, because on this route it takes
+                the study's colour and a layout is never told which study it is wrapping: it sits
+                above `[slug]` and receives no params. `CaseStudy.tsx` draws it, still a child of
+                this column (which is what it measures itself against) and still at its own
+                `z-index: -1`, so it paints in the same place as on the CV whatever the DOM order. */}
             <div className={styles.dotTexture} aria-hidden="true" />
-            <div className={styles.topGradient} aria-hidden="true">
-              <div className={styles.topGradientBand} />
-            </div>
             {/* The band a section title pins into. On the CV the tab bar carries this; here there
                 is no bar, so without it the document scrolls visibly behind a pinned title —
                 which is why the titles carry no background of their own on either route. It

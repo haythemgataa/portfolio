@@ -15,7 +15,12 @@
    No indent below 480px, unlike `.experiences` and `.contacts`. This is a wide surface sitting
    directly beneath the gallery teaser, which takes the whole column at every width; indenting one
    and not the other reads as a misalignment between two adjacent surfaces rather than as rhythm. */
+/* `position: relative` makes the card the containing block for its lit edge (`.ring::after` in
+   `EdgeGlow.module.css`), which is absolutely positioned. It is safe here in a way the notes on the
+   signature warn it is not everywhere: a positioned element paints above in-flow content that
+   overlaps it, and nothing overlaps a card. */
 .card {
+  position: relative;
   display: flex;
   align-items: center;
   column-gap: 16px;

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import CaseStudyFolder from "./CaseStudyFolder";
+import glow from "./EdgeGlow.module.css";
 import styles from "./CaseStudies.module.css";
 import type { ResolvedCaseStudy } from "./lib/contentTypes";
 
@@ -53,14 +54,19 @@ const CaseStudyCard: React.FC<{ study: ResolvedCaseStudy, as: 'link' | 'static' 
     </>
   );
 
+  // Lit under the cursor like every other hairline on the page: the card's hairline is its own
+  // `border`, so it takes `.onBorder`, as the tab and contact pills do. The Studio's static copy
+  // keeps it too, since the canvas sits under the same light.
+  const className = `${styles.card} ${glow.ring} ${glow.onBorder}`;
+
   if (as === 'static') {
-    return <span className={styles.card} data-static="true">{inner}</span>;
+    return <span className={className} data-static="true">{inner}</span>;
   }
 
   // `next/link`, not a plain anchor: this is a real route inside the app tree. The bare-`<a>`
   // rule in CLAUDE.md is specific to `global-not-found`, which replaces the root layout and so
   // has no tree for the client router to reconcile a new route into.
-  return <Link className={styles.card} href={`/${study.slug}`}>{inner}</Link>;
+  return <Link className={className} href={`/${study.slug}`}>{inner}</Link>;
 };
 
 export default CaseStudies;

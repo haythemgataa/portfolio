@@ -1447,7 +1447,7 @@ is the viewport, so one `at var(--edge-glow-x) var(--edge-glow-y)` lands on the 
 screen in every ring on the page: the light is continuous as it crosses from a tab pill to the
 frame below it, and nothing has to be measured. The first version of this lit only the gallery
 teaser and handed each ring the cursor in *its own* coordinates — a rect read and two writes per
-ring per frame, which would not have survived being asked of the 59 rings the CV page now
+ring per frame, which would not have survived being asked of the 60 rings the CV page now
 carries. Three things fell out of the change, and all three are deletions: no scroll listener
 (scrolling moves the borders *under* a stationary light, which is what a light in a room does),
 no `IntersectionObserver` (nothing per-element to switch on), and no proximity ramp — how near
@@ -1462,8 +1462,11 @@ switched off (median 8.3ms, p95 9.3 against 9.2), so there is no proximity gate 
 one.
 
 **What is lit, and what is not.** The `.ring` class goes on hosts whose `::after` is free — the
-tab pills, the contact pills, the avatar well, the theme switch, and the teaser's frame and
-tiles, which all pair it with `.onBorder` because their hairline is the element's own border.
+tab pills, the contact pills, the avatar well, the theme switch, the teaser's frame and tiles, and
+the case study cards, which all pair it with `.onBorder` because their hairline is the element's
+own border. The cards arrived on the case-studies branch without it and were the one bordered
+control on the CV that stayed dark; `.card` also gained `position: relative`, to be the ring's
+containing block, which is safe because nothing overlaps a card.
 `.ringUnder` is the second slot, for a host whose `::after` *is* its hairline: `Attachments`'
 thumbnails draw theirs as an inset pseudo-element, so the light takes `::before` and paints under
 it — which costs almost nothing, since `--border` is 6% of an ink and 94% of the light comes
@@ -1475,7 +1478,8 @@ Four deliberate exclusions:
 - **The gallery's items.** A light chasing the cursor down a column of large media reads as
   restless where the same light on a small control reads as attention. Excluded by not carrying
   the class; `/gallery` therefore lights only the chrome it shares with the CV — the avatar, the
-  tabs, the switch.
+  tabs, the switch. A case study's prose images are left dark for the same reason: they are large
+  media in a column of reading, where the card that leads to them is a small control.
 - **The lightbox.** It was lit for one commit and came out: an opened image is a takeover, with
   nothing around it to relate the light to and the reader's whole attention already on the one
   object. A hairline stirring at the edge of it is interference rather than attention.

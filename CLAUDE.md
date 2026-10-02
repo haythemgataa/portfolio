@@ -1763,11 +1763,13 @@ Three behaviours in `Profile.tsx` / `Attachments.tsx` that are easy to break by 
   any one of them collapses all of them. "Details" means `item.description` and nothing else
   — media and subheadings are always visible, which is why sections whose items carry no
   description get no control at all (they still follow the shared state, they just have
-  nothing to show). **Closed by default**, which is a reversal of the original reasoning: it was
-  open because the control is quiet and a reader who never noticed it should still get the CV's
-  substance. Closed, the whole CV *is* its headings — every role, project and award inside a
-  couple of screens, 5,483px of document against 7,607px open — and the prose is one press away
-  for whoever wants it. The Studio's canvas deliberately still starts open: a description is
+  nothing to show). **Open by default, reversed twice.** It began open because the control is
+  quiet and a reader who never noticed it should still get the CV's substance; it went closed so
+  the CV would read as its headings, 5,483px of document against 7,607px open. That trade held
+  while the descriptions said little a heading did not, and stopped holding once they carried the
+  outcomes — the numbers and the scale are in the prose, and closed, the skimming reader the quiet
+  control is least likely to reach never saw them. If the page feels long, trim the chattier
+  sections rather than closing everything again. The Studio's canvas starts open too, and would regardless: a description is
   edited by clicking the words on the page, and behind a collapsed row there are none to click.
   The collapse animates
   `grid-template-rows` from `0fr` to `1fr`, the only way to transition to a

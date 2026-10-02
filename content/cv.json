@@ -3,8 +3,8 @@
   "profile": {
     "displayName": "Haythem Gataa",
     "byline": "Product Designer {& Engineer}",
-    "location": "Tunisia {(GMT+1)}",
-    "about": "I’m a **Product Designer & Engineer**, 6+ years, owning design end to end for DeepPCB. My engineering background lets me speak dev and prototype in code when it helps.",
+    "location": "Tunis, Tunisia {(GMT+1)}",
+    "about": "**Product Designer & Engineer** with 6+ years of experience, currently owning design end to end for DeepPCB at InstaDeep. I specialize in motion and micro-interactions, and my engineering background lets me speak dev and prototype in code when it helps.",
     "photo": "profile.webp",
     "galleryPreview": [
       "invoices-page.webp",
@@ -34,10 +34,10 @@
         {
           "id": "product-designer-at-instadeep",
           "year": "2023 — Now",
-          "heading": "Product Designer at [instadeep-logo.svg] InstaDeep",
+          "heading": "Product Designer at [instadeep-logo.svg] InstaDeep (a BioNTech Company)",
           "url": "https://instadeep.com",
           "subheading": "Tunis, Tunisia",
-          "description": "* Collaborating on a design system to accelerate new project creation and ensure consistency across non-branded projects.\n\n* Creating fun animations and micro-interactions to make our products feel dynamic (for the wow effect).\n\n* Introduced tools like Rive, Lottie, and Framer to our team, which helped us reduce developer frustration and cut development time by up to one week on average.\n\n* Redesigned several products, improving the UX and modernizing the UI — paired with major enhancements from the AI team, this tripled usage of some products in under a year.\n\n* Brought to life many innovative AI-related projects.",
+          "description": "* Own design end to end for DeepPCB, an AI platform that automates PCB routing, cutting hardware engineers’ work from days to minutes.\n\n* Led DeepPCB’s redesign, which tripled monthly board uploads within a year. Alongside the AI and marketing teams’ work, the product has grown from near zero to 30k+ users and 60k+ uploaded boards.\n\n* Designed tools supporting BioNTech’s cancer vaccine research and a COVID-19 early warning system for detecting high-risk variants.\n\n* Introduced Rive, Lottie and Framer into the workflow, cutting development time by up to a week on average and easing designer–developer handoff.\n\n* Contribute to a shared design system that keeps products consistent and polished.",
           "media": [
             "board-view-running.webp",
             "document-suggestions.webp",
@@ -51,10 +51,10 @@
         },
         {
           "id": "ui-designer-at-weare-moon",
-          "year": "2020 — 2023",
+          "year": "2020 — 2022",
           "heading": "UI Designer at [wearemoon-logo.svg] Weare Moon",
           "subheading": "Sousse, Tunisia",
-          "description": "* Designed an award-winning platform (Sehaty Online).\n\n* Designed a high-fidelity wireframe, and assisted during user testing sessions for [WFP’s Last Mile Ecosystem](https://innovation.wfp.org/project/last-mile-ecosystem), a Nobel-awarded project.\n\n* Designed and ensured smooth delivery of our work, from UX to UI and on to the dev team.\n\n* Helped lead and onboard new designers joining the team.",
+          "description": "* Designed Sehaty Online, a social network for health volunteers, which won the Silver Award for Best Website Design at the Tunisia Digital Awards 2021.\n\n* Designed high-fidelity wireframes and supported user testing for the UN World Food Programme’s [Last Mile Ecosystem](https://innovation.wfp.org/project/last-mile-ecosystem).\n\n* Delivered 30+ client projects, including 5+ full products such as Rizouya (job matching), RH Facile (HR dashboard) and GreenOffice, with mobile and RTL (Arabic) versions where needed.\n\n* Owned delivery from UX through UI to developer handoff, and helped lead and onboard new designers.",
           "media": [
             "groupado-pro-learning-hero.webp",
             "rhfacile-dashboard.webp",
@@ -68,23 +68,23 @@
           "url": "https://www.facebook.com/WeareMoonUX/"
         },
         {
+          "id": "ux-instructor-part-time-at-gomycode",
+          "year": "2021 — 2022",
+          "heading": "UX Instructor at [gomycode-logo.svg] GoMyCode",
+          "url": "https://gomycode.com/",
+          "subheading": "Sousse, Tunisia",
+          "description": "* Taught UX fundamentals to 4 cohorts through lessons and hands-on workshops.\n\n* Guided students through a full UX project, from research to final prototype, by the end of the program."
+        },
+        {
           "id": "ux-ui-teacher-part-time-at-ecole-polytechnique-sousse",
           "year": "2022",
-          "heading": "Guest Lecturer at [polytechnique-logo.svg] Ecole Polytechnique Sousse",
+          "heading": "Guest Lecturer (UX) at [polytechnique-logo.svg] Ecole Polytechnique Sousse",
           "url": "https://polytechsousse.tn/",
           "subheading": "Sousse, Tunisia",
-          "description": "* Created the course plan, exercises, and exams.\n\n* Kept lessons moving and students entertained.\n\n* Organized workshops to help students practice what they had just learned.",
+          "description": "* Designed and taught the full UX course for a class of ~20 engineering students: syllabus, exercises, workshops and exams.\n\n* Ran interactive sessions that kept students engaged and practicing.",
           "media": [
             "ecole-polytechnique-sousse.webp"
           ]
-        },
-        {
-          "id": "ux-instructor-part-time-at-gomycode",
-          "year": "2021 — 2022",
-          "heading": "UX Instructor (Part-time) at [gomycode-logo.svg] GoMyCode",
-          "url": "https://gomycode.com/",
-          "subheading": "Sousse, Tunisia",
-          "description": "* Assisted students in learning UX design.\n\n* Organized workshops to help students understand UX basics.\n\n* Helped students accomplish a full UX project by the end of the program."
         }
       ]
     },
@@ -95,7 +95,7 @@
         {
           "id": "design-ruler",
           "heading": "Design Ruler – macOS App",
-          "subheading": "Swift (w/ Claude)",
+          "subheading": "Swift · Built with Claude",
           "icon": "design-ruler-icon.png",
           "url": "https://github.com/haythemgataa/design-ruler",
           "year": "2026",
@@ -103,12 +103,12 @@
             "design-ruler-measure.webm",
             "design-ruler-alignment-guides.webm"
           ],
-          "description": "Born out of a personal need, Design Ruler is a Mac app that gives you two fullscreen overlay tools for inspecting UI: one for measuring pixel distances with automatic edge detection, and one for placing alignment guides anywhere on screen. Zoom to 4x to work pixel by pixel. Works across all monitors.\n\nAvailable as a standalone menu bar app or a Raycast extension.\n\nA work in progress, pending Apple notarization, but totally usable."
+          "description": "Born out of a personal need, Design Ruler is a menu bar app for inspecting UI on screen: one fullscreen overlay for measuring pixel distances with automatic edge detection, and one for placing alignment guides anywhere on screen. Zoom to 4x to work pixel by pixel. Works across all monitors.\n\nAvailable as a standalone menu bar app or a Raycast extension.\n\nOpen source and in active development."
         },
         {
           "id": "files-shelf",
           "heading": "Files Shelf – Raycast Extension",
-          "subheading": "TypeScript (w/ Claude)",
+          "subheading": "TypeScript · Built with Claude",
           "icon": "files-shelf-icon.png",
           "url": "https://www.raycast.com/haythem_gataa/files-shelf",
           "year": "2025",
@@ -117,7 +117,7 @@
             "files-shelf-2.webp",
             "files-shelf-3.webp"
           ],
-          "description": "Another itch I had to scratch. Files Shelf is a Raycast extension that lets you collect files and folders from anywhere on your Mac into a virtual “shelf,” then run batch actions: copy all to a folder, move all, or rename with prefix, suffix, numbering, or find/replace. Handles conflicts and works across volumes."
+          "description": "Another itch I had to scratch. Files Shelf is a Raycast extension that lets you collect files and folders from anywhere on your Mac into a virtual “shelf,” then run batch actions: copy all to a folder, move all, or rename with prefix, suffix, numbering, or find/replace. Handles conflicts and works across volumes. Published on the Raycast Store with 280+ installs."
         },
         {
           "id": "personal-website",
@@ -134,7 +134,7 @@
         {
           "id": "table-lamp-mod",
           "heading": "Table Lamp Mod",
-          "subheading": "ESP32 and HomeKit (w/ Claude)",
+          "subheading": "ESP32 and HomeKit · Built with Claude",
           "icon": "table-lamp-mod-icon.png",
           "year": "2026",
           "media": [
@@ -200,28 +200,31 @@
         {
           "id": "best-website-design-silver-award-from-tunisia-digital-awards",
           "year": "2021",
-          "heading": "Best website design (Silver award) from Tunisia Digital Awards",
+          "heading": "Silver Award: Best Website Design (for Sehaty Online)",
           "media": [
             "tunisia-digital-awards-1.webp",
             "award-ceremony.webm",
             "tunisia-digital-awards-3.webp"
-          ]
-        },
-        {
-          "id": "1st-place-winner-of-code-camping-from-mentor-nations",
-          "year": "2019",
-          "heading": "1st place winner of Code Camping from Mentor Nations",
-          "media": [
-            "code-camping.webp"
-          ]
+          ],
+          "subheading": "Tunisia Digital Awards"
         },
         {
           "id": "1st-place-winner-of-innovation-camp-from-injaz-tunisia",
           "year": "2019",
-          "heading": "1st place winner of Innovation Camp from Injaz Tunisia",
+          "heading": "1st place, Innovation Camp",
           "media": [
             "injaz-tunisia.webp"
-          ]
+          ],
+          "subheading": "Injaz Tunisia"
+        },
+        {
+          "id": "1st-place-winner-of-code-camping-from-mentor-nations",
+          "year": "2019",
+          "heading": "1st place, Code Camping",
+          "media": [
+            "code-camping.webp"
+          ],
+          "subheading": "Mentor Nations"
         }
       ]
     },
@@ -247,7 +250,7 @@
         {
           "id": "design-for-non-designers-at-gomycode-hackathon",
           "year": "2022",
-          "heading": "Design for non-designers at GoMyCode Hackathon",
+          "heading": "Design for non-designers at Sousse Coders (with GoMyCode)",
           "subheading": "Sousse, Tunisia",
           "media": [
             "gomycode-hackathon-1.webp",
@@ -256,8 +259,8 @@
         },
         {
           "id": "design-boost-at-google-developers-group-event",
-          "year": "2021",
-          "heading": "Design Boost at Google Developers Group Event",
+          "year": "2020",
+          "heading": "Design Boost at GDG Event (with Google Developers Group)",
           "subheading": "Sousse, Tunisia"
         }
       ]
@@ -269,13 +272,14 @@
         {
           "id": "logo-featured-on-logosystems-co",
           "year": "2024",
-          "heading": "Logo featured on LogoSystem.co",
+          "heading": "Lexit logo featured on LogoSystem.co",
           "url": "https://logosystem.co/logo/lexit"
         },
         {
           "id": "unsplash-features",
-          "year": "Multiple times",
-          "heading": "Featured on Unsplash (17M total views and 120k downloads)"
+          "year": "Since 2017",
+          "heading": "Featured on Unsplash Editorial Page",
+          "subheading": "17M+ views, 120k+ downloads"
         },
         {
           "id": "photographer-on-buchhalter-international-group",
@@ -294,7 +298,7 @@
           "heading": "Graphic Designer at I Rise",
           "url": "https://www.facebook.com/I.Rise.Ksour.Essef/",
           "subheading": "Mahdia, Tunisia",
-          "description": "Designed social media content and print materials that boosted event attendance and engagement, and organized an initiative to transform a neglected forest into a welcoming green space for families and children, fostering a sense of safety and community.",
+          "description": "Designed event and print materials, and co-organized the restoration of a neglected local forest.",
           "media": [
             "irise-rebrand-teaser.webp",
             "irise-bachelier-forum-mockups.webp",
@@ -305,10 +309,10 @@
         {
           "id": "graphic-designer-at-mouch-shih",
           "year": "2020",
-          "heading": "Graphic Designer at Mouch Shih",
+          "heading": "Volunteer at Mouch Shih",
           "url": "https://www.facebook.com/mouchshihtn",
           "subheading": "Online",
-          "description": "Designed persuasive social media visuals for a COVID-19 fact-checking project. This effort aimed to counter misinformation, educating the public about accurate health practices during the pandemic.",
+          "description": "Designed visuals for a COVID-19 fact-checking campaign aiming to counter circulating misinformation.",
           "media": [
             "mouch-shih-campaign-mockups.webp"
           ]
@@ -316,16 +320,16 @@
         {
           "id": "co-founder-and-head-of-design-at-google-club-isigk",
           "year": "2018 — 2020",
-          "heading": "Co-Founder and Head of Design at Google Club ISIGK",
+          "heading": "Founding Member and Head of Design at Google Club ISIGK",
           "subheading": "Kairouan, Tunisia",
-          "description": "Co-led the organization and branding of events and workshops to share tech knowledge, attracting students and community members."
+          "description": "Branded and co-organized tech events and workshops."
         },
         {
           "id": "photographer-and-designer-at-we-are-kairouan-a-tunivision-initiative",
           "year": "2019 — 2020",
           "heading": "Photographer and Designer at We Are Kairouan (a Tunivision initiative)",
           "subheading": "Kairouan, Tunisia",
-          "description": "Captured the historic beauty of Kairouan, highlighting the city’s rich heritage and contributing to local tourism awareness and community pride.",
+          "description": "Photographed Kairouan’s heritage for a local tourism initiative.",
           "media": [
             "kairouan-mosque-photos.webp",
             "kairouan-mosque-portrait.webp",

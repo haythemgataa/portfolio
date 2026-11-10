@@ -3269,17 +3269,36 @@ three things read it. Five things about the arrangement:
   right — `SITE_URL` is hardcoded, so a crawler that reaches a preview is told where the real page
   is. That is why it stays hardcoded rather than becoming per-branch.
 
-**Simple Analytics is gated on the same constant** (`app/Analytics.tsx`). It is a component rather
-than the tag written inline for `ThemeScript`'s reason: `global-not-found.tsx` bypasses the layout
-and has to emit the same thing, and a 404 is arguably the page most worth counting. React 19 hoists
-`<script async src>` into `<head>` and dedupes by `src`, so rendering it from a component lands it
-once — verified in the export, one script tag per page, in `<head>`. Two things worth knowing:
-**dev traffic is the author's own**, so counting it would corrupt the numbers rather than add to
-them, which is why this is branch-gated and not merely `localhost`-excluded; and
-**`data-collect-dnt="true"` is a real choice**, not boilerplate — it opts *into* counting visitors
-with Do Not Track set. The argument for it is that what is collected is the same either way, no
-cookie and no cross-site identifier, so honouring DNT would discard page views without withholding
-anything personal. Drop the attribute to exclude them.
+**Analytics is a self-hosted Umami at `stats.haythem.cv`, gated on the same constant**
+(`app/Analytics.tsx`). It replaced Simple Analytics. It is a component rather than the tag written
+inline for `ThemeScript`'s reason: `global-not-found.tsx` bypasses the layout and has to emit the
+same thing, and a 404 is arguably the page most worth counting. Six things worth knowing:
+
+- **The host must be public and HTTPS, and nothing fails loudly when it is not.** The tracker posts
+  to `/api/send` on whatever origin its own `src` names. On this HTTPS site an `http://` src is
+  blocked as mixed content before any request, and a tailnet-only `*.ts.net` name is NXDOMAIN on
+  public DNS. That was the first address tried, which is how this is known. Either way every page
+  renders normally and nothing is counted.
+- **`defer`, as Umami ships it, rendered inside `<head>` by each caller.** React 19 only hoists and
+  dedupes `async` scripts, so the layouts place it there themselves, once each. Verified in the
+  export: exactly one tag per page, in `<head>`.
+- **`data-domains` replaces a rule Simple Analytics had built in.** A local build on `main` passes
+  the branch gate. Simple Analytics ignored `localhost`, and Umami does not, so the tracker is
+  limited to `haythem.cv` and `www.haythem.cv`. Verified by serving the production export on
+  localhost: the script loads, `window.umami` is defined, and no `/api/send` request is made.
+- **Dev traffic is the author's own**, so counting it would corrupt the numbers rather than add to
+  them, which is why this is branch-gated and not merely domain-limited.
+- **No `data-do-not-track`, so DNT visitors are counted**, the choice Simple Analytics'
+  `data-collect-dnt="true"` made. The argument is that a page view collects the same nothing either
+  way. Add the attribute to exclude them.
+- **Umami's `recorder.js` is deliberately not loaded**, and it is the line between needing no
+  banner and needing one. It is rrweb session replay plus heatmaps: a replay is the page's DOM as
+  the visitor saw it. The CNIL's self-evaluation tool for its audience-measurement exemption
+  requires session-replay features to be switched off, and its February 2026 draft recommendation
+  says replay always needs prior consent. Under GDPR Art. 3(2)(b) that applies to EU visitors
+  wherever the site is run from. It is also 57 KB gzipped against the counter's 2.3 KB, downloaded
+  by every visitor before sampling decides whether to record them. Adding it means adding a consent
+  step first.
 
 **Every pool URL therefore carries a `?v=<hash>` content hash, built in `assetUrl()`** — the one
 place a `/media/` URL is constructed, so item media, posters, item icons, dark variants and the

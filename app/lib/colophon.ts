@@ -101,7 +101,7 @@ export const COLOPHON: CreditGroup[] = [
     items: [
       { name: 'Cloudflare Pages', note: 'Hosting', href: 'https://pages.cloudflare.com' },
       { name: 'Cloudflare Images', note: 'Resizing at the edge', href: 'https://developers.cloudflare.com/images/' },
-      { name: 'Simple Analytics', note: 'No cookies, no cross-site identifier', href: 'https://www.simpleanalytics.com' },
+      { name: 'Umami (self-hosted)', note: 'No cookies, no cross-site identifier', href: 'https://umami.is' },
     ],
   },
   {

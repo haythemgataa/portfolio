@@ -1,4 +1,5 @@
 import { promises as fs } from 'fs';
+import { join } from 'path';
 import { createHash } from 'crypto';
 import type {
   ContactItem,
@@ -8,8 +9,10 @@ import type {
   MediaAsset,
 } from '../../lib/contentTypes';
 import { darkVariant, headingIconFiles, inferMediaType } from '../../lib/contentTypes';
+import { caseStudyImageFiles } from '../../lib/caseStudyDoc';
 import type { GalleryEntry, GalleryFile } from '../../lib/galleryTypes';
 import {
+  CASE_STUDIES_ROOT,
   CV_PATH,
   GALLERY_PATH,
   MEDIA_PATH,
@@ -38,6 +41,18 @@ export type Doc = {
   cv: CvFile;
   gallery: GalleryFile;
   assets: Record<string, MediaAsset>;
+  /**
+   * Pool filenames embedded in `content/case-studies/*.md`, gathered once by `readDoc`.
+   *
+   * They are not part of any of the three JSON files, so nothing else in this module could find
+   * them — and they still have to be reference-counted. Carrying them on the `Doc` is what makes
+   * `collectReferences`' extra argument hard to forget.
+   *
+   * Deliberately **not** part of the write hash: the hash guards the three files this tool writes,
+   * and a case study is edited by hand in an editor. Including it would make an unrelated markdown
+   * save reject a pending Studio edit.
+   */
+  caseStudyImages: string[];
   hash: string;
   /** Exact bytes on disk, so a write can skip files that did not change. */
   raw: { cv: string; media: string; gallery: string };
@@ -81,9 +96,34 @@ export async function readDoc(): Promise<Doc> {
     cv,
     gallery,
     assets,
+    caseStudyImages: await readCaseStudyImages(),
     hash: hashOf(cvRaw, mediaRaw, galleryRaw),
     raw: { cv: cvRaw, media: mediaRaw, gallery: galleryRaw },
   };
+}
+
+/**
+ * Every pool filename embedded in a case study's markdown, across all of them.
+ *
+ * A missing directory is normal — there were no case studies at all until recently — so it yields
+ * nothing rather than throwing. A file that cannot be read is skipped for the same reason, though
+ * note the asymmetry that buys: an unreadable study under-counts, which is the direction that
+ * loses files. It is acceptable only because the sweep needs an explicit delete to run at all.
+ */
+async function readCaseStudyImages(): Promise<string[]> {
+  let names: string[] = [];
+  try {
+    names = (await fs.readdir(CASE_STUDIES_ROOT)).filter((n) => n.endsWith('.md'));
+  } catch {
+    return [];
+  }
+
+  const files: string[] = [];
+  for (const name of names) {
+    const raw = await readMaybe(join(CASE_STUDIES_ROOT, name));
+    if (raw !== null) files.push(...caseStudyImageFiles(raw));
+  }
+  return files;
 }
 
 /**
@@ -233,8 +273,8 @@ function mergePatch<T extends Record<string, unknown>>(
 
 /**
  * Every filename referenced anywhere: CV item media, an item's own icon, the inline icons named
- * inside its heading, the profile photo, the gallery teaser, gallery entries, and poster frames
- * declared in the registry.
+ * inside its heading, the profile photo, the gallery teaser, case study logos and covers, gallery
+ * entries, and poster frames declared in the registry.
  *
  * This is the only reference counter — `planGarbage` and `findOrphans` both read
  * it — so a *kind* of reference missing from here is not a small bug: the assets
@@ -244,7 +284,17 @@ function mergePatch<T extends Record<string, unknown>>(
 export function collectReferences(
   cv: CvFile,
   gallery: GalleryFile,
-  assets: Record<string, MediaAsset>
+  assets: Record<string, MediaAsset>,
+  /**
+   * Pool filenames named by `![alt](file)` inside `content/case-studies/*.md`.
+   *
+   * **Passed in rather than derived, because this function cannot read disk and those references
+   * live in files.** That is the one kind of reference the document itself does not contain, so a
+   * caller that forgets it silently under-counts and the sweep offers to delete a picture that is
+   * on a published page. `readDoc` gathers them onto `Doc.caseStudyImages` so the two callers here
+   * cannot get it wrong by accident.
+   */
+  caseStudyImages: Iterable<string> = []
 ): Map<string, number> {
   const counts = new Map<string, number>();
   const bump = (file?: string) => {
@@ -257,6 +307,13 @@ export function collectReferences(
   // often be counted anyway — but "usually" is not a reference count: drop one from the gallery
   // and the sweep would delete a file the home page is still showing.
   for (const file of cv.profile?.galleryPreview ?? []) bump(file);
+  // A case study card names two pool files — the mark on the folder's front flap and the page
+  // peeking out of it. Neither is reachable from anywhere else in the document, so without this
+  // both read as orphans the moment they are added.
+  for (const study of cv.caseStudies?.items ?? []) {
+    bump(study.logo);
+    bump(study.cover);
+  }
   for (const section of cv.sections ?? []) {
     for (const item of section.items ?? []) {
       for (const file of item.media ?? []) bump(file);
@@ -282,6 +339,9 @@ export function collectReferences(
       }
     }
   }
+  // Images embedded in a case study's prose. The reference lives in a markdown file rather than
+  // in the document, which is why this arrives as an argument — see the parameter's note.
+  for (const file of caseStudyImages) bump(file);
   for (const entry of gallery.items ?? []) bump(entry.file);
   // A poster is only reachable through its video, so it counts as referenced
   // exactly when that video is.
@@ -305,7 +365,9 @@ export function planGarbage(
   cv: CvFile,
   gallery: GalleryFile,
   assets: Record<string, MediaAsset>,
-  candidates: string[]
+  candidates: string[],
+  /** See `collectReferences` — this has to reach it, or a sweep collects live case study art. */
+  caseStudyImages: Iterable<string> = []
 ): { assets: Record<string, MediaAsset>; remove: string[] } {
   const next = { ...assets };
   const remove: string[] = [];
@@ -315,7 +377,7 @@ export function planGarbage(
     const file = queue.pop()!;
     if (!file || !next[file]) continue;
 
-    const counts = collectReferences(cv, gallery, next);
+    const counts = collectReferences(cv, gallery, next, caseStudyImages);
     if ((counts.get(file) ?? 0) > 0) continue;
 
     const poster = next[file].poster;
@@ -904,7 +966,7 @@ export async function findOrphans(doc: Doc): Promise<{
     // No pool yet.
   }
 
-  const counts = collectReferences(doc.cv, doc.gallery, doc.assets);
+  const counts = collectReferences(doc.cv, doc.gallery, doc.assets, doc.caseStudyImages);
   return {
     unregistered: files.filter((f) => !doc.assets[f]),
     unreferenced: Object.keys(doc.assets).filter((f) => (counts.get(f) ?? 0) === 0),

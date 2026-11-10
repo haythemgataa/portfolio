@@ -1,23 +1,26 @@
 import type { Metadata } from "next";
-import "./globals.css";
-import styles from "./layout.module.css";
-import About from "./About";
-import Analytics from "./Analytics";
-import EdgeGlow from "./EdgeGlow";
-import ProfileHeader from "./ProfileHeader";
-import SiteFooter from "./SiteFooter";
-import Tabs from "./Tabs";
-import ThemeScript from "./ThemeScript";
-import ThemeSwitch from "./ThemeSwitch";
-import { switzer } from "./lib/font";
-import { faviconIcons } from "./lib/chromeAsset";
-import { loadProfileData } from "./lib/contentLoader";
-import { hasGalleryItems } from "./lib/galleryLoader";
-import { IS_PRODUCTION_DEPLOY, SITE_URL, pageTitle } from "./lib/site";
-import { THEME_SWITCH_ENABLED } from "./lib/theme";
+import "../globals.css";
+import styles from "../layout.module.css";
+import About from "../About";
+import Analytics from "../Analytics";
+import EdgeGlow from "../EdgeGlow";
+import GlowReturnScript, { returnColours } from "../GlowReturnScript";
+import ProfileHeader from "../ProfileHeader";
+import SiteFooter from "../SiteFooter";
+import Tabs from "../Tabs";
+import ThemeScript from "../ThemeScript";
+import ThemeSwitch from "../ThemeSwitch";
+import { switzer } from "../lib/font";
+import { faviconIcons } from "../lib/chromeAsset";
+import { loadProfileData } from "../lib/contentLoader";
+import { hasGalleryItems } from "../lib/galleryLoader";
+import { ogImages } from "../lib/ogImage";
+import { IS_PRODUCTION_DEPLOY, SITE_URL, pageTitle } from "../lib/site";
+import { THEME_SWITCH_ENABLED } from "../lib/theme";
 
 export async function generateMetadata(): Promise<Metadata> {
   const cv = await loadProfileData();
+  const images = await ogImages();
   return {
     // The site had no idea what its own origin was. `metadataBase` is what resolves every
     // relative URL the metadata layer emits — canonicals here, and whatever a social card
@@ -49,22 +52,26 @@ export async function generateMetadata(): Promise<Metadata> {
     // `robots.txt` stays permissive on every branch precisely so this tag can be read — see the
     // note in `app/robots.ts`.
     robots: IS_PRODUCTION_DEPLOY ? undefined : { index: false, follow: false },
-    // The card's text. Its *image* is deliberately not named here: `app/opengraph-image.png` is
-    // a file convention, so Next emits `og:image` and `twitter:image` for this segment along
-    // with the type, the real pixel dimensions read off the file, and a cache-busting hash —
-    // none of which a hand-written `images` entry would carry. A child that overrides this block
-    // loses the image and has to name it again; `/gallery` does, via `OG_IMAGE`.
+    // The card's image is named here, and it did not used to be. `app/opengraph-image.png` is a
+    // file convention, and a convention attaches to the *segment* it sits in — which used to be
+    // this layout's own, so declaring `openGraph` here still got the image for free. Splitting the
+    // routes into `(site)` and `(study)` root layouts moved `/` into a group and ended that: the
+    // home page silently lost its `og:image` while `/gallery`, which names the file by hand, kept
+    // one. Every route that declares this block now goes through `ogImages()`, which derives the
+    // dimensions, the alt text and a cache-busting hash from the bytes — see the note there.
     openGraph: {
       type: 'website',
       url: '/',
       siteName: cv.profile.displayName,
       title: cv.profile.displayName,
       description: cv.profile.byline || '',
+      images,
     },
     twitter: {
       card: 'summary_large_image',
       title: cv.profile.displayName,
       description: cv.profile.byline || '',
+      images,
     },
   };
 }
@@ -85,6 +92,7 @@ export default async function RootLayout({
     loadProfileData(),
     hasGalleryItems(),
   ]);
+  const hasReturn = Object.keys(returnColours(cv.caseStudies.items)).length > 0;
 
   /* The theme script below writes `data-theme` onto `<html>` before React hydrates, which is the
      entire point of it being inline and blocking — and it is also, unavoidably, a hydration
@@ -110,6 +118,10 @@ export default async function RootLayout({
             rather than a literal here because `global-not-found.tsx` bypasses this layout and has
             to emit the same script itself, and two copies of one string is one copy too many. */}
         <ThemeScript />
+        {/* Hands the CV's glow a study's colour when the reader has just come back from that
+            study, so it can turn back into the sweep. Inline and blocking for the same reason as
+            the theme, and it renders nothing when no study has a colour of its own. */}
+        <GlowReturnScript studies={cv.caseStudies.items} />
         {/* Production only, and a component rather than the tag inline because the 404 bypasses
             this layout and has to emit the same thing — see Analytics.tsx. */}
         <Analytics />
@@ -131,7 +143,14 @@ export default async function RootLayout({
             {/* Page grain, under the glow. See `.dotTexture` in layout.module.css. */}
             <div className={styles.dotTexture} aria-hidden="true" />
             <div className={styles.topGradient} aria-hidden="true">
-              <div className={styles.topGradientBand} />
+              <div className={styles.topGradientBand}>
+                {/* The way back from a case study: paints nothing unless `GlowReturnScript` has
+                    defined a study's colour, and then turns that colour back into the sweep.
+                    Rendered only when there is a study it could return from. */}
+                {hasReturn ? (
+                  <div className={`${styles.topGradientBrand} ${styles.topGradientReturn}`} />
+                ) : null}
+              </div>
             </div>
             {/* Everything above the bar has to be identical on both routes, and that is the
                 whole constraint: the bar is sticky and shared, so whatever sits above it decides

@@ -187,6 +187,43 @@ export type CvProfile = {
   galleryPreview?: string[];
 };
 
+/**
+ * A case study — one folder card in the section pinned above `sections[]`.
+ *
+ * **`slug` is the identity; there is deliberately no separate `id`.** It already has to be
+ * unique (it names a file in the flat `content/case-studies/` directory) and stable (it is the
+ * URL), so it serves as the React key too. A second `"id": "deeppcb"` beside it would write the
+ * same word twice — the exact criticism CONTENT-SCHEMA.md levels at the dropped `role`/`org`
+ * fields.
+ *
+ * `title` and `subtitle` are plain text, deliberately *not* `{...}` muted runs: on the card both
+ * lines are one ink apiece, and the muted convention is `profile.byline`'s and
+ * `profile.location`'s.
+ *
+ * `logo` and `cover` name pool files, so they are a **new kind of reference**: both have to be
+ * counted in `collectReferences` and mirrored in the Studio's `cvUses`, or the orphan sweep
+ * reports them unreferenced and offers to delete assets that are on screen. Same obligation
+ * `galleryPreview` carries above.
+ */
+export type CaseStudy = {
+  /** Names `content/case-studies/<slug>.md` and the route `/<slug>`. Unique among case studies. */
+  slug: string;
+  title: string;
+  subtitle?: string;
+  /** The folder's fill — the product's own colour, so it is a hex literal, not a token. */
+  color: string;
+  /** Pool filename for the mark on the front flap. Drawn as a white CSS mask. */
+  logo?: string;
+  /** Pool filename for the page peeking out of the folder. */
+  cover?: string;
+};
+
+/** Pinned above `sections[]`. Its items are orderable; its position is not. */
+export type CvCaseStudies = {
+  label: string;
+  items: CaseStudy[];
+};
+
 /** Pinned to the bottom. Its items are orderable; its position is not. */
 export type CvContact = {
   label: string;
@@ -196,6 +233,8 @@ export type CvContact = {
 export type CvFile = {
   version: number;
   profile: CvProfile;
+  /** Optional: a CV with none simply renders no such section, and the ordinals shift back. */
+  caseStudies?: CvCaseStudies;
   sections: CvSection[];
   contact: CvContact;
 };
@@ -290,8 +329,28 @@ export type ResolvedContact = {
   items: ContactItem[];
 };
 
+/**
+ * A case study with its two pool references resolved.
+ *
+ * `logoUrl` is a bare URL rather than a `ResolvedMedia`: the mark is painted as a CSS mask, so
+ * nothing downstream wants its intrinsic size, its poster or its mat — the same reason
+ * `ResolvedIcon` is narrower than `ResolvedMedia`. The cover keeps the full shape because the
+ * sheet's resize request needs real dimensions.
+ */
+export type ResolvedCaseStudy = Omit<CaseStudy, 'logo' | 'cover'> & {
+  logoUrl: string | null;
+  cover: ResolvedMedia | null;
+};
+
+export type ResolvedCaseStudies = {
+  label: string;
+  items: ResolvedCaseStudy[];
+};
+
 export type ResolvedCv = {
   profile: ResolvedProfile;
+  /** Always present; `items` is empty when the CV has no case studies. */
+  caseStudies: ResolvedCaseStudies;
   sections: ResolvedSection[];
   contact: ResolvedContact;
 };

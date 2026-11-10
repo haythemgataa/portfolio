@@ -161,7 +161,9 @@ export async function POST(req: Request) {
     if (freed.length) {
       // Pure: works out what is now unreferenced without touching disk. Counts
       // both tabs, so a file the other one still uses is left alone.
-      const plan = planGarbage(cv, gallery, assets, freed);
+      // `doc.caseStudyImages` has to reach the sweep, or a picture embedded in a published
+      // case study counts as unreferenced and is deleted — see `collectReferences`.
+      const plan = planGarbage(cv, gallery, assets, freed, doc.caseStudyImages);
       assets = plan.assets;
       remove = plan.remove;
     }

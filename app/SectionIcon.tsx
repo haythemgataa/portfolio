@@ -27,10 +27,10 @@ import DuotoneIcon, { type DuotoneMark } from "./DuotoneMark";
  * measured, it reaches 16.004 — so that clip was doing 0.004 units of real work. At 16px on a 3x
  * screen that is 0.012 of a device pixel, which is why the clip is not worth carrying.
  *
- * `caseStudies` is drawn and currently unreached: `content/case-studies/` holds no markdown yet,
- * so no section carries that key. It is in the vocabulary rather than waiting in a folder because
- * the Studio derives a key by camel-casing the label it is given, so a section created as "Case
- * Studies" lands on exactly this entry and lights up with no further work.
+ * `caseStudies` is the pinned case studies block's. Like contact, that block lives outside
+ * `sections[]` and has no `key` in the file, so `Profile.tsx` passes the literal. The name was
+ * chosen before the block existed, to match what the Studio would derive by camel-casing a section
+ * labelled "Case Studies", which is why it lines up with no second entry.
  */
 const SECTION_MARKS: Record<string, DuotoneMark> = {
   workExperience: {

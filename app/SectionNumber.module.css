@@ -142,26 +142,38 @@
      That still binds at 0.25: it is the *hue* being held constant across the ramp that matters,
      not the alpha it lands on.
 
+     **The colour is one custom property, `--section-number-color`**, which `SectionNumber` sets
+     inline when a caller passes one (a case study passes its brand colour) and which falls back
+     to the orange above. The alpha steps are `color-mix()` against `transparent` rather than
+     literal `rgb(… / a)`, because they have to be derived from whatever colour arrives. That does
+     not break the rule above: `color-mix` mixes in premultiplied alpha, so a mix with
+     `transparent` keeps the hue and only lowers the alpha. The black the rule warns about comes
+     from *interpolating* towards `transparent` between two gradient stops, and every stop here is
+     still the one colour. (A 0% mix would have no hue left to keep, and the floor here is 25%.)
+     Relative colour syntax would say it more directly, but `color-mix` is supported further back,
+     and a colour function the engine rejects would leave the numeral with no paint at all.
+
      `background-image` rather than the `background` shorthand: the shorthand resets
      `background-clip` to `border-box`, which would throw away the text clipping below it and
      paint a rectangle of gradient across the header instead of two digits. */
   --section-number-band: calc(var(--type-size) * 0.465);
   --section-number-ink: calc(var(--section-number-size) * 0.3984);
   --section-number-cut: calc(var(--section-number-ink) - var(--section-number-band));
+  --number-ink: var(--section-number-color, #fb4107);
   background-image: linear-gradient(
     to bottom,
-    #fb4107 0,
-    #fb4107 calc(50% - var(--section-number-ink)),
-    rgb(251 65 7 / 0.883) calc(50% - var(--section-number-band) - var(--section-number-cut) * 0.75),
-    rgb(251 65 7 / 0.625) calc(50% - var(--section-number-band) - var(--section-number-cut) * 0.5),
-    rgb(251 65 7 / 0.367) calc(50% - var(--section-number-band) - var(--section-number-cut) * 0.25),
-    rgb(251 65 7 / 0.25) calc(50% - var(--section-number-band)),
-    rgb(251 65 7 / 0.25) calc(50% + var(--section-number-band)),
-    rgb(251 65 7 / 0.367) calc(50% + var(--section-number-band) + var(--section-number-cut) * 0.25),
-    rgb(251 65 7 / 0.625) calc(50% + var(--section-number-band) + var(--section-number-cut) * 0.5),
-    rgb(251 65 7 / 0.883) calc(50% + var(--section-number-band) + var(--section-number-cut) * 0.75),
-    #fb4107 calc(50% + var(--section-number-ink)),
-    #fb4107 100%
+    var(--number-ink) 0,
+    var(--number-ink) calc(50% - var(--section-number-ink)),
+    color-mix(in srgb, var(--number-ink) 88.3%, transparent) calc(50% - var(--section-number-band) - var(--section-number-cut) * 0.75),
+    color-mix(in srgb, var(--number-ink) 62.5%, transparent) calc(50% - var(--section-number-band) - var(--section-number-cut) * 0.5),
+    color-mix(in srgb, var(--number-ink) 36.7%, transparent) calc(50% - var(--section-number-band) - var(--section-number-cut) * 0.25),
+    color-mix(in srgb, var(--number-ink) 25%, transparent) calc(50% - var(--section-number-band)),
+    color-mix(in srgb, var(--number-ink) 25%, transparent) calc(50% + var(--section-number-band)),
+    color-mix(in srgb, var(--number-ink) 36.7%, transparent) calc(50% + var(--section-number-band) + var(--section-number-cut) * 0.25),
+    color-mix(in srgb, var(--number-ink) 62.5%, transparent) calc(50% + var(--section-number-band) + var(--section-number-cut) * 0.5),
+    color-mix(in srgb, var(--number-ink) 88.3%, transparent) calc(50% + var(--section-number-band) + var(--section-number-cut) * 0.75),
+    var(--number-ink) calc(50% + var(--section-number-ink)),
+    var(--number-ink) 100%
   );
   -webkit-background-clip: text;
   background-clip: text;

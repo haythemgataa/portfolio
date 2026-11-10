@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import ArrowRight12 from "./ArrowRight12";
 import { cloudflareImageUrl } from "./lib/cloudflareImage";
 import glow from "./EdgeGlow.module.css";
 import styles from "./GalleryPreview.module.css";
@@ -130,25 +131,6 @@ const PreviewTile: React.FC<{ media: ResolvedMedia; alt: string; priority: boole
     </div>
   );
 };
-
-const ArrowRight12 = () => (
-  <svg
-    width="12"
-    height="12"
-    viewBox="0 0 12 12"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    aria-hidden="true"
-  >
-    <path
-      d="M2.5 6H9.5M9.5 6L6.5 3M9.5 6L6.5 9"
-      stroke="currentColor"
-      strokeWidth="1"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
 
 const GalleryPreview: React.FC<{ items: ResolvedMedia[] }> = ({ items }) => {
   if (!items.length) return null;

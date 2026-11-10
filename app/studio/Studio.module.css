@@ -6,9 +6,10 @@
    screen, so the tool around it borrows the same seven colour tokens and adds no palette of
    its own.
 
-   `.studio` is `fixed; inset: 0` because /studio sits under the site's root layout and would
-   otherwise render below ProfileHeader and the tab bar. Covering the viewport keeps it a tool
-   rather than a page, without restructuring the app's routes for a dev-only feature. */
+   `.studio` is `fixed; inset: 0` so it covers the viewport as a tool rather than scrolling as a
+   page. It began as the way to sit over the site's chrome, when /studio rendered under the site's
+   root layout. It has its own layout now (`layout.tsx`), which renders none of
+   that chrome, but the canvas is still its own scroller and the rule still holds the frame. */
 .studio {
   position: fixed;
   inset: 0;

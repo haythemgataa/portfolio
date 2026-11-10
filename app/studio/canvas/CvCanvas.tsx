@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import Arrow12 from '../../Arrow12';
 import Attachments from '../../Attachments';
+import CaseStudies from '../../CaseStudies';
 import GalleryPreview from '../../GalleryPreview';
 import RichText from '../../RichText';
 import {
@@ -15,7 +16,7 @@ import {
 import profile from '../../Profile.module.css';
 import type { ContactItem, CvItem, CvSection, ResolvedMedia } from '../../lib/contentTypes';
 import { groupContactRows, isAddressContact } from '../../lib/contentTypes';
-import { resolveHeading, resolveIcon, resolveMedia, silent } from '../../lib/resolveContent';
+import { resolveCaseStudy, resolveHeading, resolveIcon, resolveMedia, silent } from '../../lib/resolveContent';
 import { sameSelection, useStudio } from '../lib/studioContext';
 import { useDragHandlers } from '../lib/useDragHandlers';
 import Editable from './Editable';
@@ -36,6 +37,18 @@ import SectionIcon from '../../SectionIcon';
  *   and wrong here: a section you just created has to be visible to put the first item in.
  * - **Pressing a thumbnail selects its asset** instead of opening the lightbox, via the one
  *   optional prop `Attachments` takes for it.
+ *
+ * The case studies block is **read-only** here: it renders, so the editor is not showing a page
+ * the site does not have, but it carries no ring, no toolbar and no `Editable`. `content/cv.json`
+ * is edited by hand. Two consequences of that:
+ *
+ * - `CaseStudies` is reused outright with `as="static"`, which swaps its `<Link>` for a `<span>`
+ *   — the same escape hatch `Attachments` gets from `onSelect`, and for the same reason: a copy
+ *   of that component here would drift, and a press would navigate out of the Studio.
+ * - **The canvas shows every authored case study, including one the site drops.** `contentLoader`
+ *   omits a study whose `content/case-studies/<slug>.md` is missing, and that check needs disk —
+ *   the one thing `resolveContent` cannot do. For a read-only view that is the better failure: a
+ *   missing markdown file is an authoring error worth seeing rather than hiding.
  */
 
 /** Icon-only buttons, so the glyph and the accessible name are declared together. */
@@ -336,6 +349,7 @@ const CanvasItem: React.FC<ItemProps> = ({
 
 const CanvasSection: React.FC<{
   section: CvSection;
+  /** Position in `cv.sections` — what every reorder addresses. */
   index: number;
   total: number;
   showDetails: boolean;
@@ -640,6 +654,14 @@ const CvCanvas: React.FC = () => {
 
   const contactSelected = sameSelection(selection, { kind: 'contact' });
 
+  // Resolved with the same function the build uses, bound to the Studio's plain `/media/` URL —
+  // the whole point of `resolveContent` being filesystem-free. `silent`, because an author
+  // mid-edit produces broken intermediate references constantly.
+  const caseStudies = useMemo(
+    () => (cv.caseStudies?.items ?? []).map((entry) => resolveCaseStudy(entry, assets, urlFor, silent)),
+    [cv.caseStudies?.items, assets, urlFor]
+  );
+
   return (
     <>
       {teaser.length > 0 ? (
@@ -658,6 +680,22 @@ const CvCanvas: React.FC = () => {
         >
           <GalleryPreview items={teaser} />
         </div>
+      ) : null}
+
+      {caseStudies.length > 0 ? (
+        <section className={profile.profileSection}>
+          <div className={profile.sectionHeader}>
+            {/* The literal `Profile.tsx` passes: the pinned block has no `key` in the file. */}
+            <div className={profile.sectionTitle}>
+              <SectionIcon sectionKey="caseStudies" className={profile.sectionIcon} />
+              <h2>{cv.caseStudies?.label ?? 'Case Studies'}</h2>
+            </div>
+          </div>
+          {/* `as="static"` renders each card as a `<span>`: on the site the card is a real
+              `<Link>` to the case study, which here would navigate out of the Studio mid-edit —
+              the same problem the teaser above solves by cancelling its press. */}
+          <CaseStudies items={caseStudies} as="static" />
+        </section>
       ) : null}
 
       {cv.sections.map((section, index) => (

@@ -141,3 +141,139 @@
   -webkit-mask-image: var(--across);
   mask-image: var(--across);
 }
+
+/* How far a case study's glow has got from the site's sweep to the study's own colour: 0% is the
+   sweep, 100% is the brand. Registered so it can be animated at all. An unregistered custom
+   property is a token stream and steps from one value to the other in a single frame, where this
+   one interpolates like any percentage. `inherits: false` because only `.topGradientBrand` reads
+   it, and the resting value is the finished one. See `glowArrive` below. */
+@property --glow-arrival {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
+
+/* A case study's glow: the same box and the same two ramps, with the study's own colour in place
+   of the hue sweep. `--glow-brand` is the study's hex from `cv.json`, written inline by
+   `CaseStudy.tsx`; everything else is derived from it here.
+
+   **The brand sweep is the colour walked lighter to one side and darker to the other**, at the
+   original's seven stop positions, so it keeps the same structure (one end of the page brighter
+   than the other) rather than becoming a flat wash. The steps are in OKLCH, where a lightness
+   step looks like the same step at every hue, so one `--lift` reads the same on any study's
+   colour. `--drift` turns the hue a few degrees with it (lighter towards yellow and darker towards
+   red, for an orange), which is what stops the ends reading as the brand colour with white or
+   black mixed in. The lighter stops also give up a little chroma, since a lighter colour at full
+   chroma leaves the sRGB gamut and gets clipped.
+
+   **Each stop is mixed from its sweep colour in OKLCH, never cross-faded.** The obvious build is
+   this layer over the sweep with its `opacity` animated, and it was the first one. It looked wrong
+   halfway through: a cross-fade blends in sRGB, and the sweep's cool end is cyan while the brand's
+   dark end is a red-orange, which are nearly complementary. Averaged, they cancel to grey, so the
+   right half of the glow went a dull grey mid-animation. Mixing in OKLCH moves the *hue* instead:
+   every cool stop turns through violet and pink into the orange, the direction the sweep itself
+   already runs, and nothing on the way loses its colour. It costs a repaint of this box per frame
+   for 1.4s, against a composited opacity.
+
+   **It is still drawn over the sweep, as a child of `.topGradientBand`, for the fallback.** Where
+   relative colour syntax or `color-mix()` is unsupported, this gradient is invalid and paints
+   nothing, and the site's own sweep shows through: the site's glow, rather than no glow. Being a
+   child is also what keeps it under the band's mask, which applies to descendants, so the two
+   ramps shape it exactly as they shape the sweep. Where it does paint, it is opaque at every
+   point and covers the sweep completely.
+
+   `in srgb` is what makes the first frame *the* sweep rather than a near copy. The mixed stops are
+   OKLCH colours, and a gradient with any non-legacy stop interpolates between stops in OKLab by
+   default, where the sweep, being all `rgb()`, interpolates in sRGB. Pinned, frame 0 matches the
+   CV's glow between the stops as well as at them. */
+.topGradientBrand {
+  position: absolute;
+  inset: 0;
+  --lift: 0.04;
+  --drift: 4;
+  --brand-1: oklch(from var(--glow-brand) calc(l + var(--lift) * 3) calc(c * 0.8) calc(h + var(--drift) * 3));
+  --brand-2: oklch(from var(--glow-brand) calc(l + var(--lift) * 2) calc(c * 0.88) calc(h + var(--drift) * 2));
+  --brand-3: oklch(from var(--glow-brand) calc(l + var(--lift)) calc(c * 0.95) calc(h + var(--drift)));
+  --brand-4: var(--glow-brand);
+  --brand-5: oklch(from var(--glow-brand) calc(l - var(--lift)) c calc(h - var(--drift)));
+  --brand-6: oklch(from var(--glow-brand) calc(l - var(--lift) * 2) c calc(h - var(--drift) * 2));
+  --brand-7: oklch(from var(--glow-brand) calc(l - var(--lift) * 3) c calc(h - var(--drift) * 3));
+  background-image: linear-gradient(90deg in srgb,
+    color-mix(in oklch, var(--glow-stop-1), var(--brand-1) var(--glow-arrival)) 25%,
+    color-mix(in oklch, var(--glow-stop-2), var(--brand-2) var(--glow-arrival)) 33%,
+    color-mix(in oklch, var(--glow-stop-3), var(--brand-3) var(--glow-arrival)) 41.5%,
+    color-mix(in oklch, var(--glow-stop-4), var(--brand-4) var(--glow-arrival)) 49.5%,
+    color-mix(in oklch, var(--glow-stop-5), var(--brand-5) var(--glow-arrival)) 58.5%,
+    color-mix(in oklch, var(--glow-stop-6), var(--brand-6) var(--glow-arrival)) 66.5%,
+    color-mix(in oklch, var(--glow-stop-7), var(--brand-7) var(--glow-arrival)) 75%
+  );
+}
+
+/* Opening a case study turns the site's glow into the study's. `CaseStudy.tsx` puts this class on
+   the brand layer beside `.topGradientBrand`.
+
+   **This runs on load, and it has to.** Moving from `/` to a study crosses root layouts, which is a
+   full page load (see `(study)/layout.tsx`), so no element survives the navigation for a
+   transition to run on. It still reads as one glow changing colour, because the new page starts
+   with the old page's glow: the box is measured off the same column in both shells, so the first
+   frame puts the sweep exactly where the CV's was.
+
+   `backwards` holds the first keyframe through the delay, so the sweep is the first frame rather
+   than one frame of brand colour followed by a jump back. The 150ms delay lets that frame be seen
+   as the glow the reader just left before it starts to change.
+
+   The resting state is the declared one, 100%, and the animation only ever runs up to it. So
+   under reduced motion, which is outside this block, the study's colour is simply there from the
+   first frame. It also plays on a direct visit and on a reload, where there was no CV glow to come
+   from, and there it reads as the site's glow taking on the study's colour. That is a choice
+   rather than a limit: the return trip below is gated on where the reader came from, and this
+   could be gated the same way. */
+@media (prefers-reduced-motion: no-preference) {
+  .topGradientArrive {
+    animation: glowArrive 1400ms cubic-bezier(0.4, 0, 0.2, 1) 150ms backwards;
+  }
+}
+
+@keyframes glowArrive {
+  from {
+    --glow-arrival: 0%;
+  }
+}
+
+/* The way back: on the CV, a study's glow turning back into the site's sweep. The same layer, in
+   `(site)/layout.tsx`, run the other way.
+
+   **At rest it is the sweep, and usually it is nothing at all.** The layout always renders it, but
+   no study colour is defined on the CV, so `--glow-brand` is unset. Every brand stop is then
+   invalid, the gradient is invalid, and the layer paints nothing: the band underneath is the glow.
+   The colour arrives only from `GlowReturnScript`, which runs in `<head>` before the first paint
+   and defines `--glow-brand` on `:root` when this load came from a case study (see there for how it
+   decides). Its resting `--glow-arrival` is 0%, which mixes every stop back to the sweep's own
+   colour, so once the animation has run, the layer is identical to what it covers.
+
+   **The animation is always declared and held paused unless the script says otherwise**, through
+   `--glow-return`. A paused animation costs nothing per frame. And that is what keeps the timing
+   here beside the arrival's rather than in a script string: the script only writes two custom
+   properties, and this file owns the colours, the curve and the duration of both directions.
+   `backwards` holds 100% (the brand colour) before it starts, so the first frame of the CV is the
+   last frame of the study.
+
+   `animation-play-state` comes after the shorthand because the shorthand resets it to `running`.
+   Under reduced motion there is no animation, the layer rests at the sweep, and the reader simply
+   sees the CV's glow. */
+.topGradientReturn {
+  --glow-arrival: 0%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .topGradientReturn {
+    animation: glowDepart 1400ms cubic-bezier(0.4, 0, 0.2, 1) 150ms backwards;
+    animation-play-state: var(--glow-return, paused);
+  }
+}
+
+@keyframes glowDepart {
+  from {
+    --glow-arrival: 100%;
+  }
+}

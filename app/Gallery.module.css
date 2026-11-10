@@ -386,9 +386,12 @@
 /* Only ever preceded by `.filter`, so this is the gap under the bar rather than under the tab
    bar — see the note above. Smaller than it looks: the bar now carries `.sectionHeader`'s bottom
    padding, so the real distance is that plus this, landing within a pixel of the 24px this was
-   before the padding arrived. */
+   before the padding arrived.
+
+   It is the site-wide title-to-content token now. The bar *is* a section header, and this was
+   already 12 before the CV's sections came down to match it, so the value did not move. */
 .filter + .list {
-  margin-top: 12px;
+  margin-top: var(--section-content-gap);
 }
 
 /* The tag being filtered by. It is the *title* of the list underneath it, which is why it takes

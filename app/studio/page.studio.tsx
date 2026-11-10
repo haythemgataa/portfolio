@@ -23,6 +23,7 @@ export default async function StudioPage() {
     gallery: GalleryFile;
     hash: string;
     orphans: { unregistered: string[]; unreferenced: string[] };
+    caseStudyImages: string[];
   } | null = null;
   let loadError: string | undefined;
 
@@ -36,6 +37,7 @@ export default async function StudioPage() {
       gallery: doc.gallery,
       hash: doc.hash,
       orphans: await findOrphans(doc),
+      caseStudyImages: doc.caseStudyImages,
     };
   } catch (error) {
     loadError = (error as Error).message;
@@ -50,6 +52,7 @@ export default async function StudioPage() {
       initialGallery={loaded.gallery}
       initialHash={loaded.hash}
       initialOrphans={loaded.orphans}
+      initialCaseStudyImages={loaded.caseStudyImages}
     />
   );
 }

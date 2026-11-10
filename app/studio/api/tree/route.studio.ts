@@ -17,6 +17,10 @@ export async function GET(req: Request) {
       // Read-only here: the Studio does not edit the gallery, but the UI needs
       // it to show which assets are shared with the gallery tab.
       gallery: doc.gallery,
+      // Read-only too, and required rather than informational: `cvUses` is the client mirror of
+      // `collectReferences`, and these references live in markdown the browser cannot read. Without
+      // them the UI would offer to delete a picture a published case study is showing.
+      caseStudyImages: doc.caseStudyImages,
     });
   } catch (error) {
     return fail(error);

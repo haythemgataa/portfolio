@@ -40,14 +40,20 @@
   align-items: center;
 }
 
-/* 12px rather than the 24px this started at. At full-screen size a 24px radius is a visible
-   shape in its own right — it rounds the media into a card — where the intent is only to take
-   the hard corner off. The number is close to the thumbnail's 10px, so an image keeps roughly
-   the same corner as it opens instead of growing one. */
+/* 2px, down from 12 and originally 24. The reasoning has gone the same direction twice: at
+   full-screen size a rounded corner is a shape in its own right, and the intent is only to stop
+   the corner reading as a hard cut. 24px made the media a card; 12px still rounded it visibly
+   against a full-bleed picture. 2px is the corner you notice only if you look for it, which is
+   what a preview wants — the media is the subject here, not the frame around it.
+
+   The rounding does not need to match a thumbnail's any more. That argument held while the
+   opened radius was near the thumbnail's 10px, but nothing animates between the two — the
+   lightbox fades in over the page rather than growing out of the thing pressed — so there is no
+   corner for a reader to see change. */
 .imageWrap {
   width: 100%;
   height: auto;
-  border-radius: 12px;
+  border-radius: 2px;
   overflow: hidden;
   position: relative;
 }

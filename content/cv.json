@@ -13,19 +13,6 @@
       "ios-app-icon.webp"
     ]
   },
-  "caseStudies": {
-    "label": "Case Studies",
-    "items": [
-      {
-        "slug": "deeppcb",
-        "title": "DeepPCB (AI EDA Tool for PCB layout)",
-        "subtitle": "Full Product Ownership / UI / Motion / AI-assisted Dev",
-        "color": "#F4741B",
-        "logo": "deeppcb-logo.svg",
-        "cover": "board-viewer-evolution-2023-2026-poster.webp"
-      }
-    ]
-  },
   "sections": [
     {
       "key": "workExperience",
@@ -354,8 +341,8 @@
       {
         "id": "contact-linkedin",
         "platform": "LinkedIn",
-        "handle": "haythem-gataa",
-        "url": "https://linkedin.com/in/haythem-gataa"
+        "handle": "haythemgataa",
+        "url": "https://linkedin.com/in/haythemgataa"
       },
       {
         "id": "contact-dribbble",
@@ -378,8 +365,8 @@
       {
         "id": "contact-twitter",
         "platform": "Twitter",
-        "handle": "HaythemGataa",
-        "url": "https://twitter.com/HaythemGataa"
+        "handle": "haythemgataa",
+        "url": "https://twitter.com/haythemgataa"
       }
     ]
   }
